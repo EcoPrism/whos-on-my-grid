@@ -1,0 +1,367 @@
+{
+  "brief_id": "3fb95348f1d4081e",
+  "generated_at": "2026-10-27T09:00:00Z",
+  "source_mode": "fixtures",
+  "fixture": true,
+  "address": {
+    "display": "Filigree Ct, Ashburn, VA 20147",
+    "lat": 39.0163,
+    "lon": -77.4588,
+    "state": "VA",
+    "county": "Loudoun",
+    "zip": "20147",
+    "utility": "Dominion Energy Virginia"
+  },
+  "headline": {
+    "ai_rent_usd_per_month": 31.4,
+    "percentile": 94,
+    "band": "critical",
+    "one_liner": "Fifteen data centres within five miles share your substation. A typical home here pays about $31 more a month than two years ago."
+  },
+  "sections": {
+    "on_your_grid": {
+      "status": "measured",
+      "confidence": 0.92,
+      "model": null,
+      "summary": "Fifteen data-centre facilities sit within five miles, nine of them within one mile. Eight share the Nimbus 230 kV substation with your street.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/ash-01",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "facilities": [
+        {
+          "name": "Northgate Campus DC1-DC9",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.4,
+          "status": "live",
+          "estimated_mw": 180,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.019,
+          "lon": -77.455
+        },
+        {
+          "name": "Loudoun Gateway IAD-4",
+          "codename": null,
+          "operator": "Meridian Realty Trust (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.9,
+          "status": "live",
+          "estimated_mw": 96,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.012,
+          "lon": -77.466
+        },
+        {
+          "name": "Broad Run Technology Park",
+          "codename": "Project Kestrel",
+          "operator": "Orrin Cloud Services (fictional)",
+          "operator_confidence": 0.81,
+          "distance_km": 2.7,
+          "status": "under_construction",
+          "estimated_mw": 300,
+          "mw_basis": "filed",
+          "shares_substation": false,
+          "lat": 39.03,
+          "lon": -77.48
+        },
+        {
+          "name": "Waxpool Edge Site",
+          "codename": null,
+          "operator": "Pinefield Networks (fictional)",
+          "operator_confidence": 0.95,
+          "distance_km": 3.9,
+          "status": "live",
+          "estimated_mw": 10,
+          "mw_basis": "class_estimate",
+          "shares_substation": false,
+          "lat": 39.04,
+          "lon": -77.49
+        }
+      ]
+    },
+    "coming": {
+      "status": "measured",
+      "confidence": 0.84,
+      "model": "sam-3.1",
+      "summary": "Large-roof footprint within five miles grew from 112 to 171 acres between the 2023 and 2025 imagery. One 23-acre site 2.7 km north is not in any facility database.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/VA",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "construction": [
+        {
+          "label": "Broad Run north parcel",
+          "distance_km": 2.7,
+          "footprint_acres_then": 0,
+          "footprint_acres_now": 23.1,
+          "vintages": [
+            2023,
+            2025
+          ],
+          "in_database": false,
+          "polygon": [
+            [
+              39.031,
+              -77.482
+            ],
+            [
+              39.031,
+              -77.478
+            ],
+            [
+              39.028,
+              -77.478
+            ],
+            [
+              39.028,
+              -77.482
+            ]
+          ]
+        },
+        {
+          "label": "Northgate expansion",
+          "distance_km": 0.6,
+          "footprint_acres_then": 41.0,
+          "footprint_acres_now": 58.4,
+          "vintages": [
+            2023,
+            2025
+          ],
+          "in_database": true,
+          "polygon": [
+            [
+              39.02,
+              -77.457
+            ],
+            [
+              39.02,
+              -77.452
+            ],
+            [
+              39.017,
+              -77.452
+            ],
+            [
+              39.017,
+              -77.457
+            ]
+          ]
+        }
+      ]
+    },
+    "your_bill": {
+      "status": "modelled",
+      "confidence": 0.78,
+      "model": "muse-spark-1.3",
+      "summary": "Your state's residential price rose 14.2% over 24 months. For a home using 1,100 kWh a month that is about $31 more per month. The regional market monitor attributes most of the latest capacity-price increase to data-centre load.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/VA",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh"
+        },
+        {
+          "title": "Regional market monitor report (fictional)",
+          "url": "https://example.org/mm/2026",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 12,
+          "quote": "63% of the capacity price increase is attributable to data center load"
+        }
+      ],
+      "price": {
+        "currency": "USD",
+        "rate_now": 0.151,
+        "rate_then": 0.132,
+        "trend_pct": 14.2,
+        "window_months": 24,
+        "typical_household_kwh_month": 1100,
+        "attribution": "63% of the capacity price increase is attributable to data center load (market monitor, fictional)"
+      }
+    },
+    "protection": {
+      "status": "reported",
+      "confidence": 0.88,
+      "model": "muse-spark-1.3",
+      "summary": "A large-load tariff is in force. Customers above 25 MW bear incremental transmission costs, which shields households from that part of the build-out but not from capacity prices.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Commission order, large-load tariff (fictional)",
+          "url": "https://example.org/scc/order-2026-0412",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 7,
+          "quote": "Customers with demand above 25 MW shall bear the incremental cost of transmission upgrades"
+        }
+      ],
+      "tariff": {
+        "large_load_tariff": "in_force",
+        "name": "Schedule GS-5 (fictional)",
+        "protects_households": true,
+        "docket": "PUR-2026-00041"
+      }
+    },
+    "hearing": {
+      "status": "measured",
+      "confidence": 0.9,
+      "model": "muse-voice-transcribe-1.0",
+      "summary": "The Board of Supervisors votes on the Broad Run rezoning on 12 November. At the last meeting a supervisor said no further campus would be approved on that substation without a capacity study.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Board of Supervisors meeting archive, 14 Oct 2026 (fictional)",
+          "url": "https://example.org/loudoun/2026-10-14",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "We are not going to approve another campus on that substation until the utility shows us the capacity study"
+        }
+      ],
+      "hearing": {
+        "next_date": "2026-11-12",
+        "body": "Loudoun County Board of Supervisors",
+        "subject": "Broad Run Technology Park rezoning",
+        "last_meeting_date": "2026-10-14",
+        "last_meeting_said": [
+          {
+            "speaker_role": "supervisor",
+            "speaker_name": null,
+            "quote": "We are not going to approve another campus on that substation until the utility shows us the capacity study",
+            "timestamp_s": 4812.0
+          },
+          {
+            "speaker_role": "resident",
+            "speaker_name": null,
+            "quote": "The hum starts at ten and does not stop",
+            "timestamp_s": 5330.5
+          }
+        ]
+      }
+    }
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "section": "on_your_grid",
+      "text": "Eight facilities share the Nimbus substation with the address.",
+      "source": {
+        "title": "Facility registry (fictional)",
+        "url": "https://example.org/registry/ash-01",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": ""
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c2",
+      "section": "coming",
+      "text": "A 23-acre large-roof site 2.7 km north appears in 2025 imagery and not in 2023 imagery.",
+      "source": {
+        "title": "USDA aerial imagery 2025 (public domain)",
+        "url": "https://example.org/naip/VA",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": ""
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c3",
+      "section": "your_bill",
+      "text": "The state residential price rose 14.2% between Aug 2024 and Aug 2026.",
+      "source": {
+        "title": "State residential price series (fictional)",
+        "url": "https://example.org/prices/VA",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c4",
+      "section": "your_bill",
+      "text": "The market monitor attributes 63% of the capacity price increase to data-centre load.",
+      "source": {
+        "title": "Regional market monitor report (fictional)",
+        "url": "https://example.org/mm/2026",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 12,
+        "quote": "63% of the capacity price increase is attributable to data center load"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c5",
+      "section": "protection",
+      "text": "Customers above 25 MW bear incremental transmission costs under the order.",
+      "source": {
+        "title": "Commission order, large-load tariff (fictional)",
+        "url": "https://example.org/scc/order-2026-0412",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 7,
+        "quote": "Customers with demand above 25 MW shall bear the incremental cost of transmission upgrades"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c6",
+      "section": "hearing",
+      "text": "The rezoning vote is scheduled for 12 November 2026.",
+      "source": {
+        "title": "Board of Supervisors meeting archive, 14 Oct 2026 (fictional)",
+        "url": "https://example.org/loudoun/2026-10-14",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "We are not going to approve another campus on that substation until the utility shows us the capacity study"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "unverifiable",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": "Agenda for 12 Nov not yet published; date comes from the chair's statement at the 14 Oct meeting."
+    }
+  ],
+  "card": {
+    "title": "Who's on my grid: Ashburn, VA",
+    "lines": [
+      "15 data centres within 5 miles, 8 on your substation",
+      "+$31/mo for a typical home vs 2024, more than 94% of US households",
+      "23 acres of new campus visible from the air, in no database",
+      "County vote in 16 days"
+    ],
+    "footer": "Sources: facility registry, state price series, market monitor, county archive. Fictional fixture."
+  }
+}

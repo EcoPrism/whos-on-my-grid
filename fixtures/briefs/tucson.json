@@ -1,0 +1,232 @@
+{
+  "brief_id": "8bc089ffbae62dd2",
+  "generated_at": "2026-10-27T09:00:00Z",
+  "source_mode": "fixtures",
+  "fixture": true,
+  "address": {
+    "display": "S Houghton Rd, Tucson, AZ 85747",
+    "lat": 32.124,
+    "lon": -110.7689,
+    "state": "AZ",
+    "county": "Pima",
+    "zip": "85747",
+    "utility": "Tucson Electric Power"
+  },
+  "headline": {
+    "ai_rent_usd_per_month": 12.6,
+    "percentile": 72,
+    "band": "high",
+    "one_liner": "A 61-acre building appeared 1.8 miles away between the last two aerial surveys. No database lists it, and the state has no large-load tariff."
+  },
+  "sections": {
+    "on_your_grid": {
+      "status": "reported",
+      "confidence": 0.55,
+      "model": "muse-spark-1.3",
+      "summary": "No facility within five miles appears in any registry. One is visible from the air (see Coming). The operator is not known.",
+      "gap": "No registry entry and no public filing names an operator for the site visible in imagery.",
+      "sources": [],
+      "facilities": []
+    },
+    "coming": {
+      "status": "measured",
+      "confidence": 0.88,
+      "model": "sam-3.1",
+      "summary": "A 61-acre large-roof building 2.9 km south-east appears in 2025 imagery and not in 2023 imagery. It is in no facility database.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/AZ",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "construction": [
+        {
+          "label": "Houghton Rd south parcel",
+          "distance_km": 2.9,
+          "footprint_acres_then": 0,
+          "footprint_acres_now": 61.2,
+          "vintages": [
+            2023,
+            2025
+          ],
+          "in_database": false,
+          "polygon": [
+            [
+              32.105,
+              -110.765
+            ],
+            [
+              32.105,
+              -110.758
+            ],
+            [
+              32.1,
+              -110.758
+            ],
+            [
+              32.1,
+              -110.765
+            ]
+          ]
+        }
+      ]
+    },
+    "your_bill": {
+      "status": "modelled",
+      "confidence": 0.76,
+      "model": "muse-spark-1.3",
+      "summary": "Your state's residential price rose 8.9% over 24 months, about $13 more per month for a typical home.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/AZ",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, AZ, Aug 2026: 14.9 c/kWh"
+        }
+      ],
+      "price": {
+        "currency": "USD",
+        "rate_now": 0.149,
+        "rate_then": 0.137,
+        "trend_pct": 8.9,
+        "window_months": 24,
+        "typical_household_kwh_month": 1150,
+        "attribution": null
+      }
+    },
+    "protection": {
+      "status": "reported",
+      "confidence": 0.7,
+      "model": "muse-spark-1.3",
+      "summary": "No large-load tariff was found for this state. Costs of serving new large customers fall under the general tariff.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Commission tariff index (fictional)",
+          "url": "https://example.org/acc/tariffs",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "tariff": {
+        "large_load_tariff": "none_found",
+        "name": null,
+        "protects_households": false,
+        "docket": null
+      }
+    },
+    "hearing": {
+      "status": "measured",
+      "confidence": 0.85,
+      "model": "muse-voice-transcribe-1.0",
+      "summary": "The Board of Supervisors rejected the development agreement for the site on 20 October. No further hearing is scheduled.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Board of Supervisors meeting archive, 20 Oct 2026 (fictional)",
+          "url": "https://example.org/pima/2026-10-20",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "The motion to deny the development agreement carries unanimously"
+        }
+      ],
+      "hearing": {
+        "next_date": null,
+        "body": "Pima County Board of Supervisors",
+        "subject": "Development agreement, Houghton Rd parcel",
+        "last_meeting_date": "2026-10-20",
+        "last_meeting_said": [
+          {
+            "speaker_role": "chair",
+            "speaker_name": null,
+            "quote": "The motion to deny the development agreement carries unanimously",
+            "timestamp_s": 7720.0
+          }
+        ]
+      }
+    }
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "section": "coming",
+      "text": "A 61-acre building appears in 2025 imagery and not in 2023 imagery at the Houghton Rd parcel.",
+      "source": {
+        "title": "USDA aerial imagery 2025 (public domain)",
+        "url": "https://example.org/naip/AZ",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": ""
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c2",
+      "section": "your_bill",
+      "text": "The state residential price rose 8.9% over 24 months.",
+      "source": {
+        "title": "State residential price series (fictional)",
+        "url": "https://example.org/prices/AZ",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Average residential price, AZ, Aug 2026: 14.9 c/kWh"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c3",
+      "section": "protection",
+      "text": "No large-load tariff is listed in the commission tariff index.",
+      "source": {
+        "title": "Commission tariff index (fictional)",
+        "url": "https://example.org/acc/tariffs",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": ""
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c4",
+      "section": "hearing",
+      "text": "The board denied the development agreement unanimously on 20 October.",
+      "source": {
+        "title": "Board of Supervisors meeting archive, 20 Oct 2026 (fictional)",
+        "url": "https://example.org/pima/2026-10-20",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "The motion to deny the development agreement carries unanimously"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    }
+  ],
+  "card": {
+    "title": "Who's on my grid: Tucson, AZ",
+    "lines": [
+      "61 acres of new building 1.8 mi away, in no database",
+      "Operator: not known",
+      "+$13/mo for a typical home vs 2024",
+      "No large-load tariff in this state"
+    ],
+    "footer": "Sources: aerial imagery, state price series, commission index, county archive. Fictional fixture."
+  }
+}

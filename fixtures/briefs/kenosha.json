@@ -1,0 +1,243 @@
+{
+  "brief_id": "fbffd30aa062090e",
+  "generated_at": "2026-10-27T09:00:00Z",
+  "source_mode": "fixtures",
+  "fixture": true,
+  "address": {
+    "display": "88th Ave, Pleasant Prairie, WI 53158",
+    "lat": 42.5491,
+    "lon": -87.9112,
+    "state": "WI",
+    "county": "Kenosha",
+    "zip": "53158",
+    "utility": "We Energies"
+  },
+  "headline": {
+    "ai_rent_usd_per_month": 9.8,
+    "percentile": 61,
+    "band": "high",
+    "one_liner": "Nothing is running yet. A 600 MW campus filed under a codename is 2.4 miles away and the county votes on 5 November."
+  },
+  "sections": {
+    "on_your_grid": {
+      "status": "reported",
+      "confidence": 0.81,
+      "model": "muse-spark-1.3",
+      "summary": "No data-centre facility is live within five miles. One campus is announced 3.9 km west under the name Project Tembo. The county planning packet identifies the applicant as Calder Hyperscale.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "County planning packet (fictional)",
+          "url": "https://example.org/kenosha/packet-2026-10",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 3,
+          "quote": "The applicant, identified in filings as Project Tembo, is a subsidiary of Calder Hyperscale Inc."
+        }
+      ],
+      "facilities": [
+        {
+          "name": "Project Tembo",
+          "codename": "Project Tembo",
+          "operator": "Calder Hyperscale Inc. (fictional)",
+          "operator_confidence": 0.86,
+          "distance_km": 3.9,
+          "status": "announced",
+          "estimated_mw": 600,
+          "mw_basis": "filed",
+          "shares_substation": null,
+          "lat": 42.55,
+          "lon": -87.96
+        }
+      ]
+    },
+    "coming": {
+      "status": "measured",
+      "confidence": 0.7,
+      "model": "sam-3.1",
+      "summary": "Imagery shows grading on 140 acres at the announced site between 2023 and 2025 but no roofs yet.",
+      "gap": "Graded land is not a roof. Footprint is 0 until buildings appear.",
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/WI",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "construction": [
+        {
+          "label": "Project Tembo site",
+          "distance_km": 3.9,
+          "footprint_acres_then": 0,
+          "footprint_acres_now": 0,
+          "vintages": [
+            2023,
+            2025
+          ],
+          "in_database": false,
+          "polygon": []
+        }
+      ]
+    },
+    "your_bill": {
+      "status": "modelled",
+      "confidence": 0.74,
+      "model": "muse-spark-1.3",
+      "summary": "Your state's residential price rose 6.1% over 24 months, about $10 more per month for a typical home. No regulator statement attributes any of it to data centres yet.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/WI",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, WI, Aug 2026: 17.4 c/kWh"
+        }
+      ],
+      "price": {
+        "currency": "USD",
+        "rate_now": 0.174,
+        "rate_then": 0.164,
+        "trend_pct": 6.1,
+        "window_months": 24,
+        "typical_household_kwh_month": 950,
+        "attribution": null
+      }
+    },
+    "protection": {
+      "status": "reported",
+      "confidence": 0.6,
+      "model": "muse-spark-1.3",
+      "summary": "A large-load tariff has been proposed but not approved. Until it is, the cost allocation for the new load is the general tariff.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Commission docket index (fictional)",
+          "url": "https://example.org/psc/docket-5-UR-200",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "tariff": {
+        "large_load_tariff": "proposed",
+        "name": "Very Large Customer rate (fictional)",
+        "protects_households": null,
+        "docket": "5-UR-200"
+      }
+    },
+    "hearing": {
+      "status": "measured",
+      "confidence": 0.9,
+      "model": "muse-voice-transcribe-1.0",
+      "summary": "The County Board takes public comment on the water agreement on 5 November. At the 7 October meeting the chair confirmed the comment session; a resident asked who the applicant was and was not answered.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "County Board meeting archive, 7 Oct 2026 (fictional)",
+          "url": "https://example.org/kenosha/2026-10-07",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "We will take public comment on the water agreement at the November 5 session"
+        }
+      ],
+      "hearing": {
+        "next_date": "2026-11-05",
+        "body": "Kenosha County Board",
+        "subject": "Project Tembo water agreement, public comment",
+        "last_meeting_date": "2026-10-07",
+        "last_meeting_said": [
+          {
+            "speaker_role": "chair",
+            "speaker_name": null,
+            "quote": "We will take public comment on the water agreement at the November 5 session",
+            "timestamp_s": 2210.0
+          },
+          {
+            "speaker_role": "resident",
+            "speaker_name": null,
+            "quote": "Who is actually behind this? Nobody will say.",
+            "timestamp_s": 3105.0
+          }
+        ]
+      }
+    }
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "section": "on_your_grid",
+      "text": "The planning packet identifies the Project Tembo applicant as a Calder Hyperscale subsidiary.",
+      "source": {
+        "title": "County planning packet (fictional)",
+        "url": "https://example.org/kenosha/packet-2026-10",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 3,
+        "quote": "The applicant, identified in filings as Project Tembo, is a subsidiary of Calder Hyperscale Inc."
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c2",
+      "section": "your_bill",
+      "text": "The state residential price rose 6.1% over 24 months.",
+      "source": {
+        "title": "State residential price series (fictional)",
+        "url": "https://example.org/prices/WI",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Average residential price, WI, Aug 2026: 17.4 c/kWh"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c3",
+      "section": "hearing",
+      "text": "Public comment on the water agreement is scheduled for 5 November.",
+      "source": {
+        "title": "County Board meeting archive, 7 Oct 2026 (fictional)",
+        "url": "https://example.org/kenosha/2026-10-07",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "We will take public comment on the water agreement at the November 5 session"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c4",
+      "section": "protection",
+      "text": "The large-load tariff is proposed and not yet approved.",
+      "source": {
+        "title": "Commission docket index (fictional)",
+        "url": "https://example.org/psc/docket-5-UR-200",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": ""
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "unverifiable",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": "Docket index lists the filing but the verifier could not read the status field."
+    }
+  ],
+  "card": {
+    "title": "Who's on my grid: Pleasant Prairie, WI",
+    "lines": [
+      "0 live, 1 announced: Project Tembo = Calder Hyperscale, 600 MW, 2.4 mi",
+      "140 acres graded, no roofs yet",
+      "+$10/mo for a typical home vs 2024",
+      "Public comment in 9 days"
+    ],
+    "footer": "Sources: county packet, state price series, county archive. Fictional fixture."
+  }
+}

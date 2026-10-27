@@ -1,0 +1,187 @@
+{
+  "brief_id": "d33d5d7c58e50b16",
+  "generated_at": "2026-10-27T09:00:00Z",
+  "source_mode": "fixtures",
+  "fixture": true,
+  "address": {
+    "display": "W Idaho St, Boise, ID 83702",
+    "lat": 43.6166,
+    "lon": -116.2023,
+    "state": "ID",
+    "county": "Ada",
+    "zip": "83702",
+    "utility": "Idaho Power"
+  },
+  "headline": {
+    "ai_rent_usd_per_month": 4.1,
+    "percentile": 28,
+    "band": "low",
+    "one_liner": "Two small facilities within five miles, no construction visible, and a typical home pays about $4 more a month than two years ago."
+  },
+  "sections": {
+    "on_your_grid": {
+      "status": "measured",
+      "confidence": 0.9,
+      "model": null,
+      "summary": "Two facilities within five miles, both small colocation sites. Neither shares your substation.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/boi-01",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "facilities": [
+        {
+          "name": "Capitol Colo",
+          "codename": null,
+          "operator": "Sawtooth Data (fictional)",
+          "operator_confidence": 0.97,
+          "distance_km": 1.1,
+          "status": "live",
+          "estimated_mw": 10,
+          "mw_basis": "class_estimate",
+          "shares_substation": false,
+          "lat": 43.62,
+          "lon": -116.21
+        },
+        {
+          "name": "Boise Edge 2",
+          "codename": null,
+          "operator": "Pinefield Networks (fictional)",
+          "operator_confidence": 0.97,
+          "distance_km": 4.6,
+          "status": "live",
+          "estimated_mw": 10,
+          "mw_basis": "class_estimate",
+          "shares_substation": false,
+          "lat": 43.59,
+          "lon": -116.25
+        }
+      ]
+    },
+    "coming": {
+      "status": "measured",
+      "confidence": 0.8,
+      "model": "sam-3.1",
+      "summary": "No new large-roof construction within five miles between the 2023 and 2025 imagery.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/ID",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ],
+      "construction": []
+    },
+    "your_bill": {
+      "status": "modelled",
+      "confidence": 0.8,
+      "model": "muse-spark-1.3",
+      "summary": "Your state's residential price rose 3.7% over 24 months, about $4 more per month for a typical home.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/ID",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, ID, Aug 2026: 11.2 c/kWh"
+        }
+      ],
+      "price": {
+        "currency": "USD",
+        "rate_now": 0.112,
+        "rate_then": 0.108,
+        "trend_pct": 3.7,
+        "window_months": 24,
+        "typical_household_kwh_month": 1000,
+        "attribution": null
+      }
+    },
+    "protection": {
+      "status": "reported",
+      "confidence": 0.65,
+      "model": "muse-spark-1.3",
+      "summary": "A large-load tariff is in force for customers above 20 MW.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Commission order (fictional)",
+          "url": "https://example.org/puc/order-36000",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 2,
+          "quote": "Schedule 20 applies to new loads of 20 MW or more"
+        }
+      ],
+      "tariff": {
+        "large_load_tariff": "in_force",
+        "name": "Schedule 20 (fictional)",
+        "protects_households": true,
+        "docket": "IPC-E-26-11"
+      }
+    },
+    "hearing": {
+      "status": "unavailable",
+      "confidence": 0.0,
+      "model": null,
+      "summary": "Hearings in this county are not yet indexed.",
+      "gap": "Ada County is not in the indexed set. See docs/counties.md.",
+      "sources": [],
+      "hearing": {
+        "next_date": null,
+        "body": null
+      }
+    }
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "section": "your_bill",
+      "text": "The state residential price rose 3.7% over 24 months.",
+      "source": {
+        "title": "State residential price series (fictional)",
+        "url": "https://example.org/prices/ID",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Average residential price, ID, Aug 2026: 11.2 c/kWh"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    },
+    {
+      "id": "c2",
+      "section": "protection",
+      "text": "Schedule 20 applies to new loads of 20 MW or more.",
+      "source": {
+        "title": "Commission order (fictional)",
+        "url": "https://example.org/puc/order-36000",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 2,
+        "quote": "Schedule 20 applies to new loads of 20 MW or more"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open-1026",
+      "verifier_note": null
+    }
+  ],
+  "card": {
+    "title": "Who's on my grid: Boise, ID",
+    "lines": [
+      "2 small facilities within 5 miles, none on your substation",
+      "No new construction visible from the air",
+      "+$4/mo for a typical home vs 2024",
+      "Large-load tariff in force"
+    ],
+    "footer": "Sources: facility registry, aerial imagery, state price series, commission order. Fictional fixture."
+  }
+}

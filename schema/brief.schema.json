@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EcoPrism/whos-on-my-grid/schema/brief.schema.json",
+  "title": "Brief",
+  "description": "One address in, one brief out. The contract that the UI, the agent and the data providers all build to.",
+  "type": "object",
+  "required": ["brief_id", "generated_at", "source_mode", "address", "headline", "sections", "claims", "card"],
+  "properties": {
+    "brief_id": {"type": "string", "description": "sha256 of the normalised address, first 16 hex chars. The address itself is never stored."},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "source_mode": {"enum": ["fixtures", "agent", "full"]},
+    "fixture": {"type": "boolean", "description": "True when the brief is synthetic test data. Operators and sources are fictional."},
+    "address": {
+      "type": "object",
+      "required": ["display", "lat", "lon", "state", "zip"],
+      "properties": {
+        "display": {"type": "string", "description": "What the UI shows. May be shortened to street and city."},
+        "lat": {"type": "number"},
+        "lon": {"type": "number"},
+        "state": {"type": "string", "pattern": "^[A-Z]{2}$"},
+        "county": {"type": "string"},
+        "zip": {"type": "string"},
+        "utility": {"type": ["string", "null"], "description": "Serving utility from HIFLD service territories, when known."}
+      }
+    },
+    "headline": {
+      "type": "object",
+      "required": ["ai_rent_usd_per_month", "percentile", "band"],
+      "properties": {
+        "ai_rent_usd_per_month": {"type": ["number", "null"], "description": "Change in a typical household's monthly bill over the trend window, in USD. Modelled. Null when the state price series is unavailable."},
+        "percentile": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Population-weighted percentile across US states. Label it as such."},
+        "band": {"enum": ["low", "medium", "high", "critical"]},
+        "one_liner": {"type": "string", "description": "One sentence for the card. No causal claims."}
+      }
+    },
+    "sections": {
+      "type": "object",
+      "required": ["on_your_grid", "coming", "your_bill", "protection", "hearing"],
+      "properties": {
+        "on_your_grid": {"$ref": "#/$defs/section"},
+        "coming": {"$ref": "#/$defs/section"},
+        "your_bill": {"$ref": "#/$defs/section"},
+        "protection": {"$ref": "#/$defs/section"},
+        "hearing": {"$ref": "#/$defs/section"}
+      }
+    },
+    "claims": {"type": "array", "items": {"$ref": "#/$defs/claim"}},
+    "card": {
+      "type": "object",
+      "required": ["title", "lines"],
+      "properties": {
+        "title": {"type": "string"},
+        "lines": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+        "footer": {"type": "string", "description": "Sources line, always present on the shared image."}
+      }
+    }
+  },
+  "$defs": {
+    "status": {"enum": ["measured", "reported", "modelled", "unavailable"]},
+    "source": {
+      "type": "object",
+      "required": ["title", "url", "retrieved_at"],
+      "properties": {
+        "title": {"type": "string"},
+        "url": {"type": "string"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "page": {"type": ["integer", "null"]},
+        "quote": {"type": "string", "description": "Verbatim text from the source that supports the use made of it."}
+      }
+    },
+    "claim": {
+      "type": "object",
+      "required": ["id", "section", "text", "source", "verdict"],
+      "properties": {
+        "id": {"type": "string"},
+        "section": {"enum": ["on_your_grid", "coming", "your_bill", "protection", "hearing"]},
+        "text": {"type": "string"},
+        "source": {"$ref": "#/$defs/source"},
+        "drafted_by": {"type": "string", "description": "Model id that drafted the claim."},
+        "verdict": {"enum": ["supported", "contradicted", "unverifiable", "unchecked"]},
+        "verified_by": {"type": ["string", "null"], "description": "Model id of the independent verifier."},
+        "verifier_note": {"type": ["string", "null"]}
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["status", "confidence", "model", "summary", "sources"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "model": {"type": ["string", "null"], "description": "Model id that produced the section, null for deterministic data."},
+        "summary": {"type": "string", "description": "Two or three plain-English sentences. Says not known when it is not."},
+        "gap": {"type": ["string", "null"], "description": "What the section could not find out, and why."},
+        "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+        "facilities": {"type": "array", "items": {"$ref": "#/$defs/facility"}},
+        "construction": {"type": "array", "items": {"$ref": "#/$defs/construction"}},
+        "price": {"$ref": "#/$defs/price"},
+        "tariff": {"$ref": "#/$defs/tariff"},
+        "hearing": {"$ref": "#/$defs/hearing"}
+      }
+    },
+    "facility": {
+      "type": "object",
+      "required": ["name", "operator", "distance_km", "status"],
+      "properties": {
+        "name": {"type": "string"},
+        "codename": {"type": ["string", "null"]},
+        "operator": {"type": "string"},
+        "operator_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "distance_km": {"type": "number"},
+        "status": {"enum": ["live", "under_construction", "announced"]},
+        "estimated_mw": {"type": ["number", "null"]},
+        "mw_basis": {"enum": ["filed", "reported", "class_estimate", null]},
+        "shares_substation": {"type": ["boolean", "null"]},
+        "lat": {"type": "number"},
+        "lon": {"type": "number"}
+      }
+    },
+    "construction": {
+      "type": "object",
+      "required": ["distance_km", "footprint_acres_then", "footprint_acres_now", "vintages"],
+      "properties": {
+        "label": {"type": "string"},
+        "distance_km": {"type": "number"},
+        "footprint_acres_then": {"type": "number"},
+        "footprint_acres_now": {"type": "number"},
+        "vintages": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2},
+        "in_database": {"type": "boolean", "description": "False when no facility database lists it."},
+        "polygon": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}}
+      }
+    },
+    "price": {
+      "type": "object",
+      "required": ["currency", "rate_now", "rate_then", "trend_pct", "window_months", "typical_household_kwh_month"],
+      "properties": {
+        "currency": {"type": "string"},
+        "rate_now": {"type": "number"},
+        "rate_then": {"type": "number"},
+        "trend_pct": {"type": "number"},
+        "window_months": {"type": "integer"},
+        "typical_household_kwh_month": {"type": "number"},
+        "attribution": {"type": ["string", "null"], "description": "What a regulator or market monitor attributes to data-centre load, quoted and cited. Never our own causal claim."}
+      }
+    },
+    "tariff": {
+      "type": "object",
+      "required": ["large_load_tariff"],
+      "properties": {
+        "large_load_tariff": {"enum": ["in_force", "proposed", "none_found", "unknown"]},
+        "name": {"type": ["string", "null"]},
+        "protects_households": {"type": ["boolean", "null"]},
+        "docket": {"type": ["string", "null"]}
+      }
+    },
+    "hearing": {
+      "type": "object",
+      "required": ["next_date", "body"],
+      "properties": {
+        "next_date": {"type": ["string", "null"]},
+        "body": {"type": ["string", "null"]},
+        "subject": {"type": ["string", "null"]},
+        "last_meeting_date": {"type": ["string", "null"]},
+        "last_meeting_said": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["speaker_role", "quote"],
+            "properties": {
+              "speaker_role": {"type": "string"},
+              "speaker_name": {"type": ["string", "null"]},
+              "quote": {"type": "string"},
+              "timestamp_s": {"type": ["number", "null"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}
