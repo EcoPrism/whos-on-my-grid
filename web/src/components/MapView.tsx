@@ -4,7 +4,7 @@ import type { Brief, Facility } from '../types'
 
 const FIVE_MILES_M = 8047
 
-// Status is the only colour on the map, as on the page.
+// Status is the only color on the map, as on the page.
 const STATUS_COLOR: Record<Facility['status'], string> = {
   live: '#15202b',
   under_construction: '#b7791f',
@@ -12,10 +12,12 @@ const STATUS_COLOR: Record<Facility['status'], string> = {
 }
 
 // Line weight follows load, on a log scale so a 10 MW edge site and a 300 MW
-// campus both read without one swamping the other.
-function weightFor(mw: number | null | undefined, shares: boolean | null | undefined) {
+// campus both read without one swamping the other. Nothing else changes the
+// weight: the substation flag is an inference and the map must not look like
+// proof of it.
+function weightFor(mw: number | null | undefined) {
   const base = mw ? 1.5 + Math.log10(mw + 1) * 1.4 : 1.5
-  return Math.min(7, base + (shares ? 1.5 : 0))
+  return Math.min(7, base)
 }
 
 function hasPoint(f: Facility): f is Facility & { lat: number; lon: number } {
@@ -46,12 +48,18 @@ export default function MapView({ brief, className }: Props) {
     ...placed.map((f): [number, number] => [f.lat, f.lon]),
     ...construction.flatMap((c) => c.polygon ?? []),
   ]
-  const bounds = points.length > 1 ? latLngBounds(points).pad(0.35) : undefined
+  const bounds = points.length > 1 ? latLngBounds(points).pad(0.12) : undefined
+  // The headline card sits over the top-left of the map on wider screens and
+  // over the top on phones; keep every facility out from under it.
+  const wide = typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+  const boundsOptions = wide
+    ? { paddingTopLeft: [470, 40] as [number, number], paddingBottomRight: [24, 24] as [number, number] }
+    : { paddingTopLeft: [12, 230] as [number, number], paddingBottomRight: [12, 12] as [number, number] }
 
   return (
     <MapContainer
       // react-leaflet uses center and zoom when given, else bounds.
-      {...(bounds ? { bounds } : { center: [lat, lon] as [number, number], zoom: 12 })}
+      {...(bounds ? { bounds, boundsOptions } : { center: [lat, lon] as [number, number], zoom: 12 })}
       scrollWheelZoom={false}
       zoomControl={false}
       className={className ?? 'h-[360px] w-full sm:h-[440px]'}
@@ -72,7 +80,7 @@ export default function MapView({ brief, className }: Props) {
           positions={[[f.lat, f.lon], [lat, lon]]}
           pathOptions={{
             color: STATUS_COLOR[f.status],
-            weight: weightFor(f.estimated_mw, f.shares_substation),
+            weight: weightFor(f.estimated_mw),
             opacity: f.status === 'announced' ? 0.6 : 0.85,
             lineCap: 'round',
             className: `gridline gridline-${f.status}`,
@@ -98,7 +106,7 @@ export default function MapView({ brief, className }: Props) {
         <CircleMarker
           key={f.name}
           center={[f.lat, f.lon]}
-          radius={f.status === 'live' ? 6 : 5}
+          radius={f.status === 'live' ? 5 : 4.5}
           pathOptions={{
             color: '#15202b',
             weight: 1,
@@ -111,7 +119,7 @@ export default function MapView({ brief, className }: Props) {
             {f.operator}{f.codename ? ` (filed as ${f.codename})` : ''}<br />
             {f.status.replace('_', ' ')}, {f.distance_km.toFixed(1)} km
             {f.estimated_mw ? `, ${f.estimated_mw} MW` : ''}
-            {f.shares_substation ? ', shares your substation' : ''}
+            {f.shares_substation ? ', likely on your substation (inferred)' : ''}
           </Popup>
         </CircleMarker>
       ))}

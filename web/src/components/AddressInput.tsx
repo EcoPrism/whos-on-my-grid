@@ -76,23 +76,28 @@ interface PlacesLib {
 declare global {
   interface Window {
     google?: { maps?: { importLibrary(name: string): Promise<unknown> } }
+    __gridMapsReady?: () => void
   }
 }
 
 let loading: Promise<PlacesLib> | null = null
 
+// With loading=async the API finishes initialising after the script's own
+// onload, so importLibrary is only safe to call from the callback parameter.
 function loadPlaces(key: string): Promise<PlacesLib> {
   if (loading) return loading
   loading = new Promise<PlacesLib>((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async&v=weekly`
-    s.async = true
-    s.onerror = () => reject(new Error('maps script failed'))
-    s.onload = () => {
+    window.__gridMapsReady = () => {
       const maps = window.google?.maps
       if (!maps) return reject(new Error('maps missing'))
       maps.importLibrary('places').then((lib) => resolve(lib as PlacesLib), reject)
     }
+    const s = document.createElement('script')
+    s.src =
+      `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}` +
+      '&loading=async&v=weekly&callback=__gridMapsReady'
+    s.async = true
+    s.onerror = () => reject(new Error('maps script failed'))
     document.head.appendChild(s)
   })
   return loading

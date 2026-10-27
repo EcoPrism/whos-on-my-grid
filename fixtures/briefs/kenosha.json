@@ -13,7 +13,11 @@
     "utility": "We Energies"
   },
   "headline": {
-    "ai_rent_usd_per_month": 9.8,
+    "ai_rent_usd_per_month": 9.5,
+    "ai_rent_range_usd_per_month": [
+      8.0,
+      11.0
+    ],
     "percentile": 61,
     "band": "high",
     "one_liner": "Nothing is running yet. A 600 MW campus filed under a codename is 2.4 miles away and the county votes on 5 November."
@@ -23,7 +27,7 @@
       "status": "reported",
       "confidence": 0.81,
       "model": "muse-spark-1.3",
-      "summary": "No data-centre facility is live within five miles. One campus is announced 3.9 km west under the name Project Tembo. The county planning packet identifies the applicant as Calder Hyperscale.",
+      "summary": "No data-center facility is live within five miles. One campus is announced 3.9 km west under the name Project Tembo. The county planning packet identifies the applicant as Calder Hyperscale.",
       "gap": null,
       "sources": [
         {
@@ -40,7 +44,7 @@
           "codename": "Project Tembo",
           "operator": "Calder Hyperscale Inc. (fictional)",
           "operator_confidence": 0.86,
-          "distance_km": 3.9,
+          "distance_km": 4.0,
           "status": "announced",
           "estimated_mw": 600,
           "mw_basis": "filed",
@@ -54,7 +58,7 @@
       "status": "measured",
       "confidence": 0.7,
       "model": "sam-3.1",
-      "summary": "Imagery shows grading on 140 acres at the announced site between 2023 and 2025 but no roofs yet.",
+      "summary": "About 140 acres of farmland at the announced site has been graded flat between the 2023 and 2025 imagery. No roofs yet.",
       "gap": "Graded land is not a roof. Footprint is 0 until buildings appear.",
       "sources": [
         {
@@ -84,7 +88,7 @@
       "status": "modelled",
       "confidence": 0.74,
       "model": "muse-spark-1.3",
-      "summary": "Your state's residential price rose 6.1% over 24 months, about $10 more per month for a typical home. No regulator statement attributes any of it to data centres yet.",
+      "summary": "Your state's residential price rose 6.1% over 24 months, about $10 more per month for a typical home. No regulator statement attributes any of it to data centers yet.",
       "gap": null,
       "sources": [
         {
@@ -109,7 +113,7 @@
       "status": "reported",
       "confidence": 0.6,
       "model": "muse-spark-1.3",
-      "summary": "A large-load tariff has been proposed but not approved. Until it is, the cost allocation for the new load is the general tariff.",
+      "summary": "Not yet. A large-load tariff has been proposed but not approved. Until it is, the new load is served under the general tariff and nothing in the rules keeps its grid costs off your bill.",
       "gap": null,
       "sources": [
         {
@@ -178,7 +182,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -194,7 +198,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -210,7 +214,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -226,16 +230,63 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "unverifiable",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": "Docket index lists the filing but the verifier could not read the status field."
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your power bill is about $10 a month higher than two years ago, between $8 and $11 depending on usage. No regulator has tied any of that to data centers.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.74,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/WI",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, WI, Aug 2026: 17.4 c/kWh"
+        }
+      ]
+    },
+    {
+      "text": "The county is about to vote on a water agreement for the Project Tembo site. How much water it would use has not been made public. Comment is open on 5 November.",
+      "topic": "water",
+      "status": "reported",
+      "confidence": 0.6,
+      "sources": [
+        {
+          "title": "County Board meeting archive, 7 Oct 2026 (fictional)",
+          "url": "https://example.org/kenosha/2026-10-07",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "We will take public comment on the water agreement at the November 5 session"
+        }
+      ]
+    },
+    {
+      "text": "About 140 acres of farmland 2.4 miles west of you has been graded flat since 2023. Nothing has been built on it yet.",
+      "topic": "land",
+      "status": "measured",
+      "confidence": 0.7,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/WI",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
     }
   ],
   "card": {
     "title": "Who's on my grid: Pleasant Prairie, WI",
     "lines": [
       "0 live, 1 announced: Project Tembo = Calder Hyperscale, 600 MW, 2.4 mi",
-      "140 acres graded, no roofs yet",
-      "+$10/mo for a typical home vs 2024",
+      "140 acres of farmland graded, no roofs yet",
+      "About +$10/mo for a typical home vs 2024",
       "Public comment in 9 days"
     ],
     "footer": "Sources: county packet, state price series, county archive. Fictional fixture."

@@ -47,6 +47,40 @@ CLAIM_DRAFT = {
     },
 }
 
+# The plain-language strip, drafted after the five sections from their
+# summaries. The bill sentence is never drafted: headline.py derives it from
+# the price block, so no model can put a causal claim about bills here.
+HOUSE_TOPICS = ["water", "noise", "land", "air", "grid", "taxes", "other"]
+HOUSE_DRAFT = {
+    "type": "object",
+    "required": ["lines"],
+    "properties": {
+        "lines": {
+            "type": "array",
+            "maxItems": 3,
+            "description": "Two or three sentences a resident would screenshot for a neighbor.",
+            "items": {
+                "type": "object",
+                "required": ["text", "topic", "confidence", "claims"],
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "One or two short sentences. Plain words, no jargon. "
+                        "Compare numbers to something a person knows (homes, miles, fields).",
+                    },
+                    "topic": {"enum": HOUSE_TOPICS},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "claims": {
+                        "type": "array",
+                        "items": CLAIM_DRAFT,
+                        "description": "Every number in the sentence, with its source.",
+                    },
+                },
+            },
+        }
+    },
+}
+
 VERDICT_SCHEMA = {
     "type": "object",
     "required": ["verdict", "note"],
@@ -228,6 +262,19 @@ def _allows_null(schema: dict[str, Any]) -> bool:
     return "enum" in schema and None in schema["enum"]
 
 
+@lru_cache
+def house_schemas() -> tuple[dict[str, Any], dict[str, Any]]:
+    """(original, strict) schemas for the at-your-house draft."""
+    return HOUSE_DRAFT, strictify(copy.deepcopy(HOUSE_DRAFT))
+
+
+def validate_house_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    original, _ = house_schemas()
+    pruned = prune_nulls(draft, original)
+    Draft202012Validator(original, format_checker=FormatChecker()).validate(pruned)
+    return pruned
+
+
 def validate_draft(section_id: str, draft: dict[str, Any]) -> dict[str, Any]:
     """Prune nulls, then validate against the original-rules schema. Returns
     the pruned draft or raises ValidationError."""
@@ -238,6 +285,8 @@ def validate_draft(section_id: str, draft: dict[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "HOUSE_DRAFT",
+    "HOUSE_TOPICS",
     "SECTION_EXTRA",
     "SECTION_IDS",
     "VERDICT_SCHEMA",
@@ -245,9 +294,11 @@ __all__ = [
     "brief_errors",
     "build_draft_schema",
     "draft_schemas",
+    "house_schemas",
     "load_brief_schema",
     "prune_nulls",
     "strictify",
     "validate_brief",
     "validate_draft",
+    "validate_house_draft",
 ]

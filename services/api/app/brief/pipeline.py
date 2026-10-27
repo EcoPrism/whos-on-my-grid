@@ -1,4 +1,5 @@
-"""address -> geocode -> five drafts -> assemble -> verify -> validate -> cache."""
+"""address -> geocode -> five drafts -> at-your-house draft -> assemble -> verify ->
+validate -> cache."""
 
 import asyncio
 import time
@@ -7,7 +8,7 @@ from datetime import UTC, datetime
 
 from app.brief.assemble import assemble_brief
 from app.brief.cache import BriefCache, Inflight
-from app.brief.draft import DraftResult, SectionFailure, draft_section
+from app.brief.draft import DraftResult, SectionFailure, draft_house_lines, draft_section
 from app.brief.fetch import Fetcher
 from app.brief.verify import verify_claims
 from app.config import Settings
@@ -81,7 +82,18 @@ class BriefService:
         if all(isinstance(d, SectionFailure) for d in drafts.values()):
             raise DraftingUnavailable()
 
-        brief = assemble_brief(geo, drafts, brief_id=brief_id, now_iso=now_iso)
+        # The strip reads the five summaries, so it runs after them.
+        summaries = {sid: d.summary for sid, d in drafts.items() if isinstance(d, DraftResult)}
+        house = await draft_house_lines(self.draft_provider, geo, now_iso, summaries)
+
+        brief = assemble_brief(
+            geo,
+            drafts,
+            house,
+            brief_id=brief_id,
+            now_iso=now_iso,
+            verified=self.verify_provider is not None,
+        )
         await verify_claims(
             self.verify_provider,
             self.fetcher,

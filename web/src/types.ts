@@ -2,6 +2,9 @@
 
 export type Status = 'measured' | 'reported' | 'modelled' | 'unavailable'
 export type SectionId = 'on_your_grid' | 'coming' | 'your_bill' | 'protection' | 'hearing'
+// A claim may also belong to the plain-language strip under the hero.
+export type ClaimSection = SectionId | 'at_your_house'
+export type HouseTopic = 'bill' | 'water' | 'noise' | 'land' | 'air' | 'grid' | 'taxes' | 'other'
 export type Verdict = 'supported' | 'contradicted' | 'unverifiable' | 'unchecked'
 
 export interface Source {
@@ -21,6 +24,7 @@ export interface Facility {
   status: 'live' | 'under_construction' | 'announced'
   estimated_mw?: number | null
   mw_basis?: 'filed' | 'reported' | 'class_estimate' | null
+  // An inference from distance, never utility data. Rendered as 'likely'.
   shares_substation?: boolean | null
   lat?: number
   lon?: number
@@ -82,9 +86,17 @@ export interface Section {
   hearing?: Hearing
 }
 
+export interface HouseLine {
+  text: string
+  topic: HouseTopic
+  status: Status
+  confidence: number
+  sources: Source[]
+}
+
 export interface Claim {
   id: string
-  section: SectionId
+  section: ClaimSection
   text: string
   source: Source
   drafted_by?: string
@@ -109,11 +121,13 @@ export interface Brief {
   }
   headline: {
     ai_rent_usd_per_month: number | null
+    ai_rent_range_usd_per_month?: [number, number] | null
     percentile: number | null
     band: 'low' | 'medium' | 'high' | 'critical'
     one_liner?: string
   }
   sections: Record<SectionId, Section>
   claims: Claim[]
+  at_your_house?: HouseLine[]
   card: { title: string; lines: string[]; footer?: string }
 }

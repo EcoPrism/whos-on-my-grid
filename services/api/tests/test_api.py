@@ -78,3 +78,14 @@ async def test_agent_drafting_unavailable(tmp_path) -> None:
 def test_agent_mode_requires_keys(tmp_path) -> None:
     with pytest.raises(RuntimeError, match="GRID_OPENAI_API_KEY"):
         create_app(fakes.service(tmp_path, llm_provider="openai"))
+
+
+async def test_country_gate_blocks_non_us_and_missing_header(tmp_path) -> None:
+    app = create_app(fakes.service(tmp_path, allowed_countries="US", country_header="cf-ipcountry"))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        assert (await c.get("/api/health")).status_code == 200
+        assert (await c.post("/api/brief", json={"address": "x"})).status_code == 403
+        r = await c.post("/api/brief", json={"address": "x"}, headers={"cf-ipcountry": "DE"})
+        assert r.status_code == 403 and r.json()["detail"] == "not_available_in_region"
+        r = await c.post("/api/brief", json={"address": "x y z"}, headers={"CF-IPCountry": "us"})
+        assert r.status_code != 403

@@ -1,6 +1,7 @@
 """LLM provider seam. Two providers: the drafter (Muse Spark via the gateway)
 and the verifier (Muse Spark Open on Baseten). Both speak the OpenAI protocol,
-so one class serves both, parametrised."""
+so one class serves both, parametrised. The verifier is optional: with no
+Baseten key there is no verify provider and claims stay `unchecked`."""
 
 from app.config import get_settings
 from app.llm.base import LLMError, LLMProvider
@@ -28,9 +29,11 @@ def get_draft_provider() -> LLMProvider:
     return FakeProvider()
 
 
-def get_verify_provider() -> LLMProvider:
+def get_verify_provider() -> LLMProvider | None:
     s = get_settings()
     if s.llm_provider == "openai":
+        if not s.baseten_api_key:
+            return None
         from app.llm.openai_provider import OpenAIProvider
 
         return OpenAIProvider(

@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["brief_id", "generated_at", "source_mode", "address", "headline", "sections", "claims", "card"],
   "properties": {
-    "brief_id": {"type": "string", "description": "sha256 of the normalised address, first 16 hex chars. The address itself is never stored."},
+    "brief_id": {"type": "string", "description": "sha256 of the normalized address, first 16 hex chars. The address itself is never stored."},
     "generated_at": {"type": "string", "format": "date-time"},
     "source_mode": {"enum": ["fixtures", "agent", "full"]},
     "fixture": {"type": "boolean", "description": "True when the brief is synthetic test data. Operators and sources are fictional."},
@@ -27,7 +27,8 @@
       "type": "object",
       "required": ["ai_rent_usd_per_month", "percentile", "band"],
       "properties": {
-        "ai_rent_usd_per_month": {"type": ["number", "null"], "description": "Change in a typical household's monthly bill over the trend window, in USD. Modelled. Null when the state price series is unavailable."},
+        "ai_rent_usd_per_month": {"type": ["number", "null"], "description": "Change in a typical household's monthly bill over the trend window, in USD. Modeled: state average price times typical household usage. Null when the state price series is unavailable."},
+        "ai_rent_range_usd_per_month": {"type": ["array", "null"], "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Low and high of the same modeled change, from the spread of household usage around the typical figure. The UI shows the range, never the point estimate alone."},
         "percentile": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Population-weighted percentile across US states. Label it as such."},
         "band": {"enum": ["low", "medium", "high", "critical"]},
         "one_liner": {"type": "string", "description": "One sentence for the card. No causal claims."}
@@ -45,6 +46,12 @@
       }
     },
     "claims": {"type": "array", "items": {"$ref": "#/$defs/claim"}},
+    "at_your_house": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "What this means at your house: three or four plain-language sentences a resident would screenshot for a neighbor. A layer over the five sections, not a sixth section. Each sentence still carries its status, confidence and sources. Includes the other side (local tax revenue) when it is evidenced.",
+      "items": {"$ref": "#/$defs/house_line"}
+    },
     "card": {
       "type": "object",
       "required": ["title", "lines"],
@@ -73,7 +80,7 @@
       "required": ["id", "section", "text", "source", "verdict"],
       "properties": {
         "id": {"type": "string"},
-        "section": {"enum": ["on_your_grid", "coming", "your_bill", "protection", "hearing"]},
+        "section": {"enum": ["on_your_grid", "coming", "your_bill", "protection", "hearing", "at_your_house"]},
         "text": {"type": "string"},
         "source": {"$ref": "#/$defs/source"},
         "drafted_by": {"type": "string", "description": "Model id that drafted the claim."},
@@ -99,6 +106,17 @@
         "hearing": {"$ref": "#/$defs/hearing"}
       }
     },
+    "house_line": {
+      "type": "object",
+      "required": ["text", "topic", "status", "confidence", "sources"],
+      "properties": {
+        "text": {"type": "string", "description": "One or two short sentences, no jargon, no causal claim about bills. Numbers compared to something a person knows (homes, miles)."},
+        "topic": {"enum": ["bill", "water", "noise", "land", "air", "grid", "taxes", "other"]},
+        "status": {"$ref": "#/$defs/status"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}}
+      }
+    },
     "facility": {
       "type": "object",
       "required": ["name", "operator", "distance_km", "status"],
@@ -111,7 +129,7 @@
         "status": {"enum": ["live", "under_construction", "announced"]},
         "estimated_mw": {"type": ["number", "null"]},
         "mw_basis": {"enum": ["filed", "reported", "class_estimate", null]},
-        "shares_substation": {"type": ["boolean", "null"]},
+        "shares_substation": {"type": ["boolean", "null"], "description": "Whether the facility is likely fed from the same transmission substation as the address. An inference from distance and public substation locations, never from utility records, which are not public at address level. The UI says 'likely' and never puts this in a headline."},
         "lat": {"type": "number"},
         "lon": {"type": "number"}
       }
@@ -139,7 +157,7 @@
         "trend_pct": {"type": "number"},
         "window_months": {"type": "integer"},
         "typical_household_kwh_month": {"type": "number"},
-        "attribution": {"type": ["string", "null"], "description": "What a regulator or market monitor attributes to data-centre load, quoted and cited. Never our own causal claim."}
+        "attribution": {"type": ["string", "null"], "description": "What a regulator or market monitor attributes to data-center load, quoted and cited. Never our own causal claim."}
       }
     },
     "tariff": {

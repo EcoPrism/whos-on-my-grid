@@ -5,7 +5,7 @@ verifier fills them in afterwards."""
 from typing import Any
 
 from app.brief.draft import DraftResult, SectionFailure
-from app.brief.headline import Drafts, derive_card, derive_headline
+from app.brief.headline import Drafts, bill_house_line, derive_card, derive_headline
 from app.config import DRAFT_MODEL_ID
 from app.geocode import GeocodeResult
 from app.schema import SECTION_IDS
@@ -28,7 +28,13 @@ _EMPTY_EXTRA: dict[str, dict[str, Any]] = {
 
 
 def assemble_brief(
-    geo: GeocodeResult, drafts: Drafts, *, brief_id: str, now_iso: str
+    geo: GeocodeResult,
+    drafts: Drafts,
+    house: list[dict[str, Any]] | None = None,
+    *,
+    brief_id: str,
+    now_iso: str,
+    verified: bool = True,
 ) -> dict[str, Any]:
     claims: list[dict[str, Any]] = []
     sections: dict[str, Any] = {}
@@ -63,6 +69,30 @@ def assemble_brief(
             }
         sections[sid] = section
 
+    # The strip: the bill sentence first, then the model's lines, each `reported`
+    # with the claims it rests on.
+    at_your_house: list[dict[str, Any]] = []
+    bill_line = bill_house_line(drafts)
+    if bill_line:
+        bill_line["sources"] = list(sections["your_bill"]["sources"])
+        at_your_house.append(bill_line)
+    for line in house or []:
+        first = len(claims) + 1
+        own = [
+            _claim("at_your_house", c, n, now_iso)
+            for n, c in enumerate(line["claims"], start=first)
+        ]
+        claims.extend(own)
+        at_your_house.append(
+            {
+                "text": line["text"],
+                "topic": line["topic"],
+                "status": "reported",
+                "confidence": max(0.0, min(1.0, float(line["confidence"]))),
+                "sources": _distinct_sources(own),
+            }
+        )
+
     return {
         "brief_id": brief_id,
         "generated_at": now_iso,
@@ -80,7 +110,8 @@ def assemble_brief(
         "headline": derive_headline(drafts, geo),
         "sections": sections,
         "claims": claims,
-        "card": derive_card(drafts, geo, claims),
+        "at_your_house": at_your_house[:5],
+        "card": derive_card(drafts, geo, claims, verified=verified),
     }
 
 

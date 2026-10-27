@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.brief.cache import BriefCache
 from app.brief.fetch import HttpFetcher
@@ -37,20 +38,24 @@ def create_app(service: BriefService | None = None) -> FastAPI:
         raise RuntimeError(
             f"GRID_LLM_PROVIDER must be 'openai' or 'fake', got {settings.llm_provider!r}"
         )
-    if settings.brief_source == "agent" and settings.llm_provider == "openai":
-        if not settings.openai_api_key:
-            raise RuntimeError(
-                "GRID_OPENAI_API_KEY is required in agent mode (gateway virtual key)"
-            )
-        if not settings.baseten_api_key:
-            raise RuntimeError("GRID_BASETEN_API_KEY is required in agent mode (verifier)")
+    # The verifier is optional: without GRID_BASETEN_API_KEY claims stay unchecked.
+    if (
+        settings.brief_source == "agent"
+        and settings.llm_provider == "openai"
+        and not settings.openai_api_key
+    ):
+        raise RuntimeError("GRID_OPENAI_API_KEY is required in agent mode (gateway virtual key)")
 
     logging.basicConfig(level=logging.INFO)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         log_event(
-            "app_ready", ms=uptime_ms(), mode=settings.brief_source, llm=settings.llm_provider
+            "app_ready",
+            ms=uptime_ms(),
+            mode=settings.brief_source,
+            llm=settings.llm_provider,
+            verifier=settings.llm_provider != "openai" or bool(settings.baseten_api_key),
         )
         yield
 
@@ -80,6 +85,23 @@ def create_app(service: BriefService | None = None) -> FastAPI:
             ms=int((time.monotonic() - started) * 1000),
         )
         return response
+
+    countries = {c.strip().upper() for c in settings.allowed_countries.split(",") if c.strip()}
+    if countries:
+        header = settings.country_header.lower()
+
+        @app.middleware("http")
+        async def country_gate(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
+            # Health stays open for probes; brief routes are gated. Fail closed:
+            # a missing header is a misconfigured edge, not a US visitor.
+            if request.url.path.startswith("/api/brief"):
+                country = (request.headers.get(header) or "").upper()
+                if country not in countries:
+                    log_event("country_blocked", country=country or "none")
+                    return JSONResponse({"detail": "not_available_in_region"}, status_code=403)
+            return await call_next(request)
 
     app.include_router(brief.router)
     return app

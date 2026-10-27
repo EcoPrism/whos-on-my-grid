@@ -5,6 +5,7 @@ Run: python fixtures/make_fixtures.py
 
 import hashlib
 import json
+import math
 from pathlib import Path
 
 OUT = Path(__file__).parent / "briefs"
@@ -27,23 +28,65 @@ ADDRESSES = {
 }
 
 
+def km(a_lat, a_lon, b_lat, b_lon):
+    """Great-circle distance, so every plotted facility sits where its row says."""
+    p1, p2 = math.radians(a_lat), math.radians(b_lat)
+    dphi, dl = p2 - p1, math.radians(b_lon - a_lon)
+    h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return round(2 * 6371.0 * math.asin(math.sqrt(h)), 1)
+
+
+def facility(key, name, operator, lat, lon, status, mw, basis, codename=None, shares=None, op_conf=0.95):
+    a = ADDRESSES[key]
+    return {"name": name, "codename": codename, "operator": operator, "operator_confidence": op_conf,
+            "distance_km": km(a["lat"], a["lon"], lat, lon), "status": status, "estimated_mw": mw, "mw_basis": basis,
+            "shares_substation": shares, "lat": lat, "lon": lon}
+
+
+def price(rate_now, rate_then, kwh, attribution=None):
+    trend = round((rate_now / rate_then - 1) * 100, 1)
+    return {"currency": "USD", "rate_now": rate_now, "rate_then": rate_then, "trend_pct": trend, "window_months": 24,
+            "typical_household_kwh_month": kwh, "attribution": attribution}
+
+
+# The headline number and its range come from the price block and nowhere else,
+# the same arithmetic as services/api/app/brief/headline.py. The range is the
+# spread of household usage around the typical figure (±20%).
+def rent(p):
+    return round((p["rate_now"] - p["rate_then"]) * p["typical_household_kwh_month"], 1)
+
+
+def rent_range(p):
+    diff = p["rate_now"] - p["rate_then"]
+    k = p["typical_household_kwh_month"]
+    return [float(round(diff * k * 0.8)), float(round(diff * k * 1.2))]
+
+
+def headline(p, percentile, band, one_liner):
+    return {"ai_rent_usd_per_month": rent(p), "ai_rent_range_usd_per_month": rent_range(p), "percentile": percentile, "band": band, "one_liner": one_liner}
+
+
 def section(status, confidence, model, summary, sources=(), gap=None, **extra):
     s = {"status": status, "confidence": confidence, "model": model, "summary": summary, "gap": gap, "sources": list(sources)}
     s.update(extra)
     return s
 
 
+def house(topic, status, confidence, text, sources=()):
+    return {"text": text, "topic": topic, "status": status, "confidence": confidence, "sources": list(sources)}
+
+
 def claim(cid, sec, text, source, verdict="supported", note=None):
-    return {"id": cid, "section": sec, "text": text, "source": source, "drafted_by": "muse-spark-1.3",
-            "verdict": verdict, "verified_by": "meta-models/muse-spark-open-1026" if verdict != "unchecked" else None, "verifier_note": note}
+    return {"id": cid, "section": sec, "text": text, "source": source, "drafted_by": "muse-spark-1.3", "verdict": verdict,
+            "verified_by": "meta-models/muse-spark-open", "verifier_note": note}
 
 
-def brief(key, headline, sections, claims, card):
+def brief(key, headline, sections, claims, card, at_your_house):
     a = ADDRESSES[key]
     return {
         "brief_id": hashlib.sha256(a["display"].lower().encode()).hexdigest()[:16],
         "generated_at": NOW, "source_mode": "fixtures", "fixture": True,
-        "address": a, "headline": headline, "sections": sections, "claims": claims, "card": card,
+        "address": a, "headline": headline, "sections": sections, "claims": claims, "at_your_house": at_your_house, "card": card,
     }
 
 
@@ -51,36 +94,57 @@ BRIEFS = {}
 
 # ---------------------------------------------------------------- ashburn ----
 s_pdb = SRC("Facility registry (fictional)", "https://example.org/registry/ash-01")
-s_eia = SRC("State residential price series (fictional)", "https://example.org/prices/VA", "Average residential price, VA, Aug 2026: 15.1 c/kWh")
+s_terr = SRC("Utility service territory map (fictional)", "https://example.org/territory/VA", "Dominion Energy Virginia: Loudoun County east of Route 15")
+s_eia = SRC("State residential price series (fictional)", "https://example.org/prices/VA", "Average residential price, VA, Aug 2026: 15.1 c/kWh; Aug 2024: 12.3 c/kWh")
 s_mm = SRC("Regional market monitor report (fictional)", "https://example.org/mm/2026", "63% of the capacity price increase is attributable to data center load", page=12)
 s_tar = SRC("Commission order, large-load tariff (fictional)", "https://example.org/scc/order-2026-0412", "Customers with demand above 25 MW shall bear the incremental cost of transmission upgrades", page=7)
 s_hear = SRC("Board of Supervisors meeting archive, 14 Oct 2026 (fictional)", "https://example.org/loudoun/2026-10-14", "We are not going to approve another campus on that substation until the utility shows us the capacity study")
+s_water = SRC("Water authority large-user permits (fictional)", "https://example.org/loudounwater/permits-2026", "Combined permitted daily withdrawal, data center accounts: 4.2 MGD, of which 2.3 MGD reclaimed", page=4)
+s_budget = SRC("County adopted budget FY2027 (fictional)", "https://example.org/loudoun/budget-fy27", "Data center personal property tax accounts for 38 percent of general fund revenue and allowed a two-cent reduction in the real property tax rate", page=11)
+p_va = price(0.151, 0.123, 1100, "63% of the capacity price increase is attributable to data center load (market monitor, fictional)")
+
+# Fifteen facilities, nine within a mile, every one with a point on the map.
+# Eight Northgate buildings make the near cluster; the substation flag is an
+# inference from distance and is shown as such.
+ASHBURN_FACILITIES = [
+    *[facility("ashburn", f"Northgate Campus DC{i}", "Halvex Digital (fictional)", lat, lon, "live", 22, "reported", shares=True, op_conf=0.98)
+      for i, (lat, lon) in enumerate([(39.0185, -77.4565), (39.0192, -77.4552), (39.0199, -77.4540), (39.0206, -77.4528),
+                                      (39.0178, -77.4548), (39.0186, -77.4535), (39.0194, -77.4522), (39.0213, -77.4545)], start=1)],
+    facility("ashburn", "Loudoun Gateway IAD-4", "Meridian Realty Trust (fictional)", 39.012, -77.466, "live", 96, "reported", op_conf=0.98),
+    facility("ashburn", "Ashburn Crossing B", "Halvex Digital (fictional)", 39.004, -77.470, "live", 36, "reported", op_conf=0.96),
+    facility("ashburn", "Beaumeade Hall 2", "Meridian Realty Trust (fictional)", 39.027, -77.443, "live", 48, "reported", op_conf=0.97),
+    facility("ashburn", "Pacific Blvd Colo", "Pinefield Networks (fictional)", 39.000, -77.440, "live", 24, "class_estimate", op_conf=0.9),
+    facility("ashburn", "Broad Run Technology Park", "Orrin Cloud Services (fictional)", 39.03, -77.48, "under_construction", 300, "filed", codename="Project Kestrel", shares=False, op_conf=0.81),
+    facility("ashburn", "Waxpool Edge Site", "Pinefield Networks (fictional)", 39.04, -77.49, "live", 10, "class_estimate", op_conf=0.95),
+    facility("ashburn", "Dulles Tech Center 7", "Orrin Cloud Services (fictional)", 38.985, -77.435, "live", 60, "reported", op_conf=0.93),
+]
+assert len(ASHBURN_FACILITIES) == 15
+assert sum(1 for f in ASHBURN_FACILITIES if f["distance_km"] <= 1.609) == 9
+
 BRIEFS["ashburn"] = brief(
     "ashburn",
-    {"ai_rent_usd_per_month": 31.4, "percentile": 94, "band": "critical",
-     "one_liner": "Fifteen data centres within five miles share your substation. A typical home here pays about $31 more a month than two years ago."},
+    headline(p_va, 94, "critical",
+             "Fifteen data centers within five miles are on your local grid, served by Dominion Energy. A typical home here pays about $31 more a month than two years ago."),
     {
         "on_your_grid": section("measured", 0.92, None,
-            "Fifteen data-centre facilities sit within five miles, nine of them within one mile. Eight share the Nimbus 230 kV substation with your street.",
-            [s_pdb], facilities=[
-                {"name": "Northgate Campus DC1-DC9", "codename": None, "operator": "Halvex Digital (fictional)", "operator_confidence": 0.98, "distance_km": 0.4, "status": "live", "estimated_mw": 180, "mw_basis": "reported", "shares_substation": True, "lat": 39.019, "lon": -77.455},
-                {"name": "Loudoun Gateway IAD-4", "codename": None, "operator": "Meridian Realty Trust (fictional)", "operator_confidence": 0.98, "distance_km": 0.9, "status": "live", "estimated_mw": 96, "mw_basis": "reported", "shares_substation": True, "lat": 39.012, "lon": -77.466},
-                {"name": "Broad Run Technology Park", "codename": "Project Kestrel", "operator": "Orrin Cloud Services (fictional)", "operator_confidence": 0.81, "distance_km": 2.7, "status": "under_construction", "estimated_mw": 300, "mw_basis": "filed", "shares_substation": False, "lat": 39.03, "lon": -77.48},
-                {"name": "Waxpool Edge Site", "codename": None, "operator": "Pinefield Networks (fictional)", "operator_confidence": 0.95, "distance_km": 3.9, "status": "live", "estimated_mw": 10, "mw_basis": "class_estimate", "shares_substation": False, "lat": 39.04, "lon": -77.49},
-            ]),
+            "Fifteen data-center facilities sit within five miles, nine of them within one mile. All are served by Dominion Energy, the utility that serves your street. "
+            "The eight Northgate buildings are likely fed from the same 230 kV substation as your neighborhood; that is inferred from distance, not from utility records.",
+            [s_pdb, s_terr], facilities=ASHBURN_FACILITIES),
         "coming": section("measured", 0.84, "sam-3.1",
-            "Large-roof footprint within five miles grew from 112 to 171 acres between the 2023 and 2025 imagery. One 23-acre site 2.7 km north is not in any facility database.",
+            "Within five miles, 59 acres of open land became data-center roof between the 2023 and 2025 imagery, taking the total from 112 to 171 acres. "
+            "One 23-acre site 1.4 miles north of you is in no facility database.",
             [SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/VA")], construction=[
-                {"label": "Broad Run north parcel", "distance_km": 2.7, "footprint_acres_then": 0, "footprint_acres_now": 23.1, "vintages": [2023, 2025], "in_database": False, "polygon": [[39.031, -77.482], [39.031, -77.478], [39.028, -77.478], [39.028, -77.482]]},
-                {"label": "Northgate expansion", "distance_km": 0.6, "footprint_acres_then": 41.0, "footprint_acres_now": 58.4, "vintages": [2023, 2025], "in_database": True, "polygon": [[39.020, -77.457], [39.020, -77.452], [39.017, -77.452], [39.017, -77.457]]},
+                {"label": "Broad Run north parcel", "distance_km": km(39.0163, -77.4588, 39.0295, -77.48), "footprint_acres_then": 0, "footprint_acres_now": 23.1, "vintages": [2023, 2025], "in_database": False, "polygon": [[39.031, -77.482], [39.031, -77.478], [39.028, -77.478], [39.028, -77.482]]},
+                {"label": "Northgate expansion", "distance_km": km(39.0163, -77.4588, 39.0185, -77.4545), "footprint_acres_then": 41.0, "footprint_acres_now": 58.4, "vintages": [2023, 2025], "in_database": True, "polygon": [[39.020, -77.457], [39.020, -77.452], [39.017, -77.452], [39.017, -77.457]]},
             ]),
         "your_bill": section("modelled", 0.78, "muse-spark-1.3",
-            "Your state's residential price rose 14.2% over 24 months. For a home using 1,100 kWh a month that is about $31 more per month. The regional market monitor attributes most of the latest capacity-price increase to data-centre load.",
-            [s_eia, s_mm], price={"currency": "USD", "rate_now": 0.151, "rate_then": 0.132, "trend_pct": 14.2, "window_months": 24, "typical_household_kwh_month": 1100,
-                                  "attribution": "63% of the capacity price increase is attributable to data center load (market monitor, fictional)"}),
+            "Your state's average residential price rose 22.8% over 24 months. For a home using 1,100 kWh a month that is about $31 more per month, between $25 and $37 depending on how much you use. "
+            "The regional market monitor attributes most of the latest capacity-price increase to data-center load.",
+            [s_eia, s_mm], price=p_va),
         "protection": section("reported", 0.88, "muse-spark-1.3",
-            "A large-load tariff is in force. Customers above 25 MW bear incremental transmission costs, which shields households from that part of the build-out but not from capacity prices.",
-            [s_tar], tariff={"large_load_tariff": "in_force", "name": "Schedule GS-5 (fictional)", "protects_households": True, "docket": "PUR-2026-00041"}),
+            "Partly. A large-load tariff is in force: customers above 25 MW pay for their own transmission upgrades, so that part of the build-out is kept off your bill. "
+            "It does not shield you from capacity prices, which every customer pays and which the market monitor says are rising with data-center load.",
+            [s_tar, s_mm], tariff={"large_load_tariff": "in_force", "name": "Schedule GS-5 (fictional)", "protects_households": True, "docket": "PUR-2026-00041"}),
         "hearing": section("measured", 0.9, "muse-voice-transcribe-1.0",
             "The Board of Supervisors votes on the Broad Run rezoning on 12 November. At the last meeting a supervisor said no further campus would be approved on that substation without a capacity study.",
             [s_hear], hearing={"next_date": "2026-11-12", "body": "Loudoun County Board of Supervisors", "subject": "Broad Run Technology Park rezoning",
@@ -89,40 +153,50 @@ BRIEFS["ashburn"] = brief(
                                    {"speaker_role": "resident", "speaker_name": None, "quote": "The hum starts at ten and does not stop", "timestamp_s": 5330.5}]}),
     },
     [
-        claim("c1", "on_your_grid", "Eight facilities share the Nimbus substation with the address.", s_pdb),
-        claim("c2", "coming", "A 23-acre large-roof site 2.7 km north appears in 2025 imagery and not in 2023 imagery.", SRC("USDA aerial imagery 2025 (public domain)", "https://example.org/naip/VA")),
-        claim("c3", "your_bill", "The state residential price rose 14.2% between Aug 2024 and Aug 2026.", s_eia),
-        claim("c4", "your_bill", "The market monitor attributes 63% of the capacity price increase to data-centre load.", s_mm),
+        claim("c1", "on_your_grid", "Fifteen facilities within five miles are in Dominion Energy Virginia's service territory, as is the address.", s_terr),
+        claim("c2", "coming", "A 23-acre large-roof site 2.3 km north appears in 2025 imagery and not in 2023 imagery.", SRC("USDA aerial imagery 2025 (public domain)", "https://example.org/naip/VA")),
+        claim("c3", "your_bill", "The state residential price rose 22.8% between Aug 2024 and Aug 2026.", s_eia),
+        claim("c4", "your_bill", "The market monitor attributes 63% of the capacity price increase to data-center load.", s_mm),
         claim("c5", "protection", "Customers above 25 MW bear incremental transmission costs under the order.", s_tar),
         claim("c6", "hearing", "The rezoning vote is scheduled for 12 November 2026.", s_hear, "unverifiable", "Agenda for 12 Nov not yet published; date comes from the chair's statement at the 14 Oct meeting."),
+        claim("c7", "at_your_house", "Data-center accounts within five miles are permitted to withdraw up to 4.2 million gallons a day, 2.3 million of it reclaimed water.", s_water),
+        claim("c8", "at_your_house", "Data-center personal property tax is 38% of the county general fund, per the adopted budget.", s_budget),
     ],
-    {"title": "Who's on my grid: Ashburn, VA", "lines": ["15 data centres within 5 miles, 8 on your substation", "+$31/mo for a typical home vs 2024, more than 94% of US households", "23 acres of new campus visible from the air, in no database", "County vote in 16 days"],
-     "footer": "Sources: facility registry, state price series, market monitor, county archive. Fictional fixture."},
+    {"title": "Who's on my grid: Ashburn, VA", "lines": ["15 data centers within 5 miles, all on your local grid", "About +$31/mo for a typical home vs 2024, more than 94% of US households", "59 acres of open land became data-center roof since 2023", "County vote in 16 days"],
+     "footer": "Sources: facility registry, state price series, market monitor, water permits, county budget, county archive. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.78, "Your power bill is about $31 a month higher than two years ago, somewhere between $25 and $37 depending on how much electricity you use.", [s_eia]),
+        house("water", "reported", 0.72, "The data centers within five miles are permitted to use up to 4.2 million gallons of water a day, about what 14,000 homes use. Just over half of it has to be reclaimed water, not drinking water.", [s_water]),
+        house("noise", "modelled", 0.45, "The nearest building is 0.2 miles from your door. At the last county meeting a resident said the hum starts at ten and does not stop. No sound measurement for your street is public.", [s_hear]),
+        house("taxes", "reported", 0.85, "The other side, honestly: data centers pay about 38% of Loudoun County's general fund, and the county budget credits that for cutting the residential property tax rate.", [s_budget]),
+    ],
 )
 
 # ---------------------------------------------------------------- kenosha ----
 s_news = SRC("County planning packet (fictional)", "https://example.org/kenosha/packet-2026-10", "The applicant, identified in filings as Project Tembo, is a subsidiary of Calder Hyperscale Inc.", page=3)
 s_eia_wi = SRC("State residential price series (fictional)", "https://example.org/prices/WI", "Average residential price, WI, Aug 2026: 17.4 c/kWh")
 s_hear_k = SRC("County Board meeting archive, 7 Oct 2026 (fictional)", "https://example.org/kenosha/2026-10-07", "We will take public comment on the water agreement at the November 5 session")
+s_naip_wi = SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/WI")
+p_wi = price(0.174, 0.164, 950)
 BRIEFS["kenosha"] = brief(
     "kenosha",
-    {"ai_rent_usd_per_month": 9.8, "percentile": 61, "band": "high",
-     "one_liner": "Nothing is running yet. A 600 MW campus filed under a codename is 2.4 miles away and the county votes on 5 November."},
+    headline(p_wi, 61, "high",
+             "Nothing is running yet. A 600 MW campus filed under a codename is 2.4 miles away and the county votes on 5 November."),
     {
         "on_your_grid": section("reported", 0.81, "muse-spark-1.3",
-            "No data-centre facility is live within five miles. One campus is announced 3.9 km west under the name Project Tembo. The county planning packet identifies the applicant as Calder Hyperscale.",
+            "No data-center facility is live within five miles. One campus is announced 3.9 km west under the name Project Tembo. The county planning packet identifies the applicant as Calder Hyperscale.",
             [s_news], facilities=[
-                {"name": "Project Tembo", "codename": "Project Tembo", "operator": "Calder Hyperscale Inc. (fictional)", "operator_confidence": 0.86, "distance_km": 3.9, "status": "announced", "estimated_mw": 600, "mw_basis": "filed", "shares_substation": None, "lat": 42.55, "lon": -87.96}]),
+                facility("kenosha", "Project Tembo", "Calder Hyperscale Inc. (fictional)", 42.55, -87.96, "announced", 600, "filed", codename="Project Tembo", op_conf=0.86)]),
         "coming": section("measured", 0.7, "sam-3.1",
-            "Imagery shows grading on 140 acres at the announced site between 2023 and 2025 but no roofs yet.",
-            [SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/WI")], construction=[
+            "About 140 acres of farmland at the announced site has been graded flat between the 2023 and 2025 imagery. No roofs yet.",
+            [s_naip_wi], construction=[
                 {"label": "Project Tembo site", "distance_km": 3.9, "footprint_acres_then": 0, "footprint_acres_now": 0, "vintages": [2023, 2025], "in_database": False, "polygon": []}],
             gap="Graded land is not a roof. Footprint is 0 until buildings appear."),
         "your_bill": section("modelled", 0.74, "muse-spark-1.3",
-            "Your state's residential price rose 6.1% over 24 months, about $10 more per month for a typical home. No regulator statement attributes any of it to data centres yet.",
-            [s_eia_wi], price={"currency": "USD", "rate_now": 0.174, "rate_then": 0.164, "trend_pct": 6.1, "window_months": 24, "typical_household_kwh_month": 950, "attribution": None}),
+            "Your state's residential price rose 6.1% over 24 months, about $10 more per month for a typical home. No regulator statement attributes any of it to data centers yet.",
+            [s_eia_wi], price=p_wi),
         "protection": section("reported", 0.6, "muse-spark-1.3",
-            "A large-load tariff has been proposed but not approved. Until it is, the cost allocation for the new load is the general tariff.",
+            "Not yet. A large-load tariff has been proposed but not approved. Until it is, the new load is served under the general tariff and nothing in the rules keeps its grid costs off your bill.",
             [SRC("Commission docket index (fictional)", "https://example.org/psc/docket-5-UR-200")], tariff={"large_load_tariff": "proposed", "name": "Very Large Customer rate (fictional)", "protects_households": None, "docket": "5-UR-200"}),
         "hearing": section("measured", 0.9, "muse-voice-transcribe-1.0",
             "The County Board takes public comment on the water agreement on 5 November. At the 7 October meeting the chair confirmed the comment session; a resident asked who the applicant was and was not answered.",
@@ -137,93 +211,123 @@ BRIEFS["kenosha"] = brief(
         claim("c3", "hearing", "Public comment on the water agreement is scheduled for 5 November.", s_hear_k),
         claim("c4", "protection", "The large-load tariff is proposed and not yet approved.", SRC("Commission docket index (fictional)", "https://example.org/psc/docket-5-UR-200"), "unverifiable", "Docket index lists the filing but the verifier could not read the status field."),
     ],
-    {"title": "Who's on my grid: Pleasant Prairie, WI", "lines": ["0 live, 1 announced: Project Tembo = Calder Hyperscale, 600 MW, 2.4 mi", "140 acres graded, no roofs yet", "+$10/mo for a typical home vs 2024", "Public comment in 9 days"],
+    {"title": "Who's on my grid: Pleasant Prairie, WI", "lines": ["0 live, 1 announced: Project Tembo = Calder Hyperscale, 600 MW, 2.4 mi", "140 acres of farmland graded, no roofs yet", "About +$10/mo for a typical home vs 2024", "Public comment in 9 days"],
      "footer": "Sources: county packet, state price series, county archive. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.74, "Your power bill is about $10 a month higher than two years ago, between $8 and $11 depending on usage. No regulator has tied any of that to data centers.", [s_eia_wi]),
+        house("water", "reported", 0.6, "The county is about to vote on a water agreement for the Project Tembo site. How much water it would use has not been made public. Comment is open on 5 November.", [s_hear_k]),
+        house("land", "measured", 0.7, "About 140 acres of farmland 2.4 miles west of you has been graded flat since 2023. Nothing has been built on it yet.", [s_naip_wi]),
+    ],
 )
 
 # ----------------------------------------------------------------- tucson ----
 s_eia_az = SRC("State residential price series (fictional)", "https://example.org/prices/AZ", "Average residential price, AZ, Aug 2026: 14.9 c/kWh")
+s_naip_az = SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/AZ")
+s_pima = SRC("Board of Supervisors meeting archive, 20 Oct 2026 (fictional)", "https://example.org/pima/2026-10-20", "The motion to deny the development agreement carries unanimously")
+p_az = price(0.149, 0.137, 1150)
 BRIEFS["tucson"] = brief(
     "tucson",
-    {"ai_rent_usd_per_month": 12.6, "percentile": 72, "band": "high",
-     "one_liner": "A 61-acre building appeared 1.8 miles away between the last two aerial surveys. No database lists it, and the state has no large-load tariff."},
+    headline(p_az, 72, "high",
+             "A 61-acre building appeared 1.8 miles away between the last two aerial surveys. No database lists it, and the state has no large-load tariff."),
     {
         "on_your_grid": section("reported", 0.55, "muse-spark-1.3",
             "No facility within five miles appears in any registry. One is visible from the air (see Coming). The operator is not known.",
             [], gap="No registry entry and no public filing names an operator for the site visible in imagery.", facilities=[]),
         "coming": section("measured", 0.88, "sam-3.1",
-            "A 61-acre large-roof building 2.9 km south-east appears in 2025 imagery and not in 2023 imagery. It is in no facility database.",
-            [SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/AZ")], construction=[
+            "A 61-acre building, about 46 football fields of roof, appeared on open desert 2.9 km south-east between the 2023 and 2025 imagery. It is in no facility database.",
+            [s_naip_az], construction=[
                 {"label": "Houghton Rd south parcel", "distance_km": 2.9, "footprint_acres_then": 0, "footprint_acres_now": 61.2, "vintages": [2023, 2025], "in_database": False, "polygon": [[32.105, -110.765], [32.105, -110.758], [32.100, -110.758], [32.100, -110.765]]}]),
         "your_bill": section("modelled", 0.76, "muse-spark-1.3",
-            "Your state's residential price rose 8.9% over 24 months, about $13 more per month for a typical home.",
-            [s_eia_az], price={"currency": "USD", "rate_now": 0.149, "rate_then": 0.137, "trend_pct": 8.9, "window_months": 24, "typical_household_kwh_month": 1150, "attribution": None}),
+            "Your state's residential price rose 8.8% over 24 months, about $14 more per month for a typical home.",
+            [s_eia_az], price=p_az),
         "protection": section("reported", 0.7, "muse-spark-1.3",
-            "No large-load tariff was found for this state. Costs of serving new large customers fall under the general tariff.",
+            "No. No large-load tariff was found for this state. The cost of serving new large customers falls under the general tariff, which every customer pays.",
             [SRC("Commission tariff index (fictional)", "https://example.org/acc/tariffs")], tariff={"large_load_tariff": "none_found", "name": None, "protects_households": False, "docket": None}),
         "hearing": section("measured", 0.85, "muse-voice-transcribe-1.0",
             "The Board of Supervisors rejected the development agreement for the site on 20 October. No further hearing is scheduled.",
-            [SRC("Board of Supervisors meeting archive, 20 Oct 2026 (fictional)", "https://example.org/pima/2026-10-20", "The motion to deny the development agreement carries unanimously")],
+            [s_pima],
             hearing={"next_date": None, "body": "Pima County Board of Supervisors", "subject": "Development agreement, Houghton Rd parcel", "last_meeting_date": "2026-10-20",
                      "last_meeting_said": [{"speaker_role": "chair", "speaker_name": None, "quote": "The motion to deny the development agreement carries unanimously", "timestamp_s": 7720.0}]}),
     },
     [
         claim("c1", "coming", "A 61-acre building appears in 2025 imagery and not in 2023 imagery at the Houghton Rd parcel.", SRC("USDA aerial imagery 2025 (public domain)", "https://example.org/naip/AZ")),
-        claim("c2", "your_bill", "The state residential price rose 8.9% over 24 months.", s_eia_az),
+        claim("c2", "your_bill", "The state residential price rose 8.8% over 24 months.", s_eia_az),
         claim("c3", "protection", "No large-load tariff is listed in the commission tariff index.", SRC("Commission tariff index (fictional)", "https://example.org/acc/tariffs")),
-        claim("c4", "hearing", "The board denied the development agreement unanimously on 20 October.", SRC("Board of Supervisors meeting archive, 20 Oct 2026 (fictional)", "https://example.org/pima/2026-10-20", "The motion to deny the development agreement carries unanimously")),
+        claim("c4", "hearing", "The board denied the development agreement unanimously on 20 October.", s_pima),
     ],
-    {"title": "Who's on my grid: Tucson, AZ", "lines": ["61 acres of new building 1.8 mi away, in no database", "Operator: not known", "+$13/mo for a typical home vs 2024", "No large-load tariff in this state"],
+    {"title": "Who's on my grid: Tucson, AZ", "lines": ["61 acres of new building 1.8 mi away, in no database", "Operator: not known", "About +$14/mo for a typical home vs 2024", "No large-load tariff in this state"],
      "footer": "Sources: aerial imagery, state price series, commission index, county archive. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.76, "Your power bill is about $14 a month higher than two years ago, between $11 and $17 depending on usage.", [s_eia_az]),
+        house("land", "measured", 0.88, "A 61-acre building, about 46 football fields of roof, went up on open desert 1.8 miles from you between the last two aerial surveys. Nobody has said publicly who owns it.", [s_naip_az]),
+        house("other", "measured", 0.85, "The county board voted unanimously on 20 October to deny the site's development agreement. No new hearing is scheduled.", [s_pima]),
+    ],
 )
 
 # ------------------------------------------------------------------ boise ----
 s_eia_id = SRC("State residential price series (fictional)", "https://example.org/prices/ID", "Average residential price, ID, Aug 2026: 11.2 c/kWh")
+s_reg_id = SRC("Facility registry (fictional)", "https://example.org/registry/boi-01")
+s_naip_id = SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/ID")
+s_puc = SRC("Commission order (fictional)", "https://example.org/puc/order-36000", "Schedule 20 applies to new loads of 20 MW or more", page=2)
+p_id = price(0.112, 0.108, 1000)
 BRIEFS["boise"] = brief(
     "boise",
-    {"ai_rent_usd_per_month": 4.1, "percentile": 28, "band": "low",
-     "one_liner": "Two small facilities within five miles, no construction visible, and a typical home pays about $4 more a month than two years ago."},
+    headline(p_id, 28, "low",
+             "Two small facilities within five miles, no construction visible, and a typical home pays about $4 more a month than two years ago."),
     {
         "on_your_grid": section("measured", 0.9, None,
-            "Two facilities within five miles, both small colocation sites. Neither shares your substation.",
-            [SRC("Facility registry (fictional)", "https://example.org/registry/boi-01")], facilities=[
-                {"name": "Capitol Colo", "codename": None, "operator": "Sawtooth Data (fictional)", "operator_confidence": 0.97, "distance_km": 1.1, "status": "live", "estimated_mw": 10, "mw_basis": "class_estimate", "shares_substation": False, "lat": 43.62, "lon": -116.21},
-                {"name": "Boise Edge 2", "codename": None, "operator": "Pinefield Networks (fictional)", "operator_confidence": 0.97, "distance_km": 4.6, "status": "live", "estimated_mw": 10, "mw_basis": "class_estimate", "shares_substation": False, "lat": 43.59, "lon": -116.25}]),
+            "Two facilities within five miles, both small colocation sites, both served by Idaho Power like your street.",
+            [s_reg_id], facilities=[
+                facility("boise", "Capitol Colo", "Sawtooth Data (fictional)", 43.62, -116.21, "live", 10, "class_estimate", op_conf=0.97),
+                facility("boise", "Boise Edge 2", "Pinefield Networks (fictional)", 43.59, -116.25, "live", 10, "class_estimate", op_conf=0.97)]),
         "coming": section("measured", 0.8, "sam-3.1", "No new large-roof construction within five miles between the 2023 and 2025 imagery.",
-            [SRC("USDA aerial imagery 2023 and 2025 (public domain)", "https://example.org/naip/ID")], construction=[]),
+            [s_naip_id], construction=[]),
         "your_bill": section("modelled", 0.8, "muse-spark-1.3", "Your state's residential price rose 3.7% over 24 months, about $4 more per month for a typical home.",
-            [s_eia_id], price={"currency": "USD", "rate_now": 0.112, "rate_then": 0.108, "trend_pct": 3.7, "window_months": 24, "typical_household_kwh_month": 1000, "attribution": None}),
-        "protection": section("reported", 0.65, "muse-spark-1.3", "A large-load tariff is in force for customers above 20 MW.",
-            [SRC("Commission order (fictional)", "https://example.org/puc/order-36000", "Schedule 20 applies to new loads of 20 MW or more", page=2)], tariff={"large_load_tariff": "in_force", "name": "Schedule 20 (fictional)", "protects_households": True, "docket": "IPC-E-26-11"}),
+            [s_eia_id], price=p_id),
+        "protection": section("reported", 0.65, "muse-spark-1.3",
+            "Partly. A large-load tariff is in force for customers above 20 MW, so new large customers pay their own way onto the grid. The order does not say whether every cost of the build-out stays off household bills.",
+            [s_puc], tariff={"large_load_tariff": "in_force", "name": "Schedule 20 (fictional)", "protects_households": True, "docket": "IPC-E-26-11"}),
         "hearing": section("unavailable", 0.0, None, "Hearings in this county are not yet indexed.", [], gap="Ada County is not in the indexed set. See docs/counties.md.", hearing={"next_date": None, "body": None}),
     },
     [
         claim("c1", "your_bill", "The state residential price rose 3.7% over 24 months.", s_eia_id),
-        claim("c2", "protection", "Schedule 20 applies to new loads of 20 MW or more.", SRC("Commission order (fictional)", "https://example.org/puc/order-36000", "Schedule 20 applies to new loads of 20 MW or more", page=2)),
+        claim("c2", "protection", "Schedule 20 applies to new loads of 20 MW or more.", s_puc),
     ],
-    {"title": "Who's on my grid: Boise, ID", "lines": ["2 small facilities within 5 miles, none on your substation", "No new construction visible from the air", "+$4/mo for a typical home vs 2024", "Large-load tariff in force"],
+    {"title": "Who's on my grid: Boise, ID", "lines": ["2 small facilities within 5 miles, both colocation sites", "No new construction visible from the air", "About +$4/mo for a typical home vs 2024", "Large-load tariff in force"],
      "footer": "Sources: facility registry, aerial imagery, state price series, commission order. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.8, "Your power bill is about $4 a month higher than two years ago, between $3 and $5 depending on usage.", [s_eia_id]),
+        house("grid", "measured", 0.9, "Two small data centers sit within five miles, the nearest 0.7 miles away. Together they draw about 20 MW, roughly what 15,000 homes use at once.", [s_reg_id]),
+        house("land", "measured", 0.8, "Nothing new has been built within five miles between the 2023 and 2025 aerial surveys.", [s_naip_id]),
+    ],
 )
 
 # --------------------------------------------------------------- rural_sd ----
 s_eia_sd = SRC("State residential price series (fictional)", "https://example.org/prices/SD", "Average residential price, SD, Aug 2026: 12.8 c/kWh")
+s_reg_sd = SRC("Facility registry (fictional)", "https://example.org/registry/sd")
+s_naip_sd = SRC("USDA aerial imagery 2022 and 2024 (public domain)", "https://example.org/naip/SD")
+p_sd = price(0.128, 0.125, 1050)
 BRIEFS["rural_sd"] = brief(
     "rural_sd",
-    {"ai_rent_usd_per_month": 2.3, "percentile": 11, "band": "low",
-     "one_liner": "No data centre within five miles and nothing visible from the air. Your state's price rose about $2 a month for a typical home."},
+    headline(p_sd, 11, "low",
+             "No data center within five miles and nothing visible from the air. Your state's price rose about $3 a month for a typical home."),
     {
-        "on_your_grid": section("measured", 0.9, None, "No data-centre facility within five miles.", [SRC("Facility registry (fictional)", "https://example.org/registry/sd")], facilities=[]),
+        "on_your_grid": section("measured", 0.9, None, "No data-center facility within five miles.", [s_reg_sd], facilities=[]),
         "coming": section("measured", 0.8, "sam-3.1", "No new large-roof construction within five miles between the 2022 and 2024 imagery.",
-            [SRC("USDA aerial imagery 2022 and 2024 (public domain)", "https://example.org/naip/SD")], construction=[]),
-        "your_bill": section("modelled", 0.8, "muse-spark-1.3", "Your state's residential price rose 2.1% over 24 months, about $2 more per month for a typical home.",
-            [s_eia_sd], price={"currency": "USD", "rate_now": 0.128, "rate_then": 0.125, "trend_pct": 2.1, "window_months": 24, "typical_household_kwh_month": 1050, "attribution": None}),
+            [s_naip_sd], construction=[]),
+        "your_bill": section("modelled", 0.8, "muse-spark-1.3", "Your state's residential price rose 2.4% over 24 months, about $3 more per month for a typical home.",
+            [s_eia_sd], price=p_sd),
         "protection": section("unavailable", 0.0, "muse-spark-1.3", "Not known. No large-load tariff or docket was found for this state, and the absence could not be confirmed.", [],
             gap="Search found no tariff and no docket; the verifier could not confirm a negative.", tariff={"large_load_tariff": "unknown", "name": None, "protects_households": None, "docket": None}),
         "hearing": section("unavailable", 0.0, None, "Hearings in this county are not yet indexed.", [], gap="Faulk County is not in the indexed set.", hearing={"next_date": None, "body": None}),
     },
-    [claim("c1", "your_bill", "The state residential price rose 2.1% over 24 months.", s_eia_sd)],
-    {"title": "Who's on my grid: Faulkton, SD", "lines": ["Nothing within 5 miles", "Nothing new visible from the air", "+$2/mo for a typical home vs 2024", "Tariff protection: not known"],
+    [claim("c1", "your_bill", "The state residential price rose 2.4% over 24 months.", s_eia_sd)],
+    {"title": "Who's on my grid: Faulkton, SD", "lines": ["Nothing within 5 miles", "Nothing new visible from the air", "About +$3/mo for a typical home vs 2024", "Tariff protection: not known"],
      "footer": "Sources: facility registry, aerial imagery, state price series. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.8, "Your power bill is about $3 a month higher than two years ago, between $3 and $4 depending on usage.", [s_eia_sd]),
+        house("grid", "measured", 0.9, "There is no data center within five miles of you, and nothing new has been built from the air.", [s_reg_sd, s_naip_sd]),
+    ],
 )
 
 
@@ -231,4 +335,5 @@ if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     for key, b in BRIEFS.items():
         (OUT / f"{key}.json").write_text(json.dumps(b, indent=2) + "\n", encoding="utf-8")
-        print("wrote", key, b["brief_id"])
+        h = b["headline"]
+        print("wrote", key, b["brief_id"], h["ai_rent_usd_per_month"], h["ai_rent_range_usd_per_month"])

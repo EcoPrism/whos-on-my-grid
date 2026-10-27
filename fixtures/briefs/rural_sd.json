@@ -13,17 +13,21 @@
     "utility": "Northern Electric Cooperative"
   },
   "headline": {
-    "ai_rent_usd_per_month": 2.3,
+    "ai_rent_usd_per_month": 3.2,
+    "ai_rent_range_usd_per_month": [
+      3.0,
+      4.0
+    ],
     "percentile": 11,
     "band": "low",
-    "one_liner": "No data centre within five miles and nothing visible from the air. Your state's price rose about $2 a month for a typical home."
+    "one_liner": "No data center within five miles and nothing visible from the air. Your state's price rose about $3 a month for a typical home."
   },
   "sections": {
     "on_your_grid": {
       "status": "measured",
       "confidence": 0.9,
       "model": null,
-      "summary": "No data-centre facility within five miles.",
+      "summary": "No data-center facility within five miles.",
       "gap": null,
       "sources": [
         {
@@ -57,7 +61,7 @@
       "status": "modelled",
       "confidence": 0.8,
       "model": "muse-spark-1.3",
-      "summary": "Your state's residential price rose 2.1% over 24 months, about $2 more per month for a typical home.",
+      "summary": "Your state's residential price rose 2.4% over 24 months, about $3 more per month for a typical home.",
       "gap": null,
       "sources": [
         {
@@ -72,7 +76,7 @@
         "currency": "USD",
         "rate_now": 0.128,
         "rate_then": 0.125,
-        "trend_pct": 2.1,
+        "trend_pct": 2.4,
         "window_months": 24,
         "typical_household_kwh_month": 1050,
         "attribution": null
@@ -109,7 +113,7 @@
     {
       "id": "c1",
       "section": "your_bill",
-      "text": "The state residential price rose 2.1% over 24 months.",
+      "text": "The state residential price rose 2.4% over 24 months.",
       "source": {
         "title": "State residential price series (fictional)",
         "url": "https://example.org/prices/SD",
@@ -119,8 +123,47 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your power bill is about $3 a month higher than two years ago, between $3 and $4 depending on usage.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.8,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/SD",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, SD, Aug 2026: 12.8 c/kWh"
+        }
+      ]
+    },
+    {
+      "text": "There is no data center within five miles of you, and nothing new has been built from the air.",
+      "topic": "grid",
+      "status": "measured",
+      "confidence": 0.9,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/sd",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        },
+        {
+          "title": "USDA aerial imagery 2022 and 2024 (public domain)",
+          "url": "https://example.org/naip/SD",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
     }
   ],
   "card": {
@@ -128,7 +171,7 @@
     "lines": [
       "Nothing within 5 miles",
       "Nothing new visible from the air",
-      "+$2/mo for a typical home vs 2024",
+      "About +$3/mo for a typical home vs 2024",
       "Tariff protection: not known"
     ],
     "footer": "Sources: facility registry, aerial imagery, state price series. Fictional fixture."

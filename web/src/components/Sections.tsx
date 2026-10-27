@@ -1,23 +1,24 @@
-import type { Section, SectionId, Source, Status } from '../types'
+import type { ClaimSection, Section, SectionId, Source, Status } from '../types'
 import { fmtMoney } from '../pages/Home'
 
-export const SECTION_TITLES: Record<SectionId, string> = {
+export const SECTION_TITLES: Record<ClaimSection, string> = {
   on_your_grid: 'On your grid',
   coming: 'Coming',
   your_bill: 'Your bill',
   protection: 'Protection',
   hearing: 'Hearing',
+  at_your_house: 'At your house',
 }
 
 const STATUS_WORD: Record<Status, string> = {
   measured: 'Measured',
   reported: 'Reported',
-  modelled: 'Modelled',
+  modelled: 'Modeled',
   unavailable: 'Not known',
 }
 
 // Every section is a document block with a status rail on the left. The rail
-// colour is the status; a dashed rail means the section could not be filled.
+// color is the status; a dashed rail means the section could not be filled.
 export function SectionBlock({ id, section }: { id: SectionId; section: Section }) {
   return (
     <section id={id} className={`rail-${section.status} border-l-4 pl-5 sm:pl-7`}>
@@ -99,7 +100,7 @@ function Facilities({ section }: { section: Section }) {
             <td className="py-2 pr-3">
               <span className="font-semibold">{f.name}</span>
               <span className="block text-sm text-[var(--ink-soft)]">
-                {f.status.replace('_', ' ')}{f.shares_substation ? ', shares your substation' : ''}
+                {f.status.replace('_', ' ')}{f.shares_substation ? ', likely on your substation (inferred from distance)' : ''}
               </span>
             </td>
             <td className="py-2 pr-3">
@@ -170,7 +171,7 @@ function Bill({ section }: { section: Section }) {
         </p>
       ) : (
         <p className="mt-3 text-[15px] text-[var(--ink-soft)]">
-          No regulator or market monitor statement attributes any of this change to data centres. We do not make that claim ourselves.
+          No regulator or market monitor statement attributes any of this change to data centers. We do not make that claim ourselves.
         </p>
       )}
     </div>

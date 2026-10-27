@@ -13,7 +13,11 @@
     "utility": "Tucson Electric Power"
   },
   "headline": {
-    "ai_rent_usd_per_month": 12.6,
+    "ai_rent_usd_per_month": 13.8,
+    "ai_rent_range_usd_per_month": [
+      11.0,
+      17.0
+    ],
     "percentile": 72,
     "band": "high",
     "one_liner": "A 61-acre building appeared 1.8 miles away between the last two aerial surveys. No database lists it, and the state has no large-load tariff."
@@ -32,7 +36,7 @@
       "status": "measured",
       "confidence": 0.88,
       "model": "sam-3.1",
-      "summary": "A 61-acre large-roof building 2.9 km south-east appears in 2025 imagery and not in 2023 imagery. It is in no facility database.",
+      "summary": "A 61-acre building, about 46 football fields of roof, appeared on open desert 2.9 km south-east between the 2023 and 2025 imagery. It is in no facility database.",
       "gap": null,
       "sources": [
         {
@@ -79,7 +83,7 @@
       "status": "modelled",
       "confidence": 0.76,
       "model": "muse-spark-1.3",
-      "summary": "Your state's residential price rose 8.9% over 24 months, about $13 more per month for a typical home.",
+      "summary": "Your state's residential price rose 8.8% over 24 months, about $14 more per month for a typical home.",
       "gap": null,
       "sources": [
         {
@@ -94,7 +98,7 @@
         "currency": "USD",
         "rate_now": 0.149,
         "rate_then": 0.137,
-        "trend_pct": 8.9,
+        "trend_pct": 8.8,
         "window_months": 24,
         "typical_household_kwh_month": 1150,
         "attribution": null
@@ -104,7 +108,7 @@
       "status": "reported",
       "confidence": 0.7,
       "model": "muse-spark-1.3",
-      "summary": "No large-load tariff was found for this state. Costs of serving new large customers fall under the general tariff.",
+      "summary": "No. No large-load tariff was found for this state. The cost of serving new large customers falls under the general tariff, which every customer pays.",
       "gap": null,
       "sources": [
         {
@@ -167,13 +171,13 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
       "id": "c2",
       "section": "your_bill",
-      "text": "The state residential price rose 8.9% over 24 months.",
+      "text": "The state residential price rose 8.8% over 24 months.",
       "source": {
         "title": "State residential price series (fictional)",
         "url": "https://example.org/prices/AZ",
@@ -183,7 +187,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -199,7 +203,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -215,8 +219,55 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your power bill is about $14 a month higher than two years ago, between $11 and $17 depending on usage.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.76,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/AZ",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, AZ, Aug 2026: 14.9 c/kWh"
+        }
+      ]
+    },
+    {
+      "text": "A 61-acre building, about 46 football fields of roof, went up on open desert 1.8 miles from you between the last two aerial surveys. Nobody has said publicly who owns it.",
+      "topic": "land",
+      "status": "measured",
+      "confidence": 0.88,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/AZ",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
+    },
+    {
+      "text": "The county board voted unanimously on 20 October to deny the site's development agreement. No new hearing is scheduled.",
+      "topic": "other",
+      "status": "measured",
+      "confidence": 0.85,
+      "sources": [
+        {
+          "title": "Board of Supervisors meeting archive, 20 Oct 2026 (fictional)",
+          "url": "https://example.org/pima/2026-10-20",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "The motion to deny the development agreement carries unanimously"
+        }
+      ]
     }
   ],
   "card": {
@@ -224,7 +275,7 @@
     "lines": [
       "61 acres of new building 1.8 mi away, in no database",
       "Operator: not known",
-      "+$13/mo for a typical home vs 2024",
+      "About +$14/mo for a typical home vs 2024",
       "No large-load tariff in this state"
     ],
     "footer": "Sources: aerial imagery, state price series, commission index, county archive. Fictional fixture."

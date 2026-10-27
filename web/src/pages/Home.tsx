@@ -46,7 +46,7 @@ export default function Home() {
         Who's on<br />my grid?
       </h1>
       <p className="mt-8 max-w-[52ch] text-xl leading-snug">
-        Type a US address. Find out which data centres share your local grid, what is being built
+        Type a US address. Find out which data centers are on your local grid, what is being built
         near you, what your bill has done, and when the next vote is.
       </p>
 
@@ -84,7 +84,7 @@ export default function Home() {
                 <a href={`/b/${ex.key}`} className="flex items-baseline justify-between gap-4 py-3 no-underline hover:bg-white">
                   <span className="font-semibold">{ex.display}</span>
                   <span className="num shrink-0 text-sm text-[var(--ink-soft)]">
-                    {ex.ai_rent_usd_per_month === null ? 'bill: not known' : `${fmtMoney(ex.ai_rent_usd_per_month)}/mo`}
+                    {ex.ai_rent_usd_per_month === null ? 'bill: not known' : `about ${fmtMoney(ex.ai_rent_usd_per_month)}/mo`}
                   </span>
                 </a>
               </li>
@@ -122,6 +122,8 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
           : 'No brief for that address.'
       case 422:
         return 'Could not find that US address. Include the street number, city and state.'
+      case 403:
+        return 'This service covers US addresses and is only available from the United States.'
       case 503:
         return 'The address lookup service is not answering. Try again in a minute.'
       case 502:
@@ -136,4 +138,10 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
 export function fmtMoney(n: number) {
   const sign = n < 0 ? '−' : '+'
   return `${sign}$${Math.abs(n).toFixed(0)}`
+}
+
+// The modeled bill change is shown as a range, never as a point estimate alone.
+export function fmtRange([lo, hi]: [number, number]) {
+  const sign = hi < 0 ? '−' : '+'
+  return `${sign}$${Math.abs(lo).toFixed(0)} to $${Math.abs(hi).toFixed(0)}`
 }

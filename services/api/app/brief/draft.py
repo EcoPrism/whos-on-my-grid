@@ -4,10 +4,17 @@ assembler turns into an `unavailable` section with the reason in `gap`."""
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.brief.prompts import section_prompt, system_prompt
+from app.brief.prompts import house_prompt, house_system_prompt, section_prompt, system_prompt
 from app.geocode import GeocodeResult
 from app.llm.base import LLMError, LLMProvider
-from app.schema import SECTION_EXTRA, ValidationError, draft_schemas, validate_draft
+from app.schema import (
+    SECTION_EXTRA,
+    ValidationError,
+    draft_schemas,
+    house_schemas,
+    validate_draft,
+    validate_house_draft,
+)
 from app.telemetry import log_event
 
 
@@ -67,6 +74,32 @@ async def draft_section(
         extra={prop: draft[prop]},
         claims=list(draft.get("claims", [])),
     )
+
+
+async def draft_house_lines(
+    provider: LLMProvider, geo: GeocodeResult, now_iso: str, summaries: dict[str, str]
+) -> list[dict[str, Any]]:
+    """The model's part of the at-your-house strip: two or three lines, each
+    with its claims. Drafted after the sections, from their summaries. A
+    failure leaves the strip to the bill sentence alone; nothing else breaks."""
+    _, strict = house_schemas()
+    messages = [
+        {"role": "system", "content": house_system_prompt(now_iso)},
+        {"role": "user", "content": house_prompt(geo, summaries)},
+    ]
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            raw = await provider.complete_structured(messages, strict, "draft_at_your_house")
+            return list(validate_house_draft(raw)["lines"])
+        except (LLMError, ValidationError) as exc:
+            log_event(
+                "draft_failed",
+                section="at_your_house",
+                attempt=attempt,
+                kind=exc.__class__.__name__,
+                reason=str(exc)[:200],
+            )
+    return []
 
 
 def _reason(exc: Exception | None) -> str:

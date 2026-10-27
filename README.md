@@ -3,7 +3,7 @@
 Type any US address. Get an honest answer to three questions: **what is on my grid, what is
 coming, and what has it done to my bill.**
 
-Data centres are the fastest-growing new load on the US grid, and the people who live next to them
+Data centers are the fastest-growing new load on the US grid, and the people who live next to them
 find out last. The facility is announced under a codename, permitted at a county meeting most
 residents never hear about, and connected to the same local grid that serves their street. The
 costs arrive later, as a higher bill, a louder night and a rate case in a docket nobody reads. The
@@ -14,15 +14,23 @@ Who's On My Grid turns one address into one brief and one card. The brief has fi
 
 | Section | Question it answers |
 |---|---|
-| On your grid | Which data-centre facilities are within five miles, who operates them, including the operator behind a codename, and which substation they share with you |
+| On your grid | Which data-center facilities are within five miles, who operates them, including the operator behind a codename, and that they are served by the same utility as you. Which substation serves an address is not public data, so the brief never claims it; at most it says a facility is likely on the same one, and says that is inferred |
 | Coming | New large-roof construction visible from the air between the two most recent public aerial-imagery vintages, and announced or permitted campuses |
-| Your bill | What your state's residential price has done over two years, what that means per month for a typical home, and what the people who set rates say about why |
-| Protection | Whether your state has a large-load tariff that shields households from paying for the build-out, with the page that says so |
+| Your bill | What your state's residential price has done over two years, what that means per month for a typical home, shown as a range because it is modeled, and what the people who set rates say about why |
+| Protection | Whether your state has a large-load tariff, and the sentence the card exists for: does it shield households, yes, in part, no or not yet, with the page that says so |
 | Hearing | When the next county or commission hearing is, and what was said at the last one, with who said it |
 
-Every section is one of four kinds, **measured**, **reported**, **modelled** or **unavailable**, and
+Under the hero sits one strip, **What this means at your house**: three or four plain-language
+sentences a resident would screenshot for a neighbor. The bill, the water the campuses are permitted
+to use compared with homes, how close the nearest building is and what neighbors have said about the
+noise, the acres of field or forest now roof, and the other side in the same breath, the share of local
+taxes the data centers pay. Each sentence still carries its status, confidence and sources. The cards
+are for the reporter; the strip is for everyone.
+
+Every section is one of four kinds, **measured**, **reported**, **modeled** (schema value `modelled`)
+or **unavailable**, and
 carries its sources, a confidence level and the model that produced it. The brief says plainly when
-it does not know. It never claims that a data centre caused a bill increase; it shows the numbers
+it does not know. It never claims that a data center caused a bill increase; it shows the numbers
 and cites who attributes what.
 
 Built for the Meta Global AI Developer Hackathon, 26 October to 4 November 2026. Startups track,
@@ -38,7 +46,7 @@ of the brief is footered with the model that produced it.
 | Reads and conducts | Muse Spark (`muse-spark-1.3`, Meta Model API) | Runs the investigation with search grounding; reads the large-load tariff and the open rate case whole (1M-token context, direct document input) and drafts every claim with a page-level citation |
 | Sees | SAM 3.1 (`sam-3.1`, Meta Model API) | Segments public-domain USDA aerial imagery across the two most recent vintages; measures campus footprints and flags new large-roof construction that no database lists yet |
 | Hears | Muse Voice Transcribe (`muse-voice-transcribe-1.0`) | Speaker-attributed transcripts of county and utility-commission hearings, so the brief knows a commissioner said it and not a resident |
-| Verifies | Muse Spark Open (`meta-models/muse-spark-open-1026` via Baseten, open weights) | An independent model re-checks every claim against its quoted source. Verdicts: supported, contradicted, unverifiable. Disagreements are shown, not hidden |
+| Verifies | Muse Spark Open (`meta-models/muse-spark-open` via Baseten, open weights) | An independent model re-checks every claim against its quoted source. Verdicts: supported, contradicted, unverifiable. Disagreements are shown, not hidden |
 
 Two more are optional and marked as such in the brief:
 
@@ -46,7 +54,7 @@ Two more are optional and marked as such in the brief:
   filings and imagery for watched ZIP codes. Addresses never leave the machine that runs it.
 - **Built with**: Muse Code, for this week's code. The build log is in `docs/build-log.md`.
 
-What distinguishes this from a search summariser is that the models perceive and check the
+What distinguishes this from a search summarizer is that the models perceive and check the
 physical and civic record: they see the construction, hear the hearing and read the filing.
 
 ## How it is built
@@ -102,6 +110,11 @@ small call to each endpoint to prove the keys and the structured-output path. Op
 
 Generated briefs are cached in `data/briefs/` by a hash of the address, gitignored.
 
+Optional: `VITE_GOOGLE_MAPS_API_KEY` in `web/.env` turns the address box into Google Places
+autocomplete (US only). `GRID_BASETEN_API_KEY` is optional; without it claims stay `unchecked`.
+`GRID_ALLOWED_COUNTRIES=US` gates `/api/brief` behind an edge that sets `GRID_COUNTRY_HEADER`
+from the visitor IP; leave it empty locally.
+
 ## What was built when
 
 Everything in this repository was written during the hackathon, from 27 October 2026. The first
@@ -116,11 +129,11 @@ is used anywhere in this project.
 ## Coverage and honesty
 
 - US addresses only. Aerial imagery and state prices cover the whole country. Facility data is dense
-  in data-centre metros and sparse elsewhere. Hearings are covered for the counties that have been
+  in data-center metros and sparse elsewhere. Hearings are covered for the counties that have been
   indexed, listed in `docs/counties.md`. The brief says which applies, per section.
 - A claim is text plus a verbatim quote plus a source URL. The verifier checks that the quote exists
   in the source and supports the claim.
-- Addresses are personal data. Briefs are keyed by a hash of the normalised address; addresses are
+- Addresses are personal data. Briefs are keyed by a hash of the normalized address; addresses are
   not logged. Watch mode stores a ZIP code only.
 - Data sources and their terms: USDA NAIP imagery (public domain), US EIA (public domain), HIFLD
   service territories (public), OpenStreetMap (ODbL, attribution required), PeeringDB (research use
@@ -128,6 +141,6 @@ is used anywhere in this project.
   and commission archives (public record, fetched from the official archive, never from video
   platforms).
 
-## Licence
+## License
 
 Apache License 2.0. See [LICENSE](LICENSE).

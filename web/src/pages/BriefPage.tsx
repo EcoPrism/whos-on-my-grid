@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Claims from '../components/Claims'
+import HouseStrip from '../components/HouseStrip'
 import MapView from '../components/MapView'
 import { SECTION_TITLES, SectionBlock } from '../components/Sections'
 import ShareCard from '../components/ShareCard'
 import { ApiError, getBrief } from '../lib/api'
-import type { Brief, SectionId, Status } from '../types'
-import { fmtMoney } from './Home'
+import type { Brief, Section, SectionId, Status } from '../types'
+import { fmtMoney, fmtRange } from './Home'
 
 const ORDER: SectionId[] = ['on_your_grid', 'coming', 'your_bill', 'protection', 'hearing']
 
 const STATUS_WORD: Record<Status, string> = {
   measured: 'Measured',
   reported: 'Reported',
-  modelled: 'Modelled',
+  modelled: 'Modeled',
   unavailable: 'Not known',
 }
 
@@ -64,6 +65,10 @@ export default function BriefPage() {
   const a = brief.address
   const h = brief.headline
   const supported = brief.claims.filter((c) => c.verdict === 'supported').length
+  const bill = brief.sections.your_bill
+  const facilities = [...(brief.sections.on_your_grid.facilities ?? []), ...(brief.sections.coming.facilities ?? [])]
+  const placed = facilities.filter((f) => typeof f.lat === 'number').length
+  const withinMile = facilities.filter((f) => f.distance_km <= 1.61).length
 
   return (
     <main className="pb-16">
@@ -75,7 +80,16 @@ export default function BriefPage() {
 
       {/* Hero: the map, with the headline card on top of it. */}
       <div className="relative mx-auto mt-3 max-w-6xl sm:px-4">
-        <MapView brief={brief} className="h-[52vh] min-h-[380px] w-full sm:h-[62vh]" />
+        <div className="relative">
+          <MapView brief={brief} className="h-[52vh] min-h-[380px] w-full sm:h-[62vh]" />
+          {/* The count on the map is the count in the headline, and it says so. */}
+          {placed > 0 && (
+            <p className="pointer-events-none absolute bottom-6 left-3 z-[1000] border-2 border-[var(--ink)] bg-[var(--paper)]/95 px-2.5 py-1.5 text-sm font-semibold">
+              <span className="num">{placed}</span> {placed === 1 ? 'facility' : 'facilities'} plotted
+              {withinMile > 0 && <span className="num font-normal text-[var(--ink-soft)]"> · {withinMile} within a mile</span>}
+            </p>
+          )}
+        </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] p-3 sm:left-4 sm:right-auto sm:max-w-md sm:p-5">
           <div className="pointer-events-auto border-2 border-[var(--ink)] bg-[var(--paper)]/95 p-4 shadow-[6px_6px_0_var(--ink)] backdrop-blur-sm">
             <p className="text-sm text-[var(--ink-soft)]">{a.county ? `${a.county} County, ` : ''}{a.state}{a.utility ? ` · served by ${a.utility}` : ''}</p>
@@ -84,17 +98,30 @@ export default function BriefPage() {
               {h.one_liner && <p className="max-w-[34ch] text-[15px] leading-snug">{h.one_liner}</p>}
               {h.ai_rent_usd_per_month !== null && (
                 <p className="num shrink-0 text-right">
-                  <span className="block text-4xl font-extrabold leading-none text-[var(--signal)] [text-shadow:0_0_0_var(--ink),1px_1px_0_var(--ink)]">{fmtMoney(h.ai_rent_usd_per_month)}</span>
-                  <span className="block text-xs text-[var(--ink-soft)]">per month, typical home, vs 2 yrs ago</span>
+                  {/* A modeled number is shown as a range, in the modeled colour, with the
+                      same status tag as its card. Never a solid point estimate. */}
+                  <span className="block text-3xl font-extrabold leading-none text-[var(--modelled)]">
+                    {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
+                  </span>
+                  <span className="block text-xs text-[var(--ink-soft)]">a month, typical home, vs 2 yrs ago</span>
+                  <span className="tag-modelled block text-xs font-semibold">
+                    Modeled{bill.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(bill.confidence * 100)}%</span>}
+                  </span>
                 </p>
               )}
             </div>
           </div>
         </div>
         <p className="px-4 pt-2 text-xs text-[var(--ink-soft)] sm:px-0">
-          Lines tie each facility to your address and flow toward it: ink live, amber under construction, blue announced; thicker means more load. Dashed ring: five miles. Green outlines: footprints measured from aerial imagery.
+          {placed > 0 && <><span className="num">{placed}</span> {placed === 1 ? 'line ties the one facility' : 'lines tie each facility'} to your address and flow toward it: ink live, amber under construction, blue announced; thicker means more load. </>}
+          Dashed ring: five miles. Green outlines: footprints measured from aerial imagery.
         </p>
       </div>
+
+      {/* The plain-language layer. The cards below are for the reporter; this is for everyone. */}
+      {brief.at_your_house && brief.at_your_house.length > 0 && (
+        <div className="mt-4"><HouseStrip lines={brief.at_your_house} /></div>
+      )}
 
       {/* Five tiles: the whole brief at a glance. One opens at a time. */}
       <div className="mx-auto mt-6 max-w-6xl px-4">
@@ -116,7 +143,7 @@ export default function BriefPage() {
                   {STATUS_WORD[s.status]}{s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
                 </span>
                 <span className="mt-1 text-lg font-bold leading-tight">{SECTION_TITLES[id]}</span>
-                <span className={`mt-1 line-clamp-3 text-[13px] leading-snug ${isOpen ? 'opacity-85' : 'text-[var(--ink-soft)]'}`}>{tileLine(s.summary)}</span>
+                <span className={`mt-1 line-clamp-3 text-[13px] leading-snug ${isOpen ? 'opacity-85' : 'text-[var(--ink-soft)]'}`}>{tileLine(id, s)}</span>
               </button>
             )
           })}
@@ -141,7 +168,7 @@ export default function BriefPage() {
           </summary>
           {h.percentile !== null && h.ai_rent_usd_per_month !== null && (
             <p className="mt-3 max-w-[64ch] text-[15px] text-[var(--ink-soft)]">
-              {fmtMoney(h.ai_rent_usd_per_month)} a month puts this address above {h.percentile}% of US households, weighted by state population.
+              About {fmtMoney(h.ai_rent_usd_per_month)} a month puts this address above {h.percentile}% of US households, weighted by state population. Modeled from the state's average price and a typical home's usage.
             </p>
           )}
           <div className="mt-4 max-w-3xl"><ShareCard brief={brief} /></div>
@@ -161,8 +188,20 @@ function stateForError(err: unknown): State {
   return { kind: 'error', message: `${err.status} ${err.detail}` }
 }
 
-// First sentence of the summary, for the tile.
-function tileLine(summary: string): string {
-  const m = summary.match(/^.*?[.!?](?=\s|$)/)
-  return m ? m[0] : summary
+// One line for the tile. Protection answers the question the card exists for,
+// does it shield you, from the structured data; the others take the first
+// sentence of the summary.
+function tileLine(id: SectionId, s: Section): string {
+  if (id === 'protection' && s.tariff && s.status !== 'unavailable') {
+    const t = s.tariff
+    const name = t.name ?? 'A large-load tariff'
+    if (t.protects_households === true) return `Yes, in part. ${name} is in force and keeps some build-out costs off household bills.`
+    if (t.protects_households === false) {
+      return t.large_load_tariff === 'none_found' ? 'No. No large-load tariff in this state; new load is served under the general tariff.' : `No. ${name} does not shield household bills.`
+    }
+    if (t.large_load_tariff === 'proposed') return `Not yet. ${name} is proposed, not approved; nothing shields household bills today.`
+    return 'Not known whether anything shields household bills.'
+  }
+  const m = s.summary.match(/^.*?[.!?](?=\s|$)/)
+  return m ? m[0] : s.summary
 }

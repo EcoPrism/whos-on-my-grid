@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Verifying directly on Baseten.
     baseten_api_key: str = ""
     baseten_base_url: str = "https://inference.baseten.co/v1"
-    verify_model: str = "meta-models/muse-spark-open-1026"
+    verify_model: str = "meta-models/muse-spark-open"
     verify_strict_json: bool = True
 
     llm_max_tokens: int = 6144
@@ -48,6 +48,11 @@ class Settings(BaseSettings):
 
     data_dir: str = "data/briefs"
     cors_origins: str = "http://localhost:5173,http://localhost:5180"
+    # Country gate for brief routes. Empty = off. Only meaningful behind an edge that
+    # sets the header from the client IP (Cloudflare: cf-ipcountry, Front Door: x-azure-
+    # clientip-country); the app trusts the header, so never enable it without one.
+    allowed_countries: str = ""
+    country_header: str = "cf-ipcountry"
 
     @property
     def data_path(self) -> Path:

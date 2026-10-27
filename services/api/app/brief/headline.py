@@ -34,6 +34,19 @@ def monthly_change(price: dict[str, Any]) -> float:
     return round((price["rate_now"] - price["rate_then"]) * price["typical_household_kwh_month"], 1)
 
 
+# Household usage spreads widely around the state's typical figure; ±20% is the
+# range the UI shows instead of a point estimate. fixtures/make_fixtures.py
+# uses the same arithmetic.
+USAGE_SPREAD = 0.2
+
+
+def monthly_range(price: dict[str, Any]) -> list[float]:
+    diff = price["rate_now"] - price["rate_then"]
+    k = price["typical_household_kwh_month"]
+    lo, hi = diff * k * (1 - USAGE_SPREAD), diff * k * (1 + USAGE_SPREAD)
+    return [float(round(lo)), float(round(hi))]
+
+
 def _ok(d: DraftResult | SectionFailure | None) -> DraftResult | None:
     return d if isinstance(d, DraftResult) else None
 
@@ -65,13 +78,44 @@ def derive_headline(drafts: Drafts, geo: GeocodeResult) -> dict[str, Any]:
 
     return {
         "ai_rent_usd_per_month": rent,
+        "ai_rent_range_usd_per_month": monthly_range(price) if price else None,
         "percentile": None,
         "band": band,
-        "one_liner": one or "Not enough public information to summarise this address yet.",
+        "one_liner": one or "Not enough public information to summarize this address yet.",
     }
 
 
-def derive_card(drafts: Drafts, geo: GeocodeResult, claims: list[dict[str, Any]]) -> dict[str, Any]:
+def bill_house_line(drafts: Drafts) -> dict[str, Any] | None:
+    """The first sentence of the strip, from the price block alone. Modeled:
+    the state's average price times a typical home's usage. No model writes it."""
+    bill = _ok(drafts.get("your_bill"))
+    price = bill.extra.get("price") if bill else None
+    if not bill or not price:
+        return None
+    rent = monthly_change(price)
+    lo, hi = monthly_range(price)
+    word = "higher" if rent >= 0 else "lower"
+    text = (
+        f"Your power bill is about ${abs(rent):.0f} a month {word} than two years ago, "
+        f"somewhere between ${abs(lo):.0f} and ${abs(hi):.0f} depending on how much "
+        "electricity you use."
+    )
+    if price.get("attribution"):
+        text += " The people who set the rates say part of that is data-center load."
+    else:
+        text += " No regulator has tied any of that to data centers."
+    return {
+        "text": text,
+        "topic": "bill",
+        "status": "modelled",
+        "confidence": max(0.0, min(1.0, bill.confidence)),
+        "sources": [],  # the assembler fills these from the bill section
+    }
+
+
+def derive_card(
+    drafts: Drafts, geo: GeocodeResult, claims: list[dict[str, Any]], *, verified: bool = True
+) -> dict[str, Any]:
     parts = [p.strip() for p in geo.display.split(",")]
     city = parts[-2] if len(parts) >= 2 else parts[0]
     lines = [d.card_line.strip()[:80] for d in _reported(drafts) if d.card_line]
@@ -82,10 +126,11 @@ def derive_card(drafts: Drafts, geo: GeocodeResult, claims: list[dict[str, Any]]
         if h and h not in hosts:
             hosts.append(h)
     sources = ", ".join(hosts[:4]) if hosts else "none cited"
+    checked = "checked by Muse Spark Open" if verified else "claims not yet checked"
     return {
         "title": f"Who's on my grid: {city}, {geo.state}",
         "lines": lines,
-        "footer": f"Sources: {sources}. Drafted by Muse Spark, checked by Muse Spark Open. "
+        "footer": f"Sources: {sources}. Drafted by Muse Spark, {checked}. "
         "Not verified against ground-truth data.",
     }
 

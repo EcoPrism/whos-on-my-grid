@@ -13,17 +13,21 @@
     "utility": "Dominion Energy Virginia"
   },
   "headline": {
-    "ai_rent_usd_per_month": 31.4,
+    "ai_rent_usd_per_month": 30.8,
+    "ai_rent_range_usd_per_month": [
+      25.0,
+      37.0
+    ],
     "percentile": 94,
     "band": "critical",
-    "one_liner": "Fifteen data centres within five miles share your substation. A typical home here pays about $31 more a month than two years ago."
+    "one_liner": "Fifteen data centers within five miles are on your local grid, served by Dominion Energy. A typical home here pays about $31 more a month than two years ago."
   },
   "sections": {
     "on_your_grid": {
       "status": "measured",
       "confidence": 0.92,
       "model": null,
-      "summary": "Fifteen data-centre facilities sit within five miles, nine of them within one mile. Eight share the Nimbus 230 kV substation with your street.",
+      "summary": "Fifteen data-center facilities sit within five miles, nine of them within one mile. All are served by Dominion Energy, the utility that serves your street. The eight Northgate buildings are likely fed from the same 230 kV substation as your neighborhood; that is inferred from distance, not from utility records.",
       "gap": null,
       "sources": [
         {
@@ -32,41 +36,178 @@
           "retrieved_at": "2026-10-27T09:00:00Z",
           "page": null,
           "quote": ""
+        },
+        {
+          "title": "Utility service territory map (fictional)",
+          "url": "https://example.org/territory/VA",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Dominion Energy Virginia: Loudoun County east of Route 15"
         }
       ],
       "facilities": [
         {
-          "name": "Northgate Campus DC1-DC9",
+          "name": "Northgate Campus DC1",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.3,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0185,
+          "lon": -77.4565
+        },
+        {
+          "name": "Northgate Campus DC2",
           "codename": null,
           "operator": "Halvex Digital (fictional)",
           "operator_confidence": 0.98,
           "distance_km": 0.4,
           "status": "live",
-          "estimated_mw": 180,
+          "estimated_mw": 22,
           "mw_basis": "reported",
           "shares_substation": true,
-          "lat": 39.019,
-          "lon": -77.455
+          "lat": 39.0192,
+          "lon": -77.4552
+        },
+        {
+          "name": "Northgate Campus DC3",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.6,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0199,
+          "lon": -77.454
+        },
+        {
+          "name": "Northgate Campus DC4",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.7,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0206,
+          "lon": -77.4528
+        },
+        {
+          "name": "Northgate Campus DC5",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.4,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0178,
+          "lon": -77.4548
+        },
+        {
+          "name": "Northgate Campus DC6",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.5,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0186,
+          "lon": -77.4535
+        },
+        {
+          "name": "Northgate Campus DC7",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.7,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0194,
+          "lon": -77.4522
+        },
+        {
+          "name": "Northgate Campus DC8",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.98,
+          "distance_km": 0.7,
+          "status": "live",
+          "estimated_mw": 22,
+          "mw_basis": "reported",
+          "shares_substation": true,
+          "lat": 39.0213,
+          "lon": -77.4545
         },
         {
           "name": "Loudoun Gateway IAD-4",
           "codename": null,
           "operator": "Meridian Realty Trust (fictional)",
           "operator_confidence": 0.98,
-          "distance_km": 0.9,
+          "distance_km": 0.8,
           "status": "live",
           "estimated_mw": 96,
           "mw_basis": "reported",
-          "shares_substation": true,
+          "shares_substation": null,
           "lat": 39.012,
           "lon": -77.466
+        },
+        {
+          "name": "Ashburn Crossing B",
+          "codename": null,
+          "operator": "Halvex Digital (fictional)",
+          "operator_confidence": 0.96,
+          "distance_km": 1.7,
+          "status": "live",
+          "estimated_mw": 36,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 39.004,
+          "lon": -77.47
+        },
+        {
+          "name": "Beaumeade Hall 2",
+          "codename": null,
+          "operator": "Meridian Realty Trust (fictional)",
+          "operator_confidence": 0.97,
+          "distance_km": 1.8,
+          "status": "live",
+          "estimated_mw": 48,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 39.027,
+          "lon": -77.443
+        },
+        {
+          "name": "Pacific Blvd Colo",
+          "codename": null,
+          "operator": "Pinefield Networks (fictional)",
+          "operator_confidence": 0.9,
+          "distance_km": 2.4,
+          "status": "live",
+          "estimated_mw": 24,
+          "mw_basis": "class_estimate",
+          "shares_substation": null,
+          "lat": 39.0,
+          "lon": -77.44
         },
         {
           "name": "Broad Run Technology Park",
           "codename": "Project Kestrel",
           "operator": "Orrin Cloud Services (fictional)",
           "operator_confidence": 0.81,
-          "distance_km": 2.7,
+          "distance_km": 2.4,
           "status": "under_construction",
           "estimated_mw": 300,
           "mw_basis": "filed",
@@ -79,13 +220,26 @@
           "codename": null,
           "operator": "Pinefield Networks (fictional)",
           "operator_confidence": 0.95,
-          "distance_km": 3.9,
+          "distance_km": 3.8,
           "status": "live",
           "estimated_mw": 10,
           "mw_basis": "class_estimate",
-          "shares_substation": false,
+          "shares_substation": null,
           "lat": 39.04,
           "lon": -77.49
+        },
+        {
+          "name": "Dulles Tech Center 7",
+          "codename": null,
+          "operator": "Orrin Cloud Services (fictional)",
+          "operator_confidence": 0.93,
+          "distance_km": 4.0,
+          "status": "live",
+          "estimated_mw": 60,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 38.985,
+          "lon": -77.435
         }
       ]
     },
@@ -93,7 +247,7 @@
       "status": "measured",
       "confidence": 0.84,
       "model": "sam-3.1",
-      "summary": "Large-roof footprint within five miles grew from 112 to 171 acres between the 2023 and 2025 imagery. One 23-acre site 2.7 km north is not in any facility database.",
+      "summary": "Within five miles, 59 acres of open land became data-center roof between the 2023 and 2025 imagery, taking the total from 112 to 171 acres. One 23-acre site 1.4 miles north of you is in no facility database.",
       "gap": null,
       "sources": [
         {
@@ -107,7 +261,7 @@
       "construction": [
         {
           "label": "Broad Run north parcel",
-          "distance_km": 2.7,
+          "distance_km": 2.3,
           "footprint_acres_then": 0,
           "footprint_acres_now": 23.1,
           "vintages": [
@@ -136,7 +290,7 @@
         },
         {
           "label": "Northgate expansion",
-          "distance_km": 0.6,
+          "distance_km": 0.4,
           "footprint_acres_then": 41.0,
           "footprint_acres_now": 58.4,
           "vintages": [
@@ -169,7 +323,7 @@
       "status": "modelled",
       "confidence": 0.78,
       "model": "muse-spark-1.3",
-      "summary": "Your state's residential price rose 14.2% over 24 months. For a home using 1,100 kWh a month that is about $31 more per month. The regional market monitor attributes most of the latest capacity-price increase to data-centre load.",
+      "summary": "Your state's average residential price rose 22.8% over 24 months. For a home using 1,100 kWh a month that is about $31 more per month, between $25 and $37 depending on how much you use. The regional market monitor attributes most of the latest capacity-price increase to data-center load.",
       "gap": null,
       "sources": [
         {
@@ -177,7 +331,7 @@
           "url": "https://example.org/prices/VA",
           "retrieved_at": "2026-10-27T09:00:00Z",
           "page": null,
-          "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh"
+          "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh; Aug 2024: 12.3 c/kWh"
         },
         {
           "title": "Regional market monitor report (fictional)",
@@ -190,8 +344,8 @@
       "price": {
         "currency": "USD",
         "rate_now": 0.151,
-        "rate_then": 0.132,
-        "trend_pct": 14.2,
+        "rate_then": 0.123,
+        "trend_pct": 22.8,
         "window_months": 24,
         "typical_household_kwh_month": 1100,
         "attribution": "63% of the capacity price increase is attributable to data center load (market monitor, fictional)"
@@ -201,7 +355,7 @@
       "status": "reported",
       "confidence": 0.88,
       "model": "muse-spark-1.3",
-      "summary": "A large-load tariff is in force. Customers above 25 MW bear incremental transmission costs, which shields households from that part of the build-out but not from capacity prices.",
+      "summary": "Partly. A large-load tariff is in force: customers above 25 MW pay for their own transmission upgrades, so that part of the build-out is kept off your bill. It does not shield you from capacity prices, which every customer pays and which the market monitor says are rising with data-center load.",
       "gap": null,
       "sources": [
         {
@@ -210,6 +364,13 @@
           "retrieved_at": "2026-10-27T09:00:00Z",
           "page": 7,
           "quote": "Customers with demand above 25 MW shall bear the incremental cost of transmission upgrades"
+        },
+        {
+          "title": "Regional market monitor report (fictional)",
+          "url": "https://example.org/mm/2026",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 12,
+          "quote": "63% of the capacity price increase is attributable to data center load"
         }
       ],
       "tariff": {
@@ -260,23 +421,23 @@
     {
       "id": "c1",
       "section": "on_your_grid",
-      "text": "Eight facilities share the Nimbus substation with the address.",
+      "text": "Fifteen facilities within five miles are in Dominion Energy Virginia's service territory, as is the address.",
       "source": {
-        "title": "Facility registry (fictional)",
-        "url": "https://example.org/registry/ash-01",
+        "title": "Utility service territory map (fictional)",
+        "url": "https://example.org/territory/VA",
         "retrieved_at": "2026-10-27T09:00:00Z",
         "page": null,
-        "quote": ""
+        "quote": "Dominion Energy Virginia: Loudoun County east of Route 15"
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
       "id": "c2",
       "section": "coming",
-      "text": "A 23-acre large-roof site 2.7 km north appears in 2025 imagery and not in 2023 imagery.",
+      "text": "A 23-acre large-roof site 2.3 km north appears in 2025 imagery and not in 2023 imagery.",
       "source": {
         "title": "USDA aerial imagery 2025 (public domain)",
         "url": "https://example.org/naip/VA",
@@ -286,29 +447,29 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
       "id": "c3",
       "section": "your_bill",
-      "text": "The state residential price rose 14.2% between Aug 2024 and Aug 2026.",
+      "text": "The state residential price rose 22.8% between Aug 2024 and Aug 2026.",
       "source": {
         "title": "State residential price series (fictional)",
         "url": "https://example.org/prices/VA",
         "retrieved_at": "2026-10-27T09:00:00Z",
         "page": null,
-        "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh"
+        "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh; Aug 2024: 12.3 c/kWh"
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
       "id": "c4",
       "section": "your_bill",
-      "text": "The market monitor attributes 63% of the capacity price increase to data-centre load.",
+      "text": "The market monitor attributes 63% of the capacity price increase to data-center load.",
       "source": {
         "title": "Regional market monitor report (fictional)",
         "url": "https://example.org/mm/2026",
@@ -318,7 +479,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -334,7 +495,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -350,18 +511,112 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "unverifiable",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": "Agenda for 12 Nov not yet published; date comes from the chair's statement at the 14 Oct meeting."
+    },
+    {
+      "id": "c7",
+      "section": "at_your_house",
+      "text": "Data-center accounts within five miles are permitted to withdraw up to 4.2 million gallons a day, 2.3 million of it reclaimed water.",
+      "source": {
+        "title": "Water authority large-user permits (fictional)",
+        "url": "https://example.org/loudounwater/permits-2026",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 4,
+        "quote": "Combined permitted daily withdrawal, data center accounts: 4.2 MGD, of which 2.3 MGD reclaimed"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    },
+    {
+      "id": "c8",
+      "section": "at_your_house",
+      "text": "Data-center personal property tax is 38% of the county general fund, per the adopted budget.",
+      "source": {
+        "title": "County adopted budget FY2027 (fictional)",
+        "url": "https://example.org/loudoun/budget-fy27",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": 11,
+        "quote": "Data center personal property tax accounts for 38 percent of general fund revenue and allowed a two-cent reduction in the real property tax rate"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your power bill is about $31 a month higher than two years ago, somewhere between $25 and $37 depending on how much electricity you use.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.78,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/VA",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, VA, Aug 2026: 15.1 c/kWh; Aug 2024: 12.3 c/kWh"
+        }
+      ]
+    },
+    {
+      "text": "The data centers within five miles are permitted to use up to 4.2 million gallons of water a day, about what 14,000 homes use. Just over half of it has to be reclaimed water, not drinking water.",
+      "topic": "water",
+      "status": "reported",
+      "confidence": 0.72,
+      "sources": [
+        {
+          "title": "Water authority large-user permits (fictional)",
+          "url": "https://example.org/loudounwater/permits-2026",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 4,
+          "quote": "Combined permitted daily withdrawal, data center accounts: 4.2 MGD, of which 2.3 MGD reclaimed"
+        }
+      ]
+    },
+    {
+      "text": "The nearest building is 0.2 miles from your door. At the last county meeting a resident said the hum starts at ten and does not stop. No sound measurement for your street is public.",
+      "topic": "noise",
+      "status": "modelled",
+      "confidence": 0.45,
+      "sources": [
+        {
+          "title": "Board of Supervisors meeting archive, 14 Oct 2026 (fictional)",
+          "url": "https://example.org/loudoun/2026-10-14",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "We are not going to approve another campus on that substation until the utility shows us the capacity study"
+        }
+      ]
+    },
+    {
+      "text": "The other side, honestly: data centers pay about 38% of Loudoun County's general fund, and the county budget credits that for cutting the residential property tax rate.",
+      "topic": "taxes",
+      "status": "reported",
+      "confidence": 0.85,
+      "sources": [
+        {
+          "title": "County adopted budget FY2027 (fictional)",
+          "url": "https://example.org/loudoun/budget-fy27",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": 11,
+          "quote": "Data center personal property tax accounts for 38 percent of general fund revenue and allowed a two-cent reduction in the real property tax rate"
+        }
+      ]
     }
   ],
   "card": {
     "title": "Who's on my grid: Ashburn, VA",
     "lines": [
-      "15 data centres within 5 miles, 8 on your substation",
-      "+$31/mo for a typical home vs 2024, more than 94% of US households",
-      "23 acres of new campus visible from the air, in no database",
+      "15 data centers within 5 miles, all on your local grid",
+      "About +$31/mo for a typical home vs 2024, more than 94% of US households",
+      "59 acres of open land became data-center roof since 2023",
       "County vote in 16 days"
     ],
-    "footer": "Sources: facility registry, state price series, market monitor, county archive. Fictional fixture."
+    "footer": "Sources: facility registry, state price series, market monitor, water permits, county budget, county archive. Fictional fixture."
   }
 }

@@ -1,5 +1,5 @@
 import type { Brief } from '../types'
-import { fmtMoney } from '../pages/Home'
+import { fmtMoney, fmtRange } from '../pages/Home'
 
 // 1200x630, the X/OG card size, scaled to fit. Rendered in the DOM for now;
 // an image endpoint will rasterise the same markup later.
@@ -22,8 +22,10 @@ export default function ShareCard({ brief }: { brief: Brief }) {
           </ul>
           {h.ai_rent_usd_per_month !== null && (
             <p className="num shrink-0 text-right">
-              <span className="block text-[11cqw] font-extrabold leading-none text-[var(--signal)]">{fmtMoney(h.ai_rent_usd_per_month)}</span>
-              <span className="block text-[2.4cqw] opacity-80">per month for a typical home, vs two years ago</span>
+              <span className="block text-[8.5cqw] font-extrabold leading-none text-[var(--signal)]">
+                {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
+              </span>
+              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, vs two years ago · modeled</span>
             </p>
           )}
         </div>

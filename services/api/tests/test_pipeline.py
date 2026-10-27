@@ -16,7 +16,8 @@ async def test_full_brief_is_valid_and_reported(tmp_path) -> None:
     for sid in SECTION_IDS:
         assert brief["sections"][sid]["status"] == "reported"
         assert brief["sections"][sid]["model"] == DRAFT_MODEL_ID
-    assert [c["id"] for c in brief["claims"]] == [f"c{i}" for i in range(1, 7)]
+    assert [c["id"] for c in brief["claims"]] == [f"c{i}" for i in range(1, 8)]
+    assert brief["claims"][-1]["section"] == "at_your_house"
     assert brief["sections"]["coming"]["construction"] == []
     assert brief["sections"]["coming"]["facilities"][0]["status"] == "announced"
     # Verdicts: fetched pages are supported, the missing page is unverifiable with the reason.
@@ -31,7 +32,21 @@ async def test_full_brief_is_valid_and_reported(tmp_path) -> None:
     assert (
         h["ai_rent_usd_per_month"] == 20.9 and h["band"] == "critical" and h["percentile"] is None
     )
+    assert h["ai_rent_range_usd_per_month"] == [17.0, 25.0]
     assert "$21 more a month" in h["one_liner"]
+    # The strip: the bill sentence is derived, the rest is drafted and reported.
+    strip = brief["at_your_house"]
+    assert [line["topic"] for line in strip] == ["bill", "water", "noise"]
+    assert strip[0]["status"] == "modelled" and "$21 a month higher" in strip[0]["text"]
+    assert "between $17 and $25" in strip[0]["text"]
+    assert strip[0]["sources"] == brief["sections"]["your_bill"]["sources"]
+    assert strip[1]["status"] == "reported" and strip[1]["sources"][0]["url"] == fakes.URL_WATER
+    assert strip[2]["sources"] == []
+    # The strip is drafted after the sections, from their summaries.
+    names = [n for n, _ in svc.draft_provider.calls]
+    assert names[-1] == "draft_at_your_house"
+    house_messages = svc.draft_provider.calls[-1][1]
+    assert "Two data-center campuses" in house_messages[1]["content"]
     assert brief["card"]["title"] == "Who's on my grid: Ashburn, VA"
     assert len(brief["card"]["lines"]) == 4 and "example.org" in brief["card"]["footer"]
     # Cached on disk, and the address is not in the file name.
@@ -108,6 +123,26 @@ async def test_headline_without_price_uses_facilities(tmp_path) -> None:
     h = brief["headline"]
     assert h["ai_rent_usd_per_month"] is None and h["band"] == "medium"
     assert "$" not in h["one_liner"]
+
+
+async def test_house_draft_failure_leaves_bill_sentence(tmp_path) -> None:
+    responses = fakes.drafts()
+    responses["draft_at_your_house"] = LLMError("no")
+    svc = fakes.service(tmp_path, draft_responses=responses)
+    brief = await svc.brief_for_address("x")
+    validate_brief(brief)
+    assert [line["topic"] for line in brief["at_your_house"]] == ["bill"]
+    assert all(c["section"] != "at_your_house" for c in brief["claims"])
+
+
+async def test_no_price_means_no_bill_sentence(tmp_path) -> None:
+    responses = fakes.drafts()
+    responses["draft_your_bill"] = LLMError("no")
+    svc = fakes.service(tmp_path, draft_responses=responses)
+    brief = await svc.brief_for_address("x")
+    validate_brief(brief)
+    assert brief["headline"]["ai_rent_range_usd_per_month"] is None
+    assert [line["topic"] for line in brief["at_your_house"]] == ["water", "noise"]
 
 
 async def test_cache_hit_makes_no_model_calls(tmp_path) -> None:

@@ -13,7 +13,11 @@
     "utility": "Idaho Power"
   },
   "headline": {
-    "ai_rent_usd_per_month": 4.1,
+    "ai_rent_usd_per_month": 4.0,
+    "ai_rent_range_usd_per_month": [
+      3.0,
+      5.0
+    ],
     "percentile": 28,
     "band": "low",
     "one_liner": "Two small facilities within five miles, no construction visible, and a typical home pays about $4 more a month than two years ago."
@@ -23,7 +27,7 @@
       "status": "measured",
       "confidence": 0.9,
       "model": null,
-      "summary": "Two facilities within five miles, both small colocation sites. Neither shares your substation.",
+      "summary": "Two facilities within five miles, both small colocation sites, both served by Idaho Power like your street.",
       "gap": null,
       "sources": [
         {
@@ -40,11 +44,11 @@
           "codename": null,
           "operator": "Sawtooth Data (fictional)",
           "operator_confidence": 0.97,
-          "distance_km": 1.1,
+          "distance_km": 0.7,
           "status": "live",
           "estimated_mw": 10,
           "mw_basis": "class_estimate",
-          "shares_substation": false,
+          "shares_substation": null,
           "lat": 43.62,
           "lon": -116.21
         },
@@ -53,11 +57,11 @@
           "codename": null,
           "operator": "Pinefield Networks (fictional)",
           "operator_confidence": 0.97,
-          "distance_km": 4.6,
+          "distance_km": 4.8,
           "status": "live",
           "estimated_mw": 10,
           "mw_basis": "class_estimate",
-          "shares_substation": false,
+          "shares_substation": null,
           "lat": 43.59,
           "lon": -116.25
         }
@@ -109,7 +113,7 @@
       "status": "reported",
       "confidence": 0.65,
       "model": "muse-spark-1.3",
-      "summary": "A large-load tariff is in force for customers above 20 MW.",
+      "summary": "Partly. A large-load tariff is in force for customers above 20 MW, so new large customers pay their own way onto the grid. The order does not say whether every cost of the build-out stays off household bills.",
       "gap": null,
       "sources": [
         {
@@ -154,7 +158,7 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
     },
     {
@@ -170,16 +174,63 @@
       },
       "drafted_by": "muse-spark-1.3",
       "verdict": "supported",
-      "verified_by": "meta-models/muse-spark-open-1026",
+      "verified_by": "meta-models/muse-spark-open",
       "verifier_note": null
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your power bill is about $4 a month higher than two years ago, between $3 and $5 depending on usage.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.8,
+      "sources": [
+        {
+          "title": "State residential price series (fictional)",
+          "url": "https://example.org/prices/ID",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Average residential price, ID, Aug 2026: 11.2 c/kWh"
+        }
+      ]
+    },
+    {
+      "text": "Two small data centers sit within five miles, the nearest 0.7 miles away. Together they draw about 20 MW, roughly what 15,000 homes use at once.",
+      "topic": "grid",
+      "status": "measured",
+      "confidence": 0.9,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/boi-01",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
+    },
+    {
+      "text": "Nothing new has been built within five miles between the 2023 and 2025 aerial surveys.",
+      "topic": "land",
+      "status": "measured",
+      "confidence": 0.8,
+      "sources": [
+        {
+          "title": "USDA aerial imagery 2023 and 2025 (public domain)",
+          "url": "https://example.org/naip/ID",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
     }
   ],
   "card": {
     "title": "Who's on my grid: Boise, ID",
     "lines": [
-      "2 small facilities within 5 miles, none on your substation",
+      "2 small facilities within 5 miles, both colocation sites",
       "No new construction visible from the air",
-      "+$4/mo for a typical home vs 2024",
+      "About +$4/mo for a typical home vs 2024",
       "Large-load tariff in force"
     ],
     "footer": "Sources: facility registry, aerial imagery, state price series, commission order. Fictional fixture."

@@ -4,6 +4,9 @@ back onto the claim objects in place.
 
 No fetch, no verdict from the model: a page that cannot be read is
 `unverifiable` with the reason, and the model is not consulted.
+
+No verifier configured (provider is None): nothing is fetched and every claim
+stays `unchecked` with a note saying so, so the brief is honest about it.
 """
 
 import asyncio
@@ -18,6 +21,7 @@ from app.telemetry import log_event
 
 WINDOW_CHARS = 12_000
 VERDICTS = {"supported", "contradicted", "unverifiable"}
+UNCHECKED_NOTE = "Not checked: no verifier is configured for this deployment."
 
 _WS = re.compile(r"\s+")
 
@@ -41,7 +45,7 @@ def window(text: str, at: int | None) -> str:
 
 
 async def verify_claims(
-    provider: LLMProvider,
+    provider: LLMProvider | None,
     fetcher: Fetcher,
     claims: list[dict[str, Any]],
     *,
@@ -49,6 +53,13 @@ async def verify_claims(
     verified_by: str,
     now_iso: str,
 ) -> None:
+    if provider is None:
+        for claim in claims:
+            claim["verdict"] = "unchecked"
+            claim["verified_by"] = None
+            claim["verifier_note"] = UNCHECKED_NOTE
+        log_event("verify_skipped", claims=len(claims))
+        return
     sem = asyncio.Semaphore(max(1, concurrency))
     fetches: dict[str, asyncio.Task[FetchResult]] = {}
 

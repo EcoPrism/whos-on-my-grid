@@ -26,6 +26,7 @@ URL_REG = "https://example.org/registry/ash-01"
 URL_EIA = "https://example.org/prices/VA"
 URL_TAR = "https://example.org/scc/order-2026-0412"
 URL_HEAR = "https://example.org/loudoun/2026-10-14"
+URL_WATER = "https://example.org/loudounwater/permits-2026"
 URL_GONE = "https://example.org/missing"
 
 PAGES = {
@@ -37,6 +38,7 @@ PAGES = {
     * 10,
     URL_HEAR: "Minutes. The chair said: we are not going to approve another campus on that substation. "
     * 10,
+    URL_WATER: "Permits. Combined permitted daily withdrawal, data center accounts: 4.2 MGD. " * 10,
 }
 
 
@@ -57,9 +59,9 @@ def drafts() -> dict[str, dict[str, Any]]:
     return {
         "draft_on_your_grid": {
             "confidence": 0.7,
-            "summary": "Two data-centre campuses sit within five miles. One is live and one is under construction.",
+            "summary": "Two data-center campuses sit within five miles. One is live and one is under construction.",
             "gap": None,
-            "card_line": "2 data centres within 5 miles",
+            "card_line": "2 data centers within 5 miles",
             "facilities": [
                 {
                     "name": "Northgate Campus DC1-DC9",
@@ -174,6 +176,29 @@ def drafts() -> dict[str, dict[str, Any]]:
                     "Commission order",
                 )
             ],
+        },
+        "draft_at_your_house": {
+            "lines": [
+                {
+                    "text": "The data centers near you may use up to 4.2 million gallons of water a day, about what 14,000 homes use.",
+                    "topic": "water",
+                    "confidence": 0.7,
+                    "claims": [
+                        claim(
+                            "Data-center accounts are permitted 4.2 million gallons a day.",
+                            URL_WATER,
+                            "4.2 MGD",
+                            "Water permits",
+                        )
+                    ],
+                },
+                {
+                    "text": "The nearest building is 0.2 miles from your door. No sound measurement is public.",
+                    "topic": "noise",
+                    "confidence": 0.3,
+                    "claims": [],
+                },
+            ]
         },
         "draft_hearing": {
             "confidence": 0.4,
