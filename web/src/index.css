@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  /* concrete, steel and ink: the colours of a substation yard */
+  --paper: #eef0f2;
+  --paper-deep: #e2e5e9;
+  --ink: #15202b;
+  --ink-soft: #4a5663;
+  --line: #c9ced4;
+
+  /* the only colour on the page is the status rail */
+  --measured: #0f766e;
+  --reported: #3b5b8c;
+  --modelled: #b7791f;
+  --unavailable: #8b949e;
+  --contradicted: #b42318;
+  --signal: #ffc300;
+
+  --font: "Archivo", system-ui, sans-serif;
+}
+
+html { background: var(--paper); color: var(--ink); }
+body {
+  font-family: var(--font);
+  font-variation-settings: "wdth" 100;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+/* The address as a street sign: tall, narrow, heavy. */
+.sign {
+  font-variation-settings: "wdth" 68;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+.wide { font-variation-settings: "wdth" 118; }
+.num { font-variant-numeric: tabular-nums; }
+
+.rail-measured { border-left-color: var(--measured); }
+.rail-reported { border-left-color: var(--reported); }
+.rail-modelled { border-left-color: var(--modelled); }
+.rail-unavailable {
+  border-left-color: var(--unavailable);
+  border-left-style: dashed;
+}
+.tag-measured { color: var(--measured); }
+.tag-reported { color: var(--reported); }
+.tag-modelled { color: var(--modelled); }
+.tag-unavailable { color: var(--unavailable); }
+
+.hatch {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--paper-deep) 6px 8px);
+}
+
+a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+.leaflet-container { font-family: var(--font); background: var(--paper-deep); }
+/* desaturate the basemap so the status colours are the only colour */
+.leaflet-tile-pane .basemap { filter: grayscale(1) contrast(0.9) brightness(1.05); }
+.leaflet-control-attribution { font-size: 10px; background: rgba(238, 240, 242, 0.85); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
