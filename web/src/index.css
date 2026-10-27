@@ -65,6 +65,31 @@ a:hover { text-decoration-color: var(--ink); }
 .leaflet-tile-pane .basemap { filter: grayscale(1) contrast(0.9) brightness(1.05); }
 .leaflet-control-attribution { font-size: 10px; background: rgba(238, 240, 242, 0.85); }
 
+/* Grid lines: a dash pattern that flows from the facility to the address.
+   Live sites flow fastest; announced ones barely move. Drawn in on load. */
+.gridline {
+  stroke-dasharray: 10 12;
+  animation: gridflow 1.4s linear infinite, gridin 0.9s ease-out both;
+}
+.gridline-under_construction { animation-duration: 2.2s, 0.9s; }
+.gridline-announced { stroke-dasharray: 4 14; animation-duration: 3.2s, 0.9s; }
+@keyframes gridflow { to { stroke-dashoffset: -22; } }
+@keyframes gridin { from { opacity: 0; } }
+
+/* The address: a ring that pulses outward. */
+.pulse { animation: pulse 2.4s ease-out infinite; }
+@keyframes pulse {
+  from { r: 7; opacity: 0.9; }
+  to { r: 34; opacity: 0; }
+}
+
+/* Section tiles: the status is the colour, the open one is inked. */
+.tile { border-top: 4px solid var(--line); }
+.tile-measured { border-top-color: var(--measured); }
+.tile-reported { border-top-color: var(--reported); }
+.tile-modelled { border-top-color: var(--modelled); }
+.tile-unavailable { border-top-color: var(--unavailable); border-top-style: dashed; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }

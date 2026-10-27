@@ -1,17 +1,43 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fixtures, resolveAddress } from '../lib/briefs'
+import AddressInput from '../components/AddressInput'
+import { ApiError, createBrief, getHealth, type Health } from '../lib/api'
 
 export default function Home() {
   const [input, setInput] = useState('')
-  const [miss, setMiss] = useState(false)
+  const [health, setHealth] = useState<Health | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [error, setError] = useState<string | null>(null)
   const nav = useNavigate()
+  const mode = health?.mode
 
-  function go(e: React.FormEvent) {
+  useEffect(() => {
+    getHealth().then(setHealth).catch(() => setHealth({ ok: false, mode: 'offline', examples: [] }))
+  }, [])
+
+  useEffect(() => {
+    if (!busy) return
+    setElapsed(0)
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [busy])
+
+  const onChange = useCallback((v: string) => { setInput(v); setError(null) }, [])
+
+  async function go(e: React.FormEvent) {
     e.preventDefault()
-    const key = resolveAddress(input)
-    if (key) nav(`/b/${key}`)
-    else setMiss(true)
+    if (busy || !input.trim()) return
+    setError(null)
+    setBusy(true)
+    try {
+      const brief = await createBrief(input)
+      nav(`/b/${brief.brief_id}`)
+    } catch (err) {
+      setError(messageFor(err, mode))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -29,48 +55,82 @@ export default function Home() {
           Street address, city, state
         </label>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input
-            id="address"
-            value={input}
-            onChange={(e) => { setInput(e.target.value); setMiss(false) }}
-            placeholder="21715 Filigree Ct, Ashburn, VA"
-            autoComplete="street-address"
-            className="w-full border-2 border-[var(--ink)] bg-white px-4 py-3 text-lg placeholder:text-[var(--line)]"
-          />
+          <AddressInput value={input} onChange={onChange} disabled={busy} />
           <button
             type="submit"
-            className="shrink-0 border-2 border-[var(--ink)] bg-[var(--ink)] px-6 py-3 text-lg font-semibold text-[var(--paper)]"
+            disabled={busy}
+            className="shrink-0 border-2 border-[var(--ink)] bg-[var(--ink)] px-6 py-3 text-lg font-semibold text-[var(--paper)] disabled:opacity-60"
           >
-            Check my grid
+            {busy ? 'Working…' : 'Check my grid'}
           </button>
         </div>
-        {miss && (
-          <p className="mt-3 text-sm" role="alert">
-            Only the five example addresses below work while the app runs on fixtures. Pick one of them.
+        {busy && mode === 'agent' && (
+          <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
+            Spark is drafting five sections, then Spark Open fetches every cited page and checks each
+            claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
           </p>
+        )}
+        {error && (
+          <p className="mt-3 text-sm" role="alert">{error}</p>
         )}
       </form>
 
-      <section className="mt-14">
-        <h2 className="text-sm text-[var(--ink-soft)]">Example addresses</h2>
-        <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
-          {Object.entries(fixtures).map(([key, b]) => (
-            <li key={key}>
-              <a href={`/b/${key}`} className="flex items-baseline justify-between gap-4 py-3 no-underline hover:bg-white">
-                <span className="font-semibold">{b.address.display}</span>
-                <span className="num shrink-0 text-sm text-[var(--ink-soft)]">
-                  {b.headline.ai_rent_usd_per_month === null ? 'bill: not known' : `${fmtMoney(b.headline.ai_rent_usd_per_month)}/mo`}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 text-sm text-[var(--ink-soft)]">
-          Every operator, source and quote in these examples is fictional. They exist to build the page against.
+      {mode === 'fixtures' && health && (
+        <section className="mt-14">
+          <h2 className="text-sm text-[var(--ink-soft)]">Example addresses</h2>
+          <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+            {health.examples.map((ex) => (
+              <li key={ex.key}>
+                <a href={`/b/${ex.key}`} className="flex items-baseline justify-between gap-4 py-3 no-underline hover:bg-white">
+                  <span className="font-semibold">{ex.display}</span>
+                  <span className="num shrink-0 text-sm text-[var(--ink-soft)]">
+                    {ex.ai_rent_usd_per_month === null ? 'bill: not known' : `${fmtMoney(ex.ai_rent_usd_per_month)}/mo`}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+            Every operator, source and quote in these examples is fictional. They exist to build the page against.
+          </p>
+        </section>
+      )}
+
+      {mode === 'agent' && (
+        <p className="mt-14 max-w-[64ch] text-sm text-[var(--ink-soft)]">
+          Any US street address. Operators, sources and quotes come from Muse Spark's own knowledge
+          and are checked against the cited pages by Muse Spark Open. Nothing is verified against
+          ground-truth data yet, and the brief says so on every section.
         </p>
-      </section>
+      )}
+
+      {mode === 'offline' && (
+        <p className="mt-14 text-sm" role="alert">
+          The brief service is not running. Start it with <code>uv run uvicorn app.main:create_app --factory</code> in services/api.
+        </p>
+      )}
     </main>
   )
+}
+
+function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
+  if (err instanceof ApiError) {
+    switch (err.status) {
+      case 404:
+        return mode === 'fixtures'
+          ? 'Only the five example addresses below work while the app runs on fixtures. Pick one of them.'
+          : 'No brief for that address.'
+      case 422:
+        return 'Could not find that US address. Include the street number, city and state.'
+      case 503:
+        return 'The address lookup service is not answering. Try again in a minute.'
+      case 502:
+        return 'The drafting model did not answer. Try again.'
+      default:
+        return `Something went wrong (${err.status}).`
+    }
+  }
+  return 'Cannot reach the brief service. Is it running?'
 }
 
 export function fmtMoney(n: number) {

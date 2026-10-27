@@ -7,3 +7,8 @@ __pycache__/
 .next/
 dist/
 .DS_Store
+
+# Brief cache (services/api). Keyed by address hash; still never commit it.
+data/
+# Browser-tool scratch
+.playwright-mcp/

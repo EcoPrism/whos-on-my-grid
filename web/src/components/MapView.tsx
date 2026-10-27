@@ -1,23 +1,63 @@
-import { Circle, CircleMarker, MapContainer, Polygon, Popup, TileLayer } from 'react-leaflet'
-import type { Brief } from '../types'
+import { latLngBounds } from 'leaflet'
+import { Circle, CircleMarker, MapContainer, Polygon, Polyline, Popup, TileLayer, ZoomControl } from 'react-leaflet'
+import type { Brief, Facility } from '../types'
 
 const FIVE_MILES_M = 8047
 
-// The five-mile ring is the product's unit of concern. Everything else on the
-// map is a dot or an outline, in the status colours.
-export default function MapView({ brief }: { brief: Brief }) {
+// Status is the only colour on the map, as on the page.
+const STATUS_COLOR: Record<Facility['status'], string> = {
+  live: '#15202b',
+  under_construction: '#b7791f',
+  announced: '#3b5b8c',
+}
+
+// Line weight follows load, on a log scale so a 10 MW edge site and a 300 MW
+// campus both read without one swamping the other.
+function weightFor(mw: number | null | undefined, shares: boolean | null | undefined) {
+  const base = mw ? 1.5 + Math.log10(mw + 1) * 1.4 : 1.5
+  return Math.min(7, base + (shares ? 1.5 : 0))
+}
+
+function hasPoint(f: Facility): f is Facility & { lat: number; lon: number } {
+  return typeof f.lat === 'number' && typeof f.lon === 'number'
+}
+
+interface Props {
+  brief: Brief
+  className?: string
+}
+
+// The five-mile ring is the product's unit of concern. Each facility is tied
+// to the address by a line that flows toward it: the grid you share, drawn.
+export default function MapView({ brief, className }: Props) {
   const { lat, lon } = brief.address
-  const facilities = brief.sections.on_your_grid.facilities ?? []
+  // Live and under-construction sites live on "On your grid"; announced
+  // campuses on "Coming". Both belong on the map.
+  const placed = [
+    ...(brief.sections.on_your_grid.facilities ?? []),
+    ...(brief.sections.coming.facilities ?? []),
+  ].filter(hasPoint)
   const construction = brief.sections.coming.construction ?? []
+
+  // Frame the address and everything tied to it, so the lines have length.
+  // With nothing nearby, show the five-mile ring instead.
+  const points: [number, number][] = [
+    [lat, lon],
+    ...placed.map((f): [number, number] => [f.lat, f.lon]),
+    ...construction.flatMap((c) => c.polygon ?? []),
+  ]
+  const bounds = points.length > 1 ? latLngBounds(points).pad(0.35) : undefined
 
   return (
     <MapContainer
-      center={[lat, lon]}
-      zoom={12}
+      // react-leaflet uses center and zoom when given, else bounds.
+      {...(bounds ? { bounds } : { center: [lat, lon] as [number, number], zoom: 12 })}
       scrollWheelZoom={false}
-      className="h-[360px] w-full sm:h-[440px]"
+      zoomControl={false}
+      className={className ?? 'h-[360px] w-full sm:h-[440px]'}
       attributionControl
     >
+      <ZoomControl position="topright" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -25,28 +65,19 @@ export default function MapView({ brief }: { brief: Brief }) {
       />
 
       <Circle center={[lat, lon]} radius={FIVE_MILES_M} pathOptions={{ color: '#15202b', weight: 1.5, dashArray: '6 6', fill: false }} />
-      <CircleMarker center={[lat, lon]} radius={7} pathOptions={{ color: '#15202b', fillColor: '#ffc300', fillOpacity: 1, weight: 2 }}>
-        <Popup>Your address</Popup>
-      </CircleMarker>
 
-      {facilities.filter((f) => f.lat && f.lon).map((f) => (
-        <CircleMarker
-          key={f.name}
-          center={[f.lat!, f.lon!]}
-          radius={f.status === 'live' ? 6 : 5}
+      {placed.map((f) => (
+        <Polyline
+          key={`line-${f.name}`}
+          positions={[[f.lat, f.lon], [lat, lon]]}
           pathOptions={{
-            color: '#15202b',
-            weight: 1,
-            fillColor: f.status === 'live' ? '#15202b' : f.status === 'under_construction' ? '#b7791f' : '#3b5b8c',
-            fillOpacity: f.status === 'announced' ? 0.5 : 0.95,
+            color: STATUS_COLOR[f.status],
+            weight: weightFor(f.estimated_mw, f.shares_substation),
+            opacity: f.status === 'announced' ? 0.6 : 0.85,
+            lineCap: 'round',
+            className: `gridline gridline-${f.status}`,
           }}
-        >
-          <Popup>
-            <strong>{f.name}</strong><br />
-            {f.operator}{f.codename ? ` (filed as ${f.codename})` : ''}<br />
-            {f.status.replace('_', ' ')}, {f.distance_km.toFixed(1)} km
-          </Popup>
-        </CircleMarker>
+        />
       ))}
 
       {construction.filter((c) => c.polygon && c.polygon.length > 2).map((c) => (
@@ -62,6 +93,34 @@ export default function MapView({ brief }: { brief: Brief }) {
           </Popup>
         </Polygon>
       ))}
+
+      {placed.map((f) => (
+        <CircleMarker
+          key={f.name}
+          center={[f.lat, f.lon]}
+          radius={f.status === 'live' ? 6 : 5}
+          pathOptions={{
+            color: '#15202b',
+            weight: 1,
+            fillColor: STATUS_COLOR[f.status],
+            fillOpacity: f.status === 'announced' ? 0.5 : 0.95,
+          }}
+        >
+          <Popup>
+            <strong>{f.name}</strong><br />
+            {f.operator}{f.codename ? ` (filed as ${f.codename})` : ''}<br />
+            {f.status.replace('_', ' ')}, {f.distance_km.toFixed(1)} km
+            {f.estimated_mw ? `, ${f.estimated_mw} MW` : ''}
+            {f.shares_substation ? ', shares your substation' : ''}
+          </Popup>
+        </CircleMarker>
+      ))}
+
+      {/* The address: a pulse ring under a solid marker. */}
+      <CircleMarker center={[lat, lon]} radius={7} pathOptions={{ color: '#ffc300', weight: 2, fill: false, className: 'pulse' }} interactive={false} />
+      <CircleMarker center={[lat, lon]} radius={7} pathOptions={{ color: '#15202b', fillColor: '#ffc300', fillOpacity: 1, weight: 2 }}>
+        <Popup>Your address</Popup>
+      </CircleMarker>
     </MapContainer>
   )
 }

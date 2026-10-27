@@ -1,0 +1,47 @@
+[project]
+name = "grid-api"
+version = "0.1.0"
+description = "Who's On My Grid: the brief service. One address in, one brief out."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "openai>=1.60",
+    "httpx>=0.27",
+    "jsonschema>=4.23",
+    "rfc3339-validator>=0.1.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Scripted fixtures and assertions read better on one line.
+"tests/*" = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+# `live` calls the real gateway and Baseten and costs tokens: deselected by
+# default so `uv run pytest` stays offline. Run with `uv run pytest -m live --run-live`.
+addopts = "-m 'not live'"
+markers = ["live: calls the real LLM endpoints; needs --run-live and the GRID_* keys"]
+
+[tool.uv]
+package = false

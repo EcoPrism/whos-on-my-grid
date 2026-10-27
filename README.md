@@ -56,8 +56,9 @@ Nothing is wired to real data until the page already works on fixtures.
 
 1. **Dummy repo.** The schema, fixture briefs with fictional operators, this README.
 2. **UI on fixtures.** Address box, brief page, share card, versus card. `BRIEF_SOURCE=fixtures`.
-3. **Agent-only backend.** Spark with search grounding produces the whole brief from the address
-   alone, cited; Spark Open verifies. Every section is `reported`. `BRIEF_SOURCE=agent`.
+3. **Agent-only backend.** Spark produces the whole brief from the address alone, cited from its
+   own knowledge (no search API yet); the service fetches every cited page and Spark Open verifies
+   each claim against it. Every section is `reported`. `BRIEF_SOURCE=agent`.
 4. **Perception.** SAM 3.1 on two imagery vintages makes "Coming" `measured`. Voice Transcribe on
    pre-indexed hearings for a first set of counties makes "Hearing" `measured`.
 5. **Ground-truth providers.** Facilities, substations, service territory and prices from PeeringDB,
@@ -74,6 +75,32 @@ address ──► brief service ──► Spark (reads, conducts; search groundi
                                         │
                               brief + share card ──► watch mode ──► change alerts
 ```
+
+## Run it
+
+Two processes: the brief service (`services/api`, Python 3.13 with [uv](https://docs.astral.sh/uv/))
+and the UI (`web`, Vite). The UI proxies `/api` to the service.
+
+```
+cd services/api
+cp .env.example .env            # fixtures mode works with no keys
+uv sync
+uv run pytest                   # offline suite, fake providers
+uv run uvicorn app.main:create_app --factory --reload --port 8000
+
+cd ../../web
+npm install
+npm run dev                     # http://localhost:5173
+```
+
+For agent mode set `GRID_BRIEF_SOURCE=agent` and `GRID_LLM_PROVIDER=openai` in `services/api/.env`
+and fill in `GRID_OPENAI_API_KEY` (this project's virtual key on the LLM gateway; the model alias
+`meta-flagship` is Muse Spark 1.3) and `GRID_BASETEN_API_KEY` (Muse Spark Open, the verifier). The
+service refuses to start in agent mode without them. `uv run pytest -m live --run-live` sends one
+small call to each endpoint to prove the keys and the structured-output path. Optional:
+`VITE_GOOGLE_MAPS_API_KEY` in `web/.env` turns the address box into Google Places autocomplete.
+
+Generated briefs are cached in `data/briefs/` by a hash of the address, gitignored.
 
 ## What was built when
 
