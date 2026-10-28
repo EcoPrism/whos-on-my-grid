@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 
+from app.brief.fetch import blocked_reason
 from app.ground.facilities import USER_AGENT
 
 # The media host answers a bare library User-Agent with 403; a browser string
@@ -102,9 +103,32 @@ async def media_urls(
         loc = r.headers.get("location")
         if r.status_code not in (301, 302) or not loc:
             return None
+        # The redirect is server-supplied: only an https URL on a Granicus host
+        # that resolves to a public address is ever fetched or written to disk.
+        if not media_host_ok(loc) or await blocked_reason(loc):
+            return None
         mp4 = loc
         mp3 = re.sub(r"\.mp4(\?.*)?$", ".mp3", mp4)
         return mp4, mp3
+
+
+MEDIA_HOST_SUFFIX = ".granicus.com"
+
+
+def media_host_ok(url: str) -> bool:
+    """True for an https URL on a granicus.com host (archive-video.granicus.com
+    serves the media). Anything else, including a redirect to another site,
+    an http URL or a bare IP, is refused."""
+    try:
+        u = httpx.URL(url)
+    except Exception:
+        return False
+    host = (u.host or "").lower()
+    return (
+        u.scheme == "https"
+        and host.endswith(MEDIA_HOST_SUFFIX)
+        and len(host) > len(MEDIA_HOST_SUFFIX)
+    )
 
 
 # --- captions -> turns -------------------------------------------------------------

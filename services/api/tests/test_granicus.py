@@ -1,7 +1,14 @@
 """Granicus index parsing and captions-to-turns, on shapes copied from the
 real JSON (nested list, 'meta' index points, '>>' speaker marks)."""
 
-from app.hearings.granicus import Caption, captions_to_turns, parse_index, points_in
+from app.hearings.granicus import (
+    Caption,
+    captions_to_turns,
+    media_host_ok,
+    parse_index,
+    points_in,
+)
+from app.hearings.roles import clean_name
 from app.hearings.transcribe import agreement
 
 RAW = [
@@ -72,3 +79,22 @@ def test_agreement_is_token_f1() -> None:
     assert agreement(t, c) == 0.947
     assert agreement(t, []) is None
     assert agreement(t, [{"text": "completely different words entirely"}]) == 0.0
+
+
+def test_media_redirect_must_stay_on_a_granicus_host() -> None:
+    assert media_host_ok("https://archive-video.granicus.com/pwcgov/pwcgov_abc.mp4")
+    assert not media_host_ok("http://archive-video.granicus.com/pwcgov/x.mp4")
+    assert not media_host_ok("https://granicus.com/x.mp4")
+    assert not media_host_ok("https://evil.example/granicus.com/x.mp4")
+    assert not media_host_ok("https://169.254.169.254/latest/meta-data")
+    assert not media_host_ok("not a url")
+
+
+def test_speaker_name_is_kept_only_when_spoken_and_name_shaped() -> None:
+    chunk = "Thank you, Chair Scott. Supervisor Christy, you are recognized."
+    assert clean_name("Christy", chunk) == "Christy"
+    assert clean_name("  Chair   Scott ", chunk) == "Chair Scott"
+    assert clean_name("Kershner", chunk) is None
+    assert clean_name("Scott <script>", chunk) is None
+    assert clean_name("S" * 80, chunk) is None
+    assert clean_name(None, chunk) is None

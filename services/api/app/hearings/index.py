@@ -22,6 +22,7 @@ from typing import Any
 
 import httpx
 
+from app.brief.fetch import blocked_reason
 from app.config import DRAFT_MODEL_ID, get_settings
 from app.ground.hearings import HearingIndex
 from app.hearings.audio import OVERLAP_S, cut_chunks
@@ -29,6 +30,7 @@ from app.hearings.granicus import (
     BROWSER_UA,
     captions_to_turns,
     fetch_index,
+    media_host_ok,
     media_urls,
     points_in,
 )
@@ -51,18 +53,26 @@ def find(sources: dict[str, Any], meeting_id: str) -> tuple[dict[str, Any], dict
     sys.exit(f"meeting {meeting_id!r} is not in sources.json")
 
 
+MAX_AUDIO_BYTES = 3 << 30  # a 27-hour meeting at 128 kbps is about 1.5 GB
+
+
 async def download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and dest.stat().st_size > 0:
         print(f"  audio already here: {dest} ({dest.stat().st_size / 1e6:.0f} MB)")
         return dest
+    if not media_host_ok(url):
+        sys.exit(f"refusing to download from outside the archive host: {url}")
+    reason = await blocked_reason(url)
+    if reason:
+        sys.exit(f"refusing to download: {reason}")
     print(f"  downloading {url}")
     tmp = dest.with_suffix(".part")
     async with (
         httpx.AsyncClient(
             timeout=httpx.Timeout(60.0, read=600.0),
             headers={"User-Agent": BROWSER_UA},
-            follow_redirects=True,
+            follow_redirects=False,  # the vetted URL is the one that is read
         ) as client,
         client.stream("GET", url) as r,
     ):
@@ -72,6 +82,10 @@ async def download(url: str, dest: Path) -> Path:
             async for chunk in r.aiter_bytes(1 << 20):
                 f.write(chunk)
                 size += len(chunk)
+                if size > MAX_AUDIO_BYTES:
+                    f.close()
+                    tmp.unlink(missing_ok=True)
+                    sys.exit(f"download exceeded {MAX_AUDIO_BYTES >> 30} GB; stopped")
                 if size % (50 << 20) < (1 << 20):
                     print(f"    {size / 1e6:.0f} MB")
     tmp.replace(dest)
