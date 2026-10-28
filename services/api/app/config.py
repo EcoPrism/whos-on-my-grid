@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         env_file=str(API_ROOT / ".env"), env_prefix="GRID_", extra="ignore"
     )
 
-    # fixtures | agent  (full is step 5)
+    # fixtures | agent | full
     brief_source: str = "fixtures"
     # openai | fake
     llm_provider: str = "fake"
@@ -38,13 +38,28 @@ class Settings(BaseSettings):
     verify_model: str = "meta-models/muse-spark-open"
     verify_strict_json: bool = True
 
-    llm_max_tokens: int = 6144
+    llm_max_tokens: int = 12000
     llm_timeout_seconds: float = 180.0
-    verify_max_tokens: int = 1024
+    verify_max_tokens: int = 4096
     verify_timeout_seconds: float = 60.0
-    verify_concurrency: int = 4
+    verify_concurrency: int = 8
     fetch_timeout_seconds: float = 10.0
     geocode_timeout_seconds: float = 15.0
+
+    # Ground truth (full mode): facility database, service territory, prices.
+    overpass_endpoints: str = (
+        "https://overpass.openstreetmap.fr/api/interpreter,"
+        "https://overpass-api.de/api/interpreter,"
+        "https://overpass.kumi.systems/api/interpreter"
+    )
+    hifld_url: str = (
+        "https://eedgis.pnnl.gov/arcgis/rest/services/Hosted/"
+        "Electric_Service_Territories/FeatureServer/0/query"
+    )
+    ground_timeout_seconds: float = 30.0
+    # Downloaded datasets (PeeringDB snapshot, EIA workbooks). Shared by every brief
+    # cache directory, so an eval run with its own GRID_DATA_DIR does not re-download.
+    ground_dir: str = "data/ground"
 
     data_dir: str = "data/briefs"
     cors_origins: str = "http://localhost:5173,http://localhost:5180"
@@ -57,6 +72,11 @@ class Settings(BaseSettings):
     @property
     def data_path(self) -> Path:
         p = Path(self.data_dir)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def ground_path(self) -> Path:
+        p = Path(self.ground_dir)
         return p if p.is_absolute() else REPO_ROOT / p
 
 

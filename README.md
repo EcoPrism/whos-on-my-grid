@@ -69,8 +69,15 @@ Nothing is wired to real data until the page already works on fixtures.
    each claim against it. Every section is `reported`. `BRIEF_SOURCE=agent`.
 4. **Perception.** SAM 3.1 on two imagery vintages makes "Coming" `measured`. Voice Transcribe on
    pre-indexed hearings for a first set of counties makes "Hearing" `measured`.
-5. **Ground-truth providers.** Facilities, substations, service territory and prices from PeeringDB,
-   OpenStreetMap, HIFLD and EIA. `BRIEF_SOURCE=full`.
+5. **Ground-truth providers.** Facilities from PeeringDB and OpenStreetMap, serving utility from
+   HIFLD's service-territory map, residential prices from EIA-861M (state, monthly) and EIA-861
+   (this utility, annual), large-load tariffs from a hand-curated table (`data/tariffs.json`).
+   The engine owns existence, location, distance, utility and price; Spark writes the sentences
+   around them and adds what no dataset holds (announced and rejected campuses, codenames,
+   attributions, hearings). `BRIEF_SOURCE=full`. Scored against a 30-address test set in `eval/`.
+   `POST /api/brief/stream` sends the brief as it is made (newline-delimited JSON): the facts and
+   the map within seconds, each section as Spark finishes it, a count as claims are checked, then
+   the finished brief. The page opens on the first event and fills in.
 6. **Watch mode, hosted demo, video.**
 
 ```
@@ -101,12 +108,33 @@ npm install
 npm run dev                     # http://localhost:5173
 ```
 
-For agent mode set `GRID_BRIEF_SOURCE=agent` and `GRID_LLM_PROVIDER=openai` in `services/api/.env`
+For agent or full mode set `GRID_BRIEF_SOURCE=agent` (Spark from its own knowledge) or
+`GRID_BRIEF_SOURCE=full` (ground truth first) and `GRID_LLM_PROVIDER=openai` in `services/api/.env`
 and fill in `GRID_OPENAI_API_KEY` (this project's virtual key on the LLM gateway; the model alias
 `meta-flagship` is Muse Spark 1.3) and `GRID_BASETEN_API_KEY` (Muse Spark Open, the verifier). The
 service refuses to start in agent mode without them. `uv run pytest -m live --run-live` sends one
 small call to each endpoint to prove the keys and the structured-output path. Optional:
 `VITE_GOOGLE_MAPS_API_KEY` in `web/.env` turns the address box into Google Places autocomplete.
+
+Full mode needs no further keys. PeeringDB's US facility list, the EIA workbooks and the
+OpenStreetMap query are free and keyless; snapshots are cached under `data/ground/` (gitignored).
+Overpass is queried on `overpass.openstreetmap.fr` first (the only mirror reachable from some
+networks), then the others in `GRID_OVERPASS_ENDPOINTS`.
+
+### The test set
+
+`eval/addresses.json` holds thirty street-level pins with an oracle for each: facility bucket,
+operators that must be named, serving utility, bill direction and size, tariff status, which
+consequence lines must appear and which phrases are hard fails. `eval/run_eval.py` reverse-geocodes
+each pin to a numbered address (cached in `eval/resolved.json`), posts it to a running API, and scores
+the briefs per dimension into `eval/runs/<name>/report.md`:
+
+```
+cd services/api && GRID_BRIEF_SOURCE=full GRID_DATA_DIR=eval/runs/full/cache   uv run uvicorn app.main:create_app --factory --port 8010
+python eval/run_eval.py --api http://localhost:8010 --out eval/runs/full
+```
+
+Hearing is scored as information only: no dataset of minutes exists yet (step 4).
 
 Generated briefs are cached in `data/briefs/` by a hash of the address, gitignored.
 

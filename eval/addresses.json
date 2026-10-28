@@ -1,0 +1,1206 @@
+{
+  "_about": "30-address test set, prepared 2026-10-27. Street-level pins, no private residences. `expect` is the oracle in ranges; the scorer fails on wrong buckets, statuses or attributions, not on a count off by one. `oracle_confidence` marks rows where the oracle itself is thin: re-verify those against the facility database before calling a mismatch a product bug.",
+  "_fields": {
+    "facilities": "[min, max|null] total facilities (live + under_construction + announced) within five miles",
+    "live": "[min, max|null] live facilities, when the split matters",
+    "announced_min": "at least this many announced/under-construction when the split matters",
+    "operators": "operator names (case-insensitive substrings) a correct brief names; `operators_min` of them must appear",
+    "utility": "regex the serving utility must match (address.utility or any section text)",
+    "bill": "{direction: up|flat|any, range: [lo, hi] dollars/month for the hero number, attribution: null|required|any}",
+    "protection": "acceptable large_load_tariff values; `protection_specific` requires a tariff name or docket",
+    "strip_requires": "topics that must appear among the at-your-house lines (positive controls)",
+    "strip_lead": "topic the first model-written strip line must have",
+    "forbid": "regexes that must not match anywhere in the brief text (hard fails)",
+    "require_text": "regexes that must match somewhere in the brief text",
+    "hearing": "expected | none_ok  (informational: a real hook cannot be checked automatically)"
+  },
+  "addresses": [
+    {
+      "id": "ashburn",
+      "group": "A",
+      "address": "Filigree Ct, Ashburn, VA 20147",
+      "lat": 39.015,
+      "lon": -77.458,
+      "tests": "ceiling case, codename/operator density",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "operators": [
+          "Equinix",
+          "Digital Realty",
+          "NTT",
+          "Vantage",
+          "CyrusOne",
+          "STACK"
+        ],
+        "operators_min": 2,
+        "utility": "Dominion",
+        "bill": {
+          "direction": "up",
+          "range": [
+            8,
+            45
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed"
+        ],
+        "hearing": "expected"
+      },
+      "oracle_note_bill": "bill range widened 2026-10-27: the hero uses the serving utility's own EIA-861 annual series (latest two calendar years available), not the statewide monthly series the original oracle assumed"
+    },
+    {
+      "id": "sterling",
+      "group": "A",
+      "address": "Pacific Blvd, Sterling, VA 20166",
+      "lat": 39.005,
+      "lon": -77.444,
+      "tests": "noise line with real evidence nearby (the generator-hum neighbourhood)",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "operators": [
+          "Vantage",
+          "Equinix",
+          "Digital Realty",
+          "NTT",
+          "CyrusOne",
+          "STACK",
+          "Microsoft",
+          "Amazon"
+        ],
+        "operators_min": 1,
+        "utility": "Dominion",
+        "bill": {
+          "direction": "up",
+          "range": [
+            8,
+            45
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed"
+        ],
+        "strip_requires": [
+          "noise"
+        ],
+        "hearing": "none_ok"
+      },
+      "oracle_note_bill": "bill range widened 2026-10-27: the hero uses the serving utility's own EIA-861 annual series (latest two calendar years available), not the statewide monthly series the original oracle assumed"
+    },
+    {
+      "id": "manassas",
+      "group": "A",
+      "address": "Wellington Rd, Manassas, VA 20109",
+      "lat": 38.767,
+      "lon": -77.527,
+      "tests": "announced-vs-live split, contested hearing (Prince William Digital Gateway)",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "announced_min": 1,
+        "operators": [
+          "Amazon",
+          "QTS",
+          "STACK",
+          "Compass",
+          "Iron Mountain",
+          "Microsoft"
+        ],
+        "operators_min": 1,
+        "utility": "Dominion|NOVEC|Northern Virginia Electric",
+        "bill": {
+          "direction": "up",
+          "range": [
+            8,
+            45
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed"
+        ],
+        "require_text": [
+          "Digital Gateway"
+        ],
+        "hearing": "expected"
+      },
+      "oracle_note_bill": "bill range widened 2026-10-27: the hero uses the serving utility's own EIA-861 annual series (latest two calendar years available), not the statewide monthly series the original oracle assumed"
+    },
+    {
+      "id": "quincy",
+      "group": "A",
+      "address": "F St SW, Quincy, WA 98848",
+      "lat": 47.233,
+      "lon": -119.874,
+      "tests": "counter-narrative: close AND cheap. Any output implying big bill harm is a fail",
+      "expect": {
+        "facilities": [
+          5,
+          12
+        ],
+        "operators": [
+          "Microsoft",
+          "Yahoo",
+          "Sabey",
+          "NTT",
+          "Vantage",
+          "Dell"
+        ],
+        "operators_min": 2,
+        "utility": "Grant County PUD|Grant PUD|Grant County Public Utility",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -8,
+            8
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "strip_requires": [
+          "taxes"
+        ],
+        "forbid": [
+          "band\": \"critical"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "hillsboro",
+      "group": "A",
+      "address": "NE Evergreen Pkwy, Hillsboro, OR 97124",
+      "lat": 45.544,
+      "lon": -122.882,
+      "tests": "second West-Coast cluster, enterprise-tax-zone politics",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "operators": [
+          "Digital Realty",
+          "STACK",
+          "Aligned",
+          "Flexential",
+          "NTT",
+          "QTS",
+          "Edgecore"
+        ],
+        "operators_min": 2,
+        "utility": "Portland General|PGE",
+        "bill": {
+          "direction": "up",
+          "range": [
+            5,
+            40
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "council_bluffs",
+      "group": "A",
+      "address": "W Broadway, Council Bluffs, IA 51501",
+      "lat": 41.262,
+      "lon": -95.91,
+      "tests": "single-operator dominance",
+      "expect": {
+        "facilities": [
+          1,
+          12
+        ],
+        "operators": [
+          "Google"
+        ],
+        "operators_min": 0,
+        "utility": "MidAmerican",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      },
+      "oracle_confidence": "corrected 2026-10-27: Google's Council Bluffs campus is about 13 km from this pin on OpenStreetMap, outside the five-mile ring; within it the databases list Omaha colocation sites (Cogent, First National, 1623 Farnam, CyrusOne) and one unnamed data-center building"
+    },
+    {
+      "id": "altoona",
+      "group": "A",
+      "address": "Adventureland Dr, Altoona, IA 50009",
+      "lat": 41.658,
+      "lon": -93.489,
+      "tests": "count-vs-capacity: few buildings, giant load; must not call this light",
+      "expect": {
+        "facilities": [
+          1,
+          6
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 1,
+        "utility": "MidAmerican",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "\\blight (load|footprint|presence|impact)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "new_albany",
+      "group": "A",
+      "address": "Beech Rd NW, New Albany, OH 43054",
+      "lat": 40.08,
+      "lon": -82.753,
+      "tests": "construction status + tariff specificity (AEP Ohio 2024-25 data-center tariff case)",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "announced_min": 1,
+        "operators": [
+          "Meta",
+          "Amazon",
+          "Google",
+          "Microsoft",
+          "QTS"
+        ],
+        "operators_min": 2,
+        "utility": "AEP|American Electric Power|Ohio Power",
+        "bill": {
+          "direction": "up",
+          "range": [
+            0,
+            45
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed"
+        ],
+        "protection_specific": true,
+        "hearing": "none_ok"
+      },
+      "oracle_note_bill": "bill range widened 2026-10-27: the hero uses the serving utility's own EIA-861 annual series (latest two calendar years available), not the statewide monthly series the original oracle assumed"
+    },
+    {
+      "id": "mesa",
+      "group": "A",
+      "address": "E Elliot Rd, Mesa, AZ 85212",
+      "lat": 33.35,
+      "lon": -111.636,
+      "tests": "water line with real permits/agreements; strip must lead with water",
+      "expect": {
+        "facilities": [
+          5,
+          null
+        ],
+        "operators": [
+          "Meta",
+          "Apple",
+          "Google",
+          "NTT",
+          "EdgeCore",
+          "Novva",
+          "Edgecore"
+        ],
+        "operators_min": 2,
+        "utility": "SRP|Salt River Project|APS|Arizona Public Service",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            40
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "strip_requires": [
+          "water"
+        ],
+        "strip_lead": "water",
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "dallas",
+      "group": "A",
+      "address": "Singleton Blvd, Dallas, TX 75212",
+      "lat": 32.779,
+      "lon": -96.884,
+      "tests": "deregulated market: no regulated-state tariff frame",
+      "oracle_confidence": "medium (Texas SB 6 of 2025 created large-load interconnection rules; the oracle says not a tariff of the same kind)",
+      "expect": {
+        "facilities": [
+          5,
+          null
+        ],
+        "operators": [
+          "QTS",
+          "Equinix",
+          "CyrusOne",
+          "Digital Realty",
+          "DataBank",
+          "Aligned"
+        ],
+        "operators_min": 2,
+        "utility": "Oncor",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            40
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "proposed",
+          "none_found",
+          "unknown",
+          "in_force"
+        ],
+        "require_text": [
+          "ERCOT|Oncor"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "elk_grove",
+      "group": "A",
+      "address": "W Elk Grove Blvd, Elk Grove Village, IL 60007",
+      "lat": 42.01,
+      "lon": -87.994,
+      "tests": "PJM capacity-cost attribution done with sources",
+      "expect": {
+        "facilities": [
+          10,
+          null
+        ],
+        "operators": [
+          "CyrusOne",
+          "Digital Realty",
+          "STACK",
+          "Microsoft",
+          "Equinix",
+          "Compass",
+          "DataBank"
+        ],
+        "operators_min": 2,
+        "utility": "ComEd|Commonwealth Edison",
+        "bill": {
+          "direction": "up",
+          "range": [
+            5,
+            45
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "require_text": [
+          "PJM|capacity"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "santa_clara",
+      "group": "A",
+      "address": "Mission College Blvd, Santa Clara, CA 95054",
+      "lat": 37.391,
+      "lon": -121.973,
+      "tests": "municipal-utility island + attribution honesty",
+      "expect": {
+        "facilities": [
+          15,
+          null
+        ],
+        "operators": [
+          "Equinix",
+          "Digital Realty",
+          "NTT",
+          "Vantage",
+          "CoreSite",
+          "CyrusOne",
+          "Stack"
+        ],
+        "operators_min": 3,
+        "utility": "Silicon Valley Power",
+        "bill": {
+          "direction": "up",
+          "range": [
+            5,
+            60
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "los_angeles",
+      "group": "A",
+      "address": "624 S Grand Ave, Los Angeles, CA 90017",
+      "lat": 34.048,
+      "lon": -118.256,
+      "tests": "urban colo is not a campus; no greenfield growth",
+      "expect": {
+        "facilities": [
+          2,
+          null
+        ],
+        "operators": [
+          "One Wilshire",
+          "CoreSite",
+          "Digital Realty",
+          "Equinix",
+          "GI Partners",
+          "Hines"
+        ],
+        "operators_min": 1,
+        "utility": "LADWP|Los Angeles Department of Water",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            60
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "bellevue",
+      "group": "B",
+      "address": "153rd Ave SE, Bellevue, WA 98007",
+      "lat": 47.591,
+      "lon": -122.136,
+      "tests": "small-facility detection; the known failure mode of the Spark-drafted screen",
+      "oracle_confidence": "high for Colocation Northwest Bellevue (0.5 mi) and Redmond (2.9 mi); the oracle's third site, Centeris Mercer Island, is an office, not a facility",
+      "expect": {
+        "facilities": [
+          2,
+          5
+        ],
+        "live": [
+          2,
+          5
+        ],
+        "operators": [
+          "Colocation Northwest",
+          "IsoFusion"
+        ],
+        "operators_min": 1,
+        "utility": "Puget Sound Energy|PSE",
+        "bill": {
+          "direction": "up",
+          "range": [
+            14,
+            32
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "no (nearby |live |large )?data.?centers?( building)? (is |was |were |are )?(confirmed|found|verified)",
+          "could not confirm any (live|data)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "seattle",
+      "group": "B",
+      "address": "2001 6th Ave, Seattle, WA 98121",
+      "lat": 47.614,
+      "lon": -122.339,
+      "tests": "downtown cluster, municipal utility",
+      "expect": {
+        "facilities": [
+          2,
+          12
+        ],
+        "operators": [
+          "Westin",
+          "Equinix",
+          "Digital Realty",
+          "Colocation Northwest",
+          "Sabey",
+          "Clise",
+          "Zayo"
+        ],
+        "operators_min": 1,
+        "utility": "Seattle City Light",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -5,
+            20
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "no (nearby |live |large )?data.?centers?( building)? (is |was |were |are )?(confirmed|found|verified)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "new_york",
+      "group": "B",
+      "address": "111 8th Ave, New York, NY 10011",
+      "lat": 40.741,
+      "lon": -74.002,
+      "tests": "attribution honesty under maximum price pressure",
+      "expect": {
+        "facilities": [
+          2,
+          null
+        ],
+        "operators": [
+          "Google",
+          "Digital Realty",
+          "Equinix",
+          "Telx",
+          "60 Hudson",
+          "32 Avenue",
+          "DataBank",
+          "Hudson"
+        ],
+        "operators_min": 1,
+        "utility": "Con ?Ed(ison)?|Consolidated Edison",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            60
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "prineville",
+      "group": "B",
+      "address": "N Main St, Prineville, OR 97754",
+      "lat": 44.311,
+      "lon": -120.847,
+      "tests": "rural single-industry case; land/water angles",
+      "expect": {
+        "facilities": [
+          1,
+          8
+        ],
+        "operators": [
+          "Meta",
+          "Facebook",
+          "Apple"
+        ],
+        "operators_min": 1,
+        "utility": "Pacific Power|PacifiCorp",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            30
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "strip_requires_any": [
+          "water",
+          "land"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "papillion",
+      "group": "B",
+      "address": "S Washington St, Papillion, NE 68046",
+      "lat": 41.136,
+      "lon": -96.043,
+      "tests": "public-power utility framing",
+      "expect": {
+        "facilities": [
+          1,
+          6
+        ],
+        "operators": [
+          "Meta",
+          "Facebook",
+          "Google"
+        ],
+        "operators_min": 1,
+        "utility": "OPPD|Omaha Public Power",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "eagle_mountain",
+      "group": "B",
+      "address": "Pony Express Pkwy, Eagle Mountain, UT 84005",
+      "lat": 40.362,
+      "lon": -111.948,
+      "tests": "one-campus town",
+      "expect": {
+        "facilities": [
+          0,
+          5
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 0,
+        "utility": "Rocky Mountain Power|PacifiCorp",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      },
+      "oracle_confidence": "corrected 2026-10-27: Meta's Eagle Mountain campus is 11.5 to 12.3 km from this pin on OpenStreetMap, outside the five-mile ring"
+    },
+    {
+      "id": "gallatin",
+      "group": "B",
+      "address": "S Water Ave, Gallatin, TN 37066",
+      "lat": 36.364,
+      "lon": -86.44,
+      "tests": "TVA edge case: federal utility, no state PUC tariff frame",
+      "expect": {
+        "facilities": [
+          1,
+          4
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 1,
+        "utility": "TVA|Tennessee Valley Authority|Gallatin (Department of )?Electric",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "Tennessee Public Utility Commission (approved|tariff)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "huntsville",
+      "group": "B",
+      "address": "Wynn Dr NW, Huntsville, AL 35805",
+      "lat": 34.724,
+      "lon": -86.656,
+      "tests": "second TVA case, defence-town overlap",
+      "oracle_confidence": "medium; checked 2026-10-27: Meta's Huntsville campus is about 9 km from this pin, outside the five-mile ring; within it OpenStreetMap and PeeringDB list four smaller facilities (Alabama Supercomputer Center, DC BLOX, Simple Helix, Peace Communications)",
+      "expect": {
+        "facilities": [
+          1,
+          5
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 0,
+        "utility": "Huntsville Utilities|TVA",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "social_circle",
+      "group": "B",
+      "address": "S Cherokee Rd, Social Circle, GA 30025",
+      "lat": 33.648,
+      "lon": -83.722,
+      "tests": "ring-edge behaviour: distance stated honestly either way",
+      "oracle_confidence": "medium",
+      "expect": {
+        "facilities": [
+          0,
+          3
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 0,
+        "utility": "Georgia Power|Walton EMC",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            30
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "maiden",
+      "group": "B",
+      "address": "Startown Rd, Maiden, NC 28650",
+      "lat": 35.577,
+      "lon": -81.26,
+      "tests": "single campus + incentive politics",
+      "expect": {
+        "facilities": [
+          1,
+          4
+        ],
+        "operators": [
+          "Apple"
+        ],
+        "operators_min": 1,
+        "utility": "Duke",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "tucson",
+      "group": "C",
+      "address": "N Alvernon Way, Tucson, AZ 85711",
+      "lat": 32.229,
+      "lon": -110.91,
+      "tests": "status accuracy + codename unmask: Project Blue was rejected (Aug 2025), presenting it as coming is a hard fail",
+      "expect": {
+        "facilities": [
+          0,
+          5
+        ],
+        "live": [
+          0,
+          5
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "Tucson Electric Power|TEP",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            30
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "strip_requires": [
+          "water"
+        ],
+        "require_text": [
+          "Project Blue"
+        ],
+        "require_text_any": [
+          "reject",
+          "voted (it )?down",
+          "denied",
+          "turned down",
+          "unanimous"
+        ],
+        "forbid_announced": [
+          "Project Blue"
+        ],
+        "hearing": "expected"
+      },
+      "oracle_confidence": "live count corrected 2026-10-27: PeeringDB lists three small colocation sites within five miles (Simply Bits DC1, Login Tucson, ark data centers); the oracle's 'near zero' meant no hyperscale campus"
+    },
+    {
+      "id": "goodyear",
+      "group": "C",
+      "address": "W Van Buren St, Goodyear, AZ 85338",
+      "lat": 33.45,
+      "lon": -112.405,
+      "tests": "construction-status nuance (Microsoft phased/paused/resumed)",
+      "expect": {
+        "facilities": [
+          1,
+          8
+        ],
+        "operators": [
+          "Microsoft",
+          "Compass",
+          "Vantage",
+          "Stream"
+        ],
+        "operators_min": 1,
+        "utility": "APS|Arizona Public Service",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            40
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "kuna",
+      "group": "C",
+      "address": "E 4th St, Kuna, ID 83634",
+      "lat": 43.492,
+      "lon": -116.403,
+      "tests": "announced is not live",
+      "oracle_confidence": "medium",
+      "expect": {
+        "facilities": [
+          0,
+          2
+        ],
+        "live": [
+          0,
+          0
+        ],
+        "operators": [
+          "Meta",
+          "Facebook"
+        ],
+        "operators_min": 0,
+        "utility": "Idaho Power",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": "any"
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "bozeman",
+      "group": "D",
+      "address": "W Main St, Bozeman, MT 59715",
+      "lat": 45.679,
+      "lon": -111.054,
+      "tests": "null result UX: no manufactured alarm",
+      "expect": {
+        "facilities": [
+          0,
+          1
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "NorthWestern",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            25
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "band\": \"(high|critical)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "key_west",
+      "group": "D",
+      "address": "Whitehead St, Key West, FL 33040",
+      "lat": 24.556,
+      "lon": -81.804,
+      "tests": "island grid, not known done right",
+      "expect": {
+        "facilities": [
+          0,
+          0
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "Keys Energy",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -10,
+            30
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "forbid": [
+          "band\": \"(high|critical)"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "honolulu",
+      "group": "D",
+      "address": "S King St, Honolulu, HI 96813",
+      "lat": 21.306,
+      "lon": -157.86,
+      "tests": "maximum-price attribution honesty: HECO prices are oil/island legacy, not data centers",
+      "expect": {
+        "facilities": [
+          0,
+          3
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "Hawaiian Electric|HECO",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -60,
+            60
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    },
+    {
+      "id": "san_diego",
+      "group": "D",
+      "address": "Front St, San Diego, CA 92101",
+      "lat": 32.716,
+      "lon": -117.165,
+      "tests": "same honesty check at mainland scale (SDG&E: wildfire and grid costs)",
+      "expect": {
+        "facilities": [
+          0,
+          5
+        ],
+        "operators": [
+          "Equinix",
+          "Cologix",
+          "DataBank",
+          "ScaleMatrix",
+          "American Internet Services"
+        ],
+        "operators_min": 0,
+        "utility": "SDG&E|San Diego Gas",
+        "bill": {
+          "direction": "any",
+          "range": [
+            -30,
+            60
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force",
+          "proposed",
+          "none_found",
+          "unknown"
+        ],
+        "hearing": "none_ok"
+      }
+    }
+  ],
+  "global_forbid": {
+    "substation_headline": "shares? your substation",
+    "causal_bill_claim": "data.?centers?[^.\"]{0,60}\\b(are |is |have been |has been )?(driving|causing|pushing up|raising|behind|responsible for)\\b[^.\"]{0,40}\\b(bills?|prices?|rates?)"
+  }
+}

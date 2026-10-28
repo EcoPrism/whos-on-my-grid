@@ -6,7 +6,9 @@ import MapView from '../components/MapView'
 import { SECTION_TITLES, SectionBlock } from '../components/Sections'
 import ShareCard from '../components/ShareCard'
 import { ApiError, getBrief } from '../lib/api'
+import { useLive } from '../lib/live'
 import type { Brief, Section, SectionId, Status } from '../types'
+import type { Live } from '../lib/live'
 import { fmtMoney, fmtRange } from './Home'
 
 const ORDER: SectionId[] = ['on_your_grid', 'coming', 'your_bill', 'protection', 'hearing']
@@ -24,19 +26,27 @@ type State = { kind: 'loading' } | { kind: 'missing' } | { kind: 'error'; messag
 // for whichever tile is open. Everything else folds away.
 export default function BriefPage() {
   const { key = '' } = useParams()
+  const live = useLive(key)
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [open, setOpen] = useState<SectionId | null>(null)
 
+  // A brief that is being made right now comes from the live store and
+  // re-renders on every stage; anything else is fetched from the cache.
+  const streaming = live !== undefined
   useEffect(() => {
+    setOpen(null)
+    if (streaming) return
     let cancelled = false
     setState({ kind: 'loading' })
-    setOpen(null)
     getBrief(key)
       .then((brief) => { if (!cancelled) setState({ kind: 'ready', brief }) })
       .catch((err: unknown) => { if (!cancelled) setState(stateForError(err)) })
     return () => { cancelled = true }
-  }, [key])
+  }, [key, streaming])
 
+  if (live) {
+    return <BriefView brief={live.brief} live={live} open={open} setOpen={setOpen} />
+  }
   if (state.kind === 'loading') {
     return (
       <main className="mx-auto max-w-3xl px-4 py-24">
@@ -61,12 +71,15 @@ export default function BriefPage() {
     )
   }
 
-  const brief = state.brief
+  return <BriefView brief={state.brief} open={open} setOpen={setOpen} />
+}
+
+function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; open: SectionId | null; setOpen: (id: SectionId | null) => void }) {
   const a = brief.address
   const h = brief.headline
   const supported = brief.claims.filter((c) => c.verdict === 'supported').length
   const bill = brief.sections.your_bill
-  const facilities = [...(brief.sections.on_your_grid.facilities ?? []), ...(brief.sections.coming.facilities ?? [])]
+  const facilities = [...(brief.sections.on_your_grid.facilities ?? []), ...(brief.sections.coming.facilities ?? [])].filter((f) => f.status !== 'rejected')
   const placed = facilities.filter((f) => typeof f.lat === 'number').length
   const withinMile = facilities.filter((f) => f.distance_km <= 1.61).length
 
@@ -76,7 +89,10 @@ export default function BriefPage() {
         <Link to="/" className="no-underline"><span className="wide font-semibold">Who's on my grid</span></Link>
         {brief.fixture && <span className="text-[var(--ink-soft)]">Fixture. Operators and sources are fictional.</span>}
         {brief.source_mode === 'agent' && <span className="text-[var(--ink-soft)]">Drafted by Muse Spark from its own knowledge. Checked, not measured.</span>}
+        {brief.source_mode === 'full' && <span className="text-[var(--ink-soft)]">Facilities, utility and prices from public data. Sentences by Muse Spark, checked by Muse Spark Open.</span>}
       </nav>
+
+      {live && live.stage !== 'done' && <Progress live={live} />}
 
       {/* Hero: the map, with the headline card on top of it. */}
       <div className="relative mx-auto mt-3 max-w-6xl sm:px-4">
@@ -103,7 +119,7 @@ export default function BriefPage() {
                   <span className="block text-3xl font-extrabold leading-none text-[var(--modelled)]">
                     {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
                   </span>
-                  <span className="block text-xs text-[var(--ink-soft)]">a month, typical home, vs 2 yrs ago</span>
+                  <span className="block text-xs text-[var(--ink-soft)]">a month, typical home, {periodWords(bill.price?.as_of, bill.price?.window_months)}</span>
                   <span className="tag-modelled block text-xs font-semibold">
                     Modeled{bill.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(bill.confidence * 100)}%</span>}
                   </span>
@@ -129,6 +145,7 @@ export default function BriefPage() {
           {ORDER.map((id) => {
             const s = brief.sections[id]
             const isOpen = open === id
+            const pending = brief.partial?.pending.includes(id) ?? false
             return (
               <button
                 key={id}
@@ -137,13 +154,13 @@ export default function BriefPage() {
                 aria-selected={isOpen}
                 aria-controls={`panel-${id}`}
                 onClick={() => setOpen(isOpen ? null : id)}
-                className={`tile tile-${s.status} flex min-h-[7.5rem] flex-col items-start p-3 text-left transition-colors ${isOpen ? 'bg-[var(--ink)] text-[var(--paper)]' : 'bg-white hover:bg-[var(--paper-deep)]'}`}
+                className={`tile tile-${s.status} flex min-h-[7.5rem] flex-col items-start p-3 text-left transition-colors ${pending ? 'breathe' : ''} ${isOpen ? 'bg-[var(--ink)] text-[var(--paper)]' : 'bg-white hover:bg-[var(--paper-deep)]'}`}
               >
-                <span className={`text-xs font-semibold ${isOpen ? 'opacity-80' : `tag-${s.status}`}`}>
-                  {STATUS_WORD[s.status]}{s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
+                <span className={`text-xs font-semibold ${isOpen ? 'opacity-80' : pending ? 'text-[var(--ink-soft)]' : `tag-${s.status}`}`}>
+                  {pending ? 'Drafting' : STATUS_WORD[s.status]}{!pending && s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
                 </span>
                 <span className="mt-1 text-lg font-bold leading-tight">{SECTION_TITLES[id]}</span>
-                <span className={`mt-1 line-clamp-3 text-[13px] leading-snug ${isOpen ? 'opacity-85' : 'text-[var(--ink-soft)]'}`}>{tileLine(id, s)}</span>
+                <span className={`mt-1 line-clamp-3 text-[13px] leading-snug ${isOpen ? 'opacity-85' : 'text-[var(--ink-soft)]'}`}>{pending ? 'Muse Spark is writing this section from the facts above…' : tileLine(id, s)}</span>
               </button>
             )
           })}
@@ -157,7 +174,7 @@ export default function BriefPage() {
 
         <details className="mt-8 border-t border-[var(--line)] pt-3">
           <summary className="cursor-pointer text-lg font-bold">
-            Every claim, checked <span className="num text-sm font-normal text-[var(--ink-soft)]">· {brief.claims.length} claims, {supported} supported</span>
+            Every claim, checked <span className="num text-sm font-normal text-[var(--ink-soft)]">· {live && live.stage === 'verifying' ? `checking ${live.verified} of ${live.claims}` : `${brief.claims.length} claims, ${supported} supported`}</span>
           </summary>
           <div className="mt-3"><Claims claims={brief.claims} /></div>
         </details>
@@ -180,6 +197,52 @@ export default function BriefPage() {
       </div>
     </main>
   )
+}
+
+// The brief is built in three stages and the page says which one it is in.
+// Facts land in seconds; Spark's sentences and the fact-check take the rest.
+function Progress({ live }: { live: Live }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const elapsed = Math.max(0, Math.round((now - live.startedAt) / 1000))
+  const p = live.brief.partial
+  const steps: { label: string; state: 'done' | 'active' | 'todo' }[] = [
+    { label: 'Facilities, utility and prices from public data', state: 'done' },
+    {
+      label: p && p.pending.length > 0 ? `Muse Spark writing the sections · ${p.sections - p.pending.length} of ${p.sections}` : 'Muse Spark wrote the sections',
+      state: live.stage === 'ground' || live.stage === 'drafting' ? 'active' : 'done',
+    },
+    {
+      label: live.stage === 'verifying' ? `Muse Spark Open checking every claim · ${live.verified} of ${live.claims}` : 'Checking every claim against its source',
+      state: live.stage === 'verifying' ? 'active' : live.stage === 'error' ? 'todo' : 'todo',
+    },
+  ]
+  return (
+    <div className="mx-auto mt-3 max-w-6xl px-4" aria-live="polite">
+      <ol className="flex flex-wrap items-center gap-x-5 gap-y-1 border-2 border-[var(--ink)] bg-white px-3 py-2 text-sm">
+        {steps.map((s) => (
+          <li key={s.label} className={`flex items-center gap-2 ${s.state === 'todo' ? 'text-[var(--line)]' : s.state === 'active' ? 'breathe font-semibold' : 'text-[var(--ink-soft)]'}`}>
+            <span aria-hidden className={`inline-block h-2.5 w-2.5 border border-[var(--ink)] ${s.state === 'done' ? 'bg-[var(--ink)]' : s.state === 'active' ? 'bg-[var(--modelled)]' : 'bg-transparent'}`} />
+            {s.label}
+          </li>
+        ))}
+        <li className="num ml-auto text-[var(--ink-soft)]">{elapsed}s</li>
+        {live.stage === 'error' && <li className="basis-full text-[var(--reported)]" role="alert">{live.error} The facts above stand; the sentences could not be finished.</li>}
+      </ol>
+    </div>
+  )
+}
+
+// Annual utility data is labelled by its years; a series to the present says "vs 2 yrs ago".
+function periodWords(asOf: string | undefined, windowMonths: number | undefined) {
+  if (asOf && asOf.endsWith('-12')) {
+    const year = Number(asOf.slice(0, 4))
+    return `${year} vs ${year - Math.max(1, Math.floor((windowMonths ?? 24) / 12))}`
+  }
+  return 'vs 2 yrs ago'
 }
 
 function stateForError(err: unknown): State {

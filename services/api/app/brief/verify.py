@@ -11,6 +11,7 @@ stays `unchecked` with a note saying so, so the brief is honest about it.
 
 import asyncio
 import re
+from collections.abc import Callable
 from typing import Any
 
 from app.brief.fetch import Fetcher, FetchResult
@@ -52,6 +53,7 @@ async def verify_claims(
     concurrency: int,
     verified_by: str,
     now_iso: str,
+    on_verdict: Callable[[], None] | None = None,
 ) -> None:
     if provider is None:
         for claim in claims:
@@ -69,6 +71,13 @@ async def verify_claims(
         return fetches[url]
 
     async def one(claim: dict[str, Any]) -> None:
+        try:
+            await _one(claim)
+        finally:
+            if on_verdict is not None:
+                on_verdict()
+
+    async def _one(claim: dict[str, Any]) -> None:
         async with sem:
             src = claim["source"]
             src["retrieved_at"] = now_iso

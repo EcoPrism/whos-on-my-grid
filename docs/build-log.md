@@ -49,3 +49,39 @@ from anything pre-existing.
   (project ecoprism-ecoutil, Places API New + Maps JS); the loader now uses the API's `callback`
   parameter since `importLibrary` is not ready at script onload. Optional US-only gate on
   /api/brief (GRID_ALLOWED_COUNTRIES, trusts an edge-set country header; off locally).
+- 2026-10-27, ground truth first (`GRID_BRIEF_SOURCE=full`). A reviewer checked the Bellevue brief
+  line by line: "no nearby data center building is confirmed" was false (two Colocation Northwest
+  sites within three miles, one half a mile away), the +$13 bill figure was a stale statewide
+  number, and only the sentence the engine wrote itself held. A 30-address test set
+  (`eval/addresses.json`, oracle in ranges, scored by `eval/run_eval.py`) put the agent-only build at
+  4/30, with 23 of 26 facility rows reporting nothing and 67 of 180 section drafts truncated. The
+  fix is the README's step 5: `app/ground/` gathers facilities from PeeringDB and OpenStreetMap
+  (Overpass, clustered into campuses, nearest first), the serving utility from HIFLD's territory
+  map (overlapping polygons disambiguated with EIA-861 customer counts, county lists and the
+  address's city), residential prices from EIA-861M (state, monthly) and EIA-861 (this utility,
+  annual, joined on the EIA utility number HIFLD carries), and large-load tariffs from a hand-curated
+  `data/tariffs.json`. Spark now writes around a facts block: it cannot add or remove a facility,
+  the price block is the engine's (`price.as_of` labels the period), the Protection tile comes from
+  the tariff table, the noise line is modeled from distance, the strip is ordered bill, water,
+  noise, and the band is capped when nothing is within five miles. New facility status `rejected`
+  for a voted-down campus. Muse Spark counts its reasoning in completion tokens, so the draft budget
+  is now 12,000 and the verifier's 4,096. Full test set on the grounded build: 26/30 (grid 28, bill 30, protection 30, strip 30,
+  hard-fail signatures 28). The four left need a source this step does not have: the Prince William
+  Digital Gateway hearing (Manassas), New Albany's construction that OpenStreetMap has not tagged,
+  Project Blue's rejection in Tucson, and the operator of Apple's unmapped Maiden buildings. Three
+  oracle rows were corrected after the map showed their campus outside the five-mile ring (Council
+  Bluffs, Eagle Mountain, Huntsville). Runs live in `eval/runs/` (gitignored).
+- 2026-10-28, the brief streams. A full-mode brief took 96 s to the first pixel: Spark's five
+  drafts (16 to 29 s, in parallel), then the at-your-house draft (19 s), then 33 claims verified
+  four at a time (about 45 s). Now `POST /api/brief/stream` emits the brief in stages as
+  newline-delimited JSON: a partial brief once the ground truth is in (map, utility, bill range,
+  engine-written strip lines, every section marked pending), a fresh partial as each section
+  lands, a count per verified claim, then the finished brief. The page moves to the brief on the
+  first event, shows a three-step progress line with elapsed time, breathes on the pending tiles,
+  and ticks the claim count. Facts are on screen in about 9 s; sections land between 23 and 35 s.
+  Total time also fell: in full mode the strip draft anchors to the facts block, so it runs in
+  parallel with the sections, and the verifier runs eight claims at a time. Facility names are now
+  unique (two clusters of the same operator get the compass direction from the address), which
+  also fixes duplicate React keys on the map. The address box passes typed text through when
+  Google's autocomplete widget is mounted but blocked, and a dropdown of test-set addresses sits
+  under it in agent and full mode.

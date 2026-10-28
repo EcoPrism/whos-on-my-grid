@@ -5,6 +5,10 @@ prompt may ask the model to assert causation or to fill a gap with a guess.
 """
 
 from app.geocode import GeocodeResult
+from app.ground.types import GroundTruth
+
+KM_TO_MI = 0.621371
+MAX_FACILITY_LINES = 25
 
 SECTION_QUESTIONS = {
     "on_your_grid": (
@@ -52,6 +56,113 @@ SECTION_QUESTIONS = {
 }
 
 
+# When the engine has measured the facts, the question changes: the model
+# writes around the data instead of recalling it.
+GROUNDED_QUESTIONS = {
+    "on_your_grid": (
+        "On your grid",
+        "The facility list in the facts block is the answer to this section and will be used as "
+        "given: do not add, remove, rename or move a facility. Write the summary from it: the "
+        "first sentence says how many are within five miles and names the nearest with its "
+        "distance; then who operates them. For a listed facility you may add `estimated_mw` "
+        "with its `mw_basis`, the operator behind a codename, and the `operator` of an entry "
+        "whose operator is 'not recorded' when you know who runs those buildings, each backed by "
+        "a claim with a real source; return in `facilities` only the entries you annotate (same "
+        "`name`, copied exactly), or an empty array. `shares_substation` is an inference from "
+        "distance; say so if you set it.",
+    ),
+    "coming": (
+        "Coming",
+        "Facilities in the facts block are already on the grid; do not repeat them. List "
+        "data-center campuses within five miles that are announced, permitted or filed for but "
+        "not in that list, and campuses that were rejected or withdrawn (status 'rejected', with "
+        "the vote or decision as a claim). Name, codename if filed under one, operator, filed MW. "
+        "Leave `construction` empty: aerial imagery is not available in this mode; say so in "
+        "`gap`.",
+    ),
+    "your_bill": (
+        "Your bill",
+        "The price figures in the facts block are measured (EIA-861M) and will be used as given; "
+        "repeat them in `price` exactly and do not substitute remembered numbers. Write the "
+        "summary around them for the serving utility named: direction, the monthly change for a "
+        "typical home, and what the people who set rates (the state commission, the regional "
+        "market monitor, the utility) say about why. `attribution` must be a quote from a "
+        "regulator, market monitor or utility, with its source in claims, or null. Never "
+        "attribute the change yourself.",
+    ),
+}
+
+
+def ground_block(truth: GroundTruth | None, geo: GeocodeResult) -> str:
+    """What the engine measured, for the model to write around."""
+    if truth is None:
+        return ""
+    lines = ["Facts from the engine (public datasets, already checked; do not contradict them):"]
+    if truth.utility:
+        lines.append(
+            f"- Serving utility at this point: {truth.utility.name} "
+            f"({truth.utility.kind.lower()}; HIFLD service-territory map)."
+        )
+    else:
+        lines.append("- Serving utility: not known.")
+    if truth.facilities is None:
+        lines.append("- Facility database: could not be reached for this brief.")
+    elif not truth.facilities:
+        lines.append(
+            "- Facilities within five miles (PeeringDB + OpenStreetMap): none listed. Small "
+            "server rooms inside offices are not in either database."
+        )
+    else:
+        lines.append(
+            f"- Facilities within five miles (PeeringDB + OpenStreetMap), nearest first, "
+            f"{len(truth.facilities)} in all:"
+        )
+        for i, f in enumerate(truth.facilities[:MAX_FACILITY_LINES], start=1):
+            lines.append(
+                f"  {i}. {f.name} | {f.operator} | {f.status.replace('_', ' ')} | "
+                f"{f.distance_km * KM_TO_MI:.1f} mi | {f.buildings} building"
+                f"{'s' if f.buildings != 1 else ''} | {f.source_url}"
+            )
+        if len(truth.facilities) > MAX_FACILITY_LINES:
+            lines.append(f"  ... and {len(truth.facilities) - MAX_FACILITY_LINES} more.")
+    if truth.utility_price:
+        p = truth.utility_price
+        change = (p.rate_now - p.rate_then) * p.typical_kwh_month
+        lines.append(
+            f"- Residential price for THIS utility ({p.label}), EIA-861 annual: "
+            f"{p.rate_then * 100:.2f} cents/kWh in {p.latest[0] - p.window_months // 12} -> "
+            f"{p.rate_now * 100:.2f} cents/kWh in {p.latest[0]}, {p.trend_pct:+.1f}%. Typical "
+            f"home on this utility: {p.typical_kwh_month:.0f} kWh a month, so about "
+            f"${change:+.0f} a month. This is the series used in `price`: rate_then "
+            f"{p.rate_then}, rate_now {p.rate_now}, window {p.window_months} months."
+        )
+    if truth.price:
+        p = truth.price
+        change = (p.rate_now - p.rate_then) * p.typical_kwh_month
+        used = (
+            "This is the series used in `price`: " if not truth.utility_price else "Context only: "
+        )
+        lines.append(
+            f"- Residential price, {geo.state} statewide, EIA-861M monthly "
+            f"({p.data_status.lower()} data): {p.rate_then * 100:.2f} cents/kWh (twelve months "
+            f"ending 24 months before {p.latest[0]}-{p.latest[1]:02d}) -> "
+            f"{p.rate_now * 100:.2f} cents/kWh (twelve months "
+            f"to {p.latest[0]}-{p.latest[1]:02d}), {p.trend_pct:+.1f}%. Typical home statewide: "
+            f"{p.typical_kwh_month:.0f} kWh a month, so about ${change:+.0f} a month. {used}"
+            f"rate_then {p.rate_then}, rate_now {p.rate_now}, window 24 months."
+        )
+    if truth.tariff:
+        t = truth.tariff
+        lines.append(
+            f"- Large-load rule on record for this utility: {t.lead} {t.name or 'none'} "
+            f"({t.status.replace('_', ' ')}{', docket ' + t.docket if t.docket else ''}): "
+            f"{t.summary} Source: {t.url}"
+        )
+    if truth.notes:
+        lines.append("- Provider notes: " + " ".join(truth.notes))
+    return "\n".join(lines) + "\n\n"
+
+
 def system_prompt(now_iso: str) -> str:
     return (
         "You are drafting one section of a public-interest brief that tells a US resident what "
@@ -76,21 +187,35 @@ def system_prompt(now_iso: str) -> str:
         "hedging filler, no causal claims.\n"
         f"8. Today's date is {now_iso[:10]}. Treat anything you remember as possibly out of date "
         "and say so where it matters.\n"
+        "9. Keep it short. At most 8 claims, each under 200 characters, each a different fact. "
+        "The summary is two or three sentences. Never copy the facts block back into the "
+        "output.\n"
         "Output only the JSON object."
     )
 
 
-def section_prompt(section_id: str, geo: GeocodeResult) -> str:
-    title, question = SECTION_QUESTIONS[section_id]
+def section_prompt(section_id: str, geo: GeocodeResult, truth: GroundTruth | None = None) -> str:
+    grounded = truth is not None and section_id in GROUNDED_QUESTIONS
+    if grounded and section_id == "your_bill" and truth.best_price is None:  # type: ignore[union-attr]
+        grounded = False
+    if grounded and section_id in ("on_your_grid", "coming") and truth.facilities is None:  # type: ignore[union-attr]
+        grounded = False
+    title, question = (GROUNDED_QUESTIONS if grounded else SECTION_QUESTIONS)[section_id]
     county = f"{geo.county} County" if geo.county else "county not known"
+    utility = (
+        f"Serving utility: {truth.utility.name} (from the HIFLD service-territory map).\n"
+        if truth is not None and truth.utility
+        else "Serving utility: not known (say which one you believe serves this address if you "
+        "are confident, as a claim with a source).\n"
+    )
     return (
         f"Section: {title}\n"
         f"Question this section answers: {question}\n\n"
+        f"{ground_block(truth, geo)}"
         f"Address (street and city only): {geo.display}\n"
         f"Coordinates: {geo.lat:.4f}, {geo.lon:.4f}\n"
         f"State: {geo.state}. {county}. ZIP {geo.zip}.\n"
-        "Serving utility: not known (say which one you believe serves this address if you are "
-        "confident, as a claim with a source).\n"
+        f"{utility}"
         "Radius of concern: five miles (8 km). Distances in km.\n\n"
         "Fill the section object. Every statement in `summary` and every number in the "
         "structured data must appear as a claim with its source."
@@ -126,16 +251,28 @@ def house_system_prompt(now_iso: str) -> str:
     )
 
 
-def house_prompt(geo: GeocodeResult, summaries: dict[str, str]) -> str:
+def house_prompt(
+    geo: GeocodeResult, summaries: dict[str, str], truth: GroundTruth | None = None
+) -> str:
     county = f"{geo.county} County" if geo.county else "county not known"
     ctx = "\n".join(
         f"- {SECTION_QUESTIONS[sid][0]}: {text}" for sid, text in summaries.items() if text
     )
+    anchor = ""
+    if truth is not None and truth.facilities is not None:
+        anchor = (
+            "Anchor every water, air, land and tax line to the facilities in the facts block, by "
+            "name (for example 'the three facilities near you do not publish water use'). The "
+            "noise line is written by the engine from distance; do not write one. If the facts "
+            "block lists no facility, write only lines that say there is none to report.\n\n"
+        )
     return (
+        f"{ground_block(truth, geo)}"
         f"Address (street and city only): {geo.display}\n"
         f"State: {geo.state}. {county}. ZIP {geo.zip}.\n\n"
         "What the five sections of the brief already say:\n"
         f"{ctx or '- (no section could be drafted)'}\n\n"
+        f"{anchor}"
         "Write the strip: two or three lines, each with its topic, your confidence and its claims."
     )
 

@@ -95,12 +95,12 @@ function Facilities({ section }: { section: Section }) {
         </tr>
       </thead>
       <tbody>
-        {list.map((f) => (
-          <tr key={f.name} className="border-b border-[var(--line)] align-top">
+        {list.map((f, i) => (
+          <tr key={`${i}-${f.name}`} className="border-b border-[var(--line)] align-top">
             <td className="py-2 pr-3">
               <span className="font-semibold">{f.name}</span>
               <span className="block text-sm text-[var(--ink-soft)]">
-                {f.status.replace('_', ' ')}{f.shares_substation ? ', likely on your substation (inferred from distance)' : ''}
+                {f.status === 'rejected' ? 'rejected or withdrawn' : f.status.replace('_', ' ')}{f.shares_substation ? ', likely on your substation (inferred from distance)' : ''}
               </span>
             </td>
             <td className="py-2 pr-3">
@@ -149,15 +149,16 @@ function Bill({ section }: { section: Section }) {
   if (!p) return null
   const monthThen = p.rate_then * p.typical_household_kwh_month
   const monthNow = p.rate_now * p.typical_household_kwh_month
+  const asOf = p.as_of ? periodLabel(p.as_of) : null
   return (
     <div className="num mt-5 max-w-[72ch]">
       <dl className="grid grid-cols-3 gap-x-4 border-y border-[var(--line)] py-3">
         <div>
-          <dt className="text-sm text-[var(--ink-soft)]">{p.window_months} months ago</dt>
+          <dt className="text-sm text-[var(--ink-soft)]">{asOf ? `${p.window_months} months earlier` : `${p.window_months} months ago`}</dt>
           <dd className="text-xl">{(p.rate_then * 100).toFixed(1)}¢/kWh</dd>
         </div>
         <div>
-          <dt className="text-sm text-[var(--ink-soft)]">Now</dt>
+          <dt className="text-sm text-[var(--ink-soft)]">{asOf ?? 'Now'}</dt>
           <dd className="text-xl">{(p.rate_now * 100).toFixed(1)}¢/kWh</dd>
         </div>
         <div>
@@ -233,6 +234,13 @@ function HearingBlock({ section }: { section: Section }) {
       )}
     </div>
   )
+}
+
+// "2024-12" -> "Calendar 2024"; "2026-08" -> "12 months to Aug 2026".
+function periodLabel(asOf: string) {
+  const [y, m] = asOf.split('-').map(Number)
+  if (m === 12) return `Calendar ${y}`
+  return `12 months to ${new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
 }
 
 // Date-only strings are local calendar dates, not UTC instants.

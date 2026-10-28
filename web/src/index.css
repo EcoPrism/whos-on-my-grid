@@ -72,6 +72,7 @@ a:hover { text-decoration-color: var(--ink); }
   animation: gridflow 1.4s linear infinite, gridin 0.9s ease-out both;
 }
 .gridline-under_construction { animation-duration: 2.2s, 0.9s; }
+.gridline-rejected { animation: none; }
 .gridline-announced { stroke-dasharray: 4 14; animation-duration: 3.2s, 0.9s; }
 @keyframes gridflow { to { stroke-dashoffset: -22; } }
 @keyframes gridin { from { opacity: 0; } }
@@ -93,3 +94,7 @@ a:hover { text-decoration-color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Something still being made: a slow breath, not a spinner. */
+.breathe { animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.45; } }

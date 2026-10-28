@@ -1,0 +1,82 @@
+{
+  "_about": "Large-load tariffs and rules the engine knows about, keyed by state and utility. Curated by hand on 2026-10-27 from public commission orders and statutes; the verifier fetches each `url` and judges the claim like any other, so a stale or wrong entry shows as contradicted or unverifiable rather than as fact. `status`: in_force | proposed | none_found. `protects_households`: whether the rule's stated purpose is to keep large-load build-out costs off other customers. Add entries with their official page; never a news story as the only source.",
+  "entries": [
+    {
+      "state": "VA",
+      "utility_match": "VIRGINIA ELECTRIC|DOMINION",
+      "name": "Rate Schedule GS-5 (customers above 25 MW)",
+      "status": "in_force",
+      "protects_households": true,
+      "docket": "PUR-2025-00058",
+      "summary": "The State Corporation Commission's November 2025 biennial-review order created a GS-5 rate class for Dominion Energy Virginia customers with demand above 25 MW, with minimum demand charges and 14-year contract terms so that transmission and generation built for them is paid by them.",
+      "url": "https://www.scc.virginia.gov/pages/Case-Information",
+      "title": "Virginia State Corporation Commission, case information (PUR-2025-00058)"
+    },
+    {
+      "state": "OH",
+      "utility_match": "OHIO POWER|AEP",
+      "name": "AEP Ohio data-center tariff (85% minimum demand, 12 years)",
+      "status": "in_force",
+      "protects_households": true,
+      "docket": "24-508-EL-ATA",
+      "summary": "The Public Utilities Commission of Ohio approved AEP Ohio's data-center tariff in July 2025: new data-center customers above 25 MW pay for at least 85% of the capacity they ask for over a 12-year contract, so that grid expansion built for them is not left to other customers.",
+      "url": "https://dis.puc.state.oh.us/CaseRecord.aspx?CaseNo=24-508",
+      "title": "PUCO docketing information system, case 24-0508-EL-ATA"
+    },
+    {
+      "state": "GA",
+      "utility_match": "GEORGIA POWER",
+      "name": "Georgia Public Service Commission large-load rules (100 MW and above)",
+      "status": "in_force",
+      "protects_households": true,
+      "docket": null,
+      "summary": "In January 2025 the Georgia Public Service Commission adopted rule changes letting Georgia Power set contract terms, minimum bills and cost-recovery conditions for customers of 100 MW or more, with the stated aim of protecting other ratepayers from the cost of serving them.",
+      "url": "https://psc.ga.gov/",
+      "title": "Georgia Public Service Commission"
+    },
+    {
+      "state": "TX",
+      "utility_match": "ONCOR|CENTERPOINT|AEP TEXAS|TEXAS-NEW MEXICO",
+      "name": "Senate Bill 6 (2025): large-load interconnection standards in ERCOT",
+      "status": "in_force",
+      "protects_households": null,
+      "docket": null,
+      "summary": "Texas Senate Bill 6, signed in June 2025, sets interconnection, disclosure and curtailment rules for loads of 75 MW and more in ERCOT and directs the Public Utility Commission of Texas to allocate interconnection costs. It is a statute about reliability and cost allocation, not a retail tariff shielding household bills; ERCOT's competitive market has no large-load tariff of the kind regulated states use.",
+      "url": "https://capitol.texas.gov/BillLookup/History.aspx?LegSess=89R&Bill=SB6",
+      "title": "Texas Legislature Online, SB 6 (89th Legislature)"
+    },
+    {
+      "state": "OR",
+      "utility_match": "PORTLAND GENERAL|PACIFICORP|PACIFIC POWER",
+      "name": "POWER Act (House Bill 3546, 2025): separate rate class for loads above 20 MW",
+      "status": "in_force",
+      "protects_households": true,
+      "docket": null,
+      "summary": "Oregon's POWER Act, signed in June 2025, requires the Public Utility Commission to put customers above 20 MW, including data centers, in their own rate class with contracts of at least ten years, so that the cost of serving them is not spread to households and small businesses.",
+      "url": "https://olis.oregonlegislature.gov/liz/2025R1/Measures/Overview/HB3546",
+      "title": "Oregon Legislative Information System, HB 3546 (2025)"
+    },
+    {
+      "state": "IN",
+      "utility_match": "INDIANA MICHIGAN POWER|I&M",
+      "name": "Indiana Michigan Power large-load settlement (70 MW and above)",
+      "status": "in_force",
+      "protects_households": true,
+      "docket": "46097",
+      "summary": "The Indiana Utility Regulatory Commission approved a settlement in February 2025 under which Indiana Michigan Power customers of 70 MW or more commit to minimum payments of 80% of contracted capacity for 12 years, so that new generation and transmission built for them is paid by them.",
+      "url": "https://www.in.gov/iurc/",
+      "title": "Indiana Utility Regulatory Commission"
+    },
+    {
+      "state": "WA",
+      "utility_match": "PUGET SOUND ENERGY",
+      "name": null,
+      "status": "none_found",
+      "protects_households": null,
+      "docket": null,
+      "summary": "No large-load tariff shielding Puget Sound Energy households from data-center build-out costs was found in the Washington Utilities and Transportation Commission's orders as of October 2026; PSE's 2025-2026 rate increases were attributed by the commission to clean-energy compliance, reliability and low-income assistance.",
+      "url": "https://utc.wa.gov/news/2025/state-regulators-approve-new-rates-pse",
+      "title": "Washington UTC, State regulators approve new rates for PSE (January 2025)"
+    }
+  ]
+}

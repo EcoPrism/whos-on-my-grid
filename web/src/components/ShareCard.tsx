@@ -25,7 +25,7 @@ export default function ShareCard({ brief }: { brief: Brief }) {
               <span className="block text-[8.5cqw] font-extrabold leading-none text-[var(--signal)]">
                 {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
               </span>
-              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, vs two years ago · modeled</span>
+              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, {brief.sections.your_bill.price?.as_of?.endsWith('-12') ? `${brief.sections.your_bill.price.as_of.slice(0, 4)} vs ${Number(brief.sections.your_bill.price.as_of.slice(0, 4)) - 2}` : 'vs two years ago'} · modeled</span>
             </p>
           )}
         </div>

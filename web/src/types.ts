@@ -21,7 +21,7 @@ export interface Facility {
   operator: string
   operator_confidence?: number
   distance_km: number
-  status: 'live' | 'under_construction' | 'announced'
+  status: 'live' | 'under_construction' | 'announced' | 'rejected'
   estimated_mw?: number | null
   mw_basis?: 'filed' | 'reported' | 'class_estimate' | null
   // An inference from distance, never utility data. Rendered as 'likely'.
@@ -48,6 +48,7 @@ export interface Price {
   window_months: number
   typical_household_kwh_month: number
   attribution?: string | null
+  as_of?: string
 }
 
 export interface Tariff {
@@ -105,11 +106,21 @@ export interface Claim {
   verifier_note?: string | null
 }
 
+// Present only on a brief still being made (streamed from /api/brief/stream):
+// which sections Spark has not drafted yet.
+export interface PartialInfo {
+  stage: 'ground' | 'drafting' | 'verifying'
+  pending: SectionId[]
+  drafted: number
+  sections: number
+}
+
 export interface Brief {
   brief_id: string
   generated_at: string
   source_mode: 'fixtures' | 'agent' | 'full'
   fixture?: boolean
+  partial?: PartialInfo
   address: {
     display: string
     lat: number

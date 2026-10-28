@@ -11,7 +11,7 @@ export interface Example {
 
 export interface Health {
   ok: boolean
-  mode: 'fixtures' | 'agent' | 'offline'
+  mode: 'fixtures' | 'agent' | 'full' | 'offline'
   examples: Example[]
 }
 
@@ -50,6 +50,54 @@ export function createBrief(address: string): Promise<Brief> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ address }),
   })
+}
+
+// One event per line from /api/brief/stream while the brief is made.
+export type BriefEvent =
+  | { stage: 'ground' | 'drafting' | 'done'; brief: Brief }
+  | { stage: 'verifying'; verified: number; claims: number }
+  | { stage: 'error'; status: number; detail: string }
+
+// The streaming twin of createBrief: `onEvent` sees the brief take shape, the
+// promise resolves with the finished brief. Errors reported on the stream
+// become ApiErrors like the plain endpoint's.
+export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
+  const r = await fetch('/api/brief/stream', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ address }),
+  })
+  if (!r.ok || !r.body) {
+    let detail = r.statusText
+    try {
+      detail = (await r.json()).detail ?? detail
+    } catch {
+      /* no JSON body */
+    }
+    throw new ApiError(r.status, String(detail))
+  }
+  const reader = r.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let final: Brief | null = null
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let nl = buffer.indexOf('\n')
+    while (nl >= 0) {
+      const line = buffer.slice(0, nl).trim()
+      buffer = buffer.slice(nl + 1)
+      nl = buffer.indexOf('\n')
+      if (!line) continue
+      const ev = JSON.parse(line) as BriefEvent
+      if (ev.stage === 'error') throw new ApiError(ev.status, ev.detail)
+      onEvent(ev)
+      if (ev.stage === 'done') final = ev.brief
+    }
+  }
+  if (!final) throw new ApiError(0, 'The brief stream ended before the brief was finished.')
+  return final
 }
 
 export function getBrief(id: string): Promise<Brief> {

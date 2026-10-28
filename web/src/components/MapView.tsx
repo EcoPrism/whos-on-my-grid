@@ -9,6 +9,7 @@ const STATUS_COLOR: Record<Facility['status'], string> = {
   live: '#15202b',
   under_construction: '#b7791f',
   announced: '#3b5b8c',
+  rejected: '#8a8f98',
 }
 
 // Line weight follows load, on a log scale so a 10 MW edge site and a 300 MW
@@ -74,14 +75,15 @@ export default function MapView({ brief, className }: Props) {
 
       <Circle center={[lat, lon]} radius={FIVE_MILES_M} pathOptions={{ color: '#15202b', weight: 1.5, dashArray: '6 6', fill: false }} />
 
-      {placed.map((f) => (
+      {placed.map((f, i) => (
         <Polyline
-          key={`line-${f.name}`}
+          key={`line-${i}-${f.name}`}
           positions={[[f.lat, f.lon], [lat, lon]]}
           pathOptions={{
             color: STATUS_COLOR[f.status],
             weight: weightFor(f.estimated_mw),
-            opacity: f.status === 'announced' ? 0.6 : 0.85,
+            opacity: f.status === 'announced' ? 0.6 : f.status === 'rejected' ? 0.45 : 0.85,
+            dashArray: f.status === 'rejected' ? '2 8' : undefined,
             lineCap: 'round',
             className: `gridline gridline-${f.status}`,
           }}
@@ -102,22 +104,22 @@ export default function MapView({ brief, className }: Props) {
         </Polygon>
       ))}
 
-      {placed.map((f) => (
+      {placed.map((f, i) => (
         <CircleMarker
-          key={f.name}
+          key={`${i}-${f.name}`}
           center={[f.lat, f.lon]}
           radius={f.status === 'live' ? 5 : 4.5}
           pathOptions={{
             color: '#15202b',
             weight: 1,
             fillColor: STATUS_COLOR[f.status],
-            fillOpacity: f.status === 'announced' ? 0.5 : 0.95,
+            fillOpacity: f.status === 'announced' ? 0.5 : f.status === 'rejected' ? 0.25 : 0.95,
           }}
         >
           <Popup>
             <strong>{f.name}</strong><br />
             {f.operator}{f.codename ? ` (filed as ${f.codename})` : ''}<br />
-            {f.status.replace('_', ' ')}, {f.distance_km.toFixed(1)} km
+            {f.status === 'rejected' ? 'rejected or withdrawn' : f.status.replace('_', ' ')}, {f.distance_km.toFixed(1)} km
             {f.estimated_mw ? `, ${f.estimated_mw} MW` : ''}
             {f.shares_substation ? ', likely on your substation (inferred)' : ''}
           </Popup>

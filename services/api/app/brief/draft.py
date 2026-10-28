@@ -6,6 +6,7 @@ from typing import Any
 
 from app.brief.prompts import house_prompt, house_system_prompt, section_prompt, system_prompt
 from app.geocode import GeocodeResult
+from app.ground.types import GroundTruth
 from app.llm.base import LLMError, LLMProvider
 from app.schema import (
     SECTION_EXTRA,
@@ -39,12 +40,16 @@ ATTEMPTS = 2
 
 
 async def draft_section(
-    provider: LLMProvider, section_id: str, geo: GeocodeResult, now_iso: str
+    provider: LLMProvider,
+    section_id: str,
+    geo: GeocodeResult,
+    now_iso: str,
+    truth: GroundTruth | None = None,
 ) -> DraftResult | SectionFailure:
     _, strict = draft_schemas(section_id)
     messages = [
         {"role": "system", "content": system_prompt(now_iso)},
-        {"role": "user", "content": section_prompt(section_id, geo)},
+        {"role": "user", "content": section_prompt(section_id, geo, truth)},
     ]
     last: Exception | None = None
     for attempt in range(1, ATTEMPTS + 1):
@@ -77,7 +82,11 @@ async def draft_section(
 
 
 async def draft_house_lines(
-    provider: LLMProvider, geo: GeocodeResult, now_iso: str, summaries: dict[str, str]
+    provider: LLMProvider,
+    geo: GeocodeResult,
+    now_iso: str,
+    summaries: dict[str, str],
+    truth: GroundTruth | None = None,
 ) -> list[dict[str, Any]]:
     """The model's part of the at-your-house strip: two or three lines, each
     with its claims. Drafted after the sections, from their summaries. A
@@ -85,7 +94,7 @@ async def draft_house_lines(
     _, strict = house_schemas()
     messages = [
         {"role": "system", "content": house_system_prompt(now_iso)},
-        {"role": "user", "content": house_prompt(geo, summaries)},
+        {"role": "user", "content": house_prompt(geo, summaries, truth)},
     ]
     for attempt in range(1, ATTEMPTS + 1):
         try:

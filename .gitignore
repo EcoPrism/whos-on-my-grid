@@ -8,7 +8,11 @@ __pycache__/
 dist/
 .DS_Store
 
-# Brief cache (services/api). Keyed by address hash; still never commit it.
-data/
+# Brief cache and downloaded datasets (services/api). Keyed by address hash; never commit it.
+# The hand-curated tariff table is source, not cache.
+data/*
+!data/tariffs.json
+# Eval runs: briefs for real addresses and their scores.
+eval/runs/
 # Browser-tool scratch
 .playwright-mcp/

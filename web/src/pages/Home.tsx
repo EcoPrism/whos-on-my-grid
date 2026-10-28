@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AddressInput from '../components/AddressInput'
-import { ApiError, createBrief, getHealth, type Health } from '../lib/api'
+import TestAddresses from '../components/TestAddresses'
+import { ApiError, getHealth, streamBrief, type Health } from '../lib/api'
+import { setLive, updateLive } from '../lib/live'
 
 export default function Home() {
   const [input, setInput] = useState('')
@@ -30,11 +32,26 @@ export default function Home() {
     if (busy || !input.trim()) return
     setError(null)
     setBusy(true)
+    // The brief streams in stages. The first partial (the facts: map, utility,
+    // bill number) moves us to the brief page; later events update it there.
+    let id: string | null = null
+    const startedAt = Date.now()
     try {
-      const brief = await createBrief(input)
-      nav(`/b/${brief.brief_id}`)
+      await streamBrief(input, (ev) => {
+        if (ev.stage === 'error') return // thrown by streamBrief instead
+        if (ev.stage === 'verifying') {
+          if (id) updateLive(id, { stage: 'verifying', verified: ev.verified, claims: ev.claims })
+          return
+        }
+        const first = id === null
+        const bid = ev.brief.brief_id
+        id = bid
+        setLive(bid, { brief: ev.brief, stage: ev.stage, verified: 0, claims: 0, startedAt })
+        if (first) nav(`/b/${bid}`)
+      })
     } catch (err) {
-      setError(messageFor(err, mode))
+      if (id) updateLive(id, { stage: 'error', error: messageFor(err, mode) })
+      else setError(messageFor(err, mode))
     } finally {
       setBusy(false)
     }
@@ -64,7 +81,10 @@ export default function Home() {
             {busy ? 'Working…' : 'Check my grid'}
           </button>
         </div>
-        {busy && mode === 'agent' && (
+        {(mode === 'agent' || mode === 'full') && (
+          <TestAddresses onPick={onChange} disabled={busy} />
+        )}
+        {busy && (mode === 'agent' || mode === 'full') && (
           <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
             Spark is drafting five sections, then Spark Open fetches every cited page and checks each
             claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>

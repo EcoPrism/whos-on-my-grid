@@ -1,14 +1,19 @@
-"""The headline number and the share card, derived from the section drafts.
-No model call: nothing here can introduce a causal claim."""
+"""The headline number, the plain-language lines the engine writes itself, and
+the share card, all derived from the assembled sections. No model call:
+nothing here can introduce a causal claim."""
 
 from typing import Any
 from urllib.parse import urlparse
 
 from app.brief.draft import DraftResult, SectionFailure
 from app.geocode import GeocodeResult
+from app.ground.types import GroundTruth
 from app.schema import SECTION_IDS
 
 Drafts = dict[str, DraftResult | SectionFailure]
+Sections = dict[str, dict[str, Any]]
+
+KM_TO_MI = 0.621371
 
 
 def band_from_rent(rent: float) -> str:
@@ -30,6 +35,16 @@ def band_from_facilities(live: int) -> str:
     return "high"
 
 
+def cap_band(band: str, facilities: int | None) -> str:
+    """A statewide price rise with no facility within five miles is not a data-
+    center story at this address: the band says so."""
+    order = ["low", "medium", "high", "critical"]
+    if facilities is None:
+        return band
+    ceiling = "medium" if facilities == 0 else "high" if facilities <= 2 else "critical"
+    return order[min(order.index(band), order.index(ceiling))]
+
+
 def monthly_change(price: dict[str, Any]) -> float:
     return round((price["rate_now"] - price["rate_then"]) * price["typical_household_kwh_month"], 1)
 
@@ -47,34 +62,80 @@ def monthly_range(price: dict[str, Any]) -> list[float]:
     return [float(round(lo)), float(round(hi))]
 
 
-def _ok(d: DraftResult | SectionFailure | None) -> DraftResult | None:
-    return d if isinstance(d, DraftResult) else None
+def _price(sections: Sections) -> dict[str, Any] | None:
+    bill = sections.get("your_bill") or {}
+    return bill.get("price") if bill.get("status") != "unavailable" else None
 
 
-def _reported(drafts: Drafts) -> list[DraftResult]:
-    """The drafts that succeeded, in section order."""
-    return [d for sid in SECTION_IDS if (d := _ok(drafts.get(sid)))]
+def period_words(price: dict[str, Any]) -> tuple[str, str]:
+    """('in 2024', 'in 2022') for annual utility data; ('', 'two years ago')
+    for a series that runs to the present."""
+    as_of = price.get("as_of") or ""
+    if as_of.endswith("-12") and len(as_of) == 7:
+        year = int(as_of[:4])
+        then = year - max(1, int(price.get("window_months", 24)) // 12)
+        return f"in {year}", f"in {then}"
+    return "", "two years ago"
 
 
-def derive_headline(drafts: Drafts, geo: GeocodeResult) -> dict[str, Any]:
-    bill = _ok(drafts.get("your_bill"))
-    price = bill.extra.get("price") if bill else None
+def facility_count(sections: Sections) -> tuple[int, int]:
+    """(total on the grid, live) from the assembled On your grid section."""
+    facilities = (sections.get("on_your_grid") or {}).get("facilities") or []
+    return len(facilities), sum(1 for f in facilities if f.get("status") == "live")
+
+
+def grid_sentence(sections: Sections, geo: GeocodeResult, truth: GroundTruth) -> str:
+    """The first sentence of the hero when the facility list is the engine's."""
+    total, live = facility_count(sections)
+    served = f", served by {truth.utility.name}" if truth.utility else ""
+    if total == 0:
+        return (
+            "No data-center facility within five miles of this address is listed in "
+            f"PeeringDB or OpenStreetMap{served}."
+        )
+    building = total - live
+    what = "data center" if total == 1 else "data centers"
+    tail = f" ({building} under construction)" if building else ""
+    return f"{total} {what} within five miles are on your local grid{served}{tail}."
+
+
+def derive_headline(
+    sections: Sections, geo: GeocodeResult, truth: GroundTruth | None = None
+) -> dict[str, Any]:
+    price = _price(sections)
     rent = monthly_change(price) if price else None
-
-    grid = _ok(drafts.get("on_your_grid"))
-    live = 0
-    if grid:
-        facilities = grid.extra.get("facilities") or []
-        live = sum(1 for f in facilities if f.get("status") == "live")
+    total, live = facility_count(sections)
+    grounded = truth is not None and truth.facilities is not None
 
     band = band_from_rent(rent) if rent is not None else band_from_facilities(live)
+    if grounded:
+        band = cap_band(band, total)
 
-    lead = grid.summary if grid else next((d.summary for d in _reported(drafts)), "")
-    one = _first_sentence(lead)
-    if rent is not None:
+    if grounded:
+        one = grid_sentence(sections, geo, truth)  # type: ignore[arg-type]
+    else:
+        lead = next(
+            (
+                sections[sid]["summary"]
+                for sid in SECTION_IDS
+                if sections.get(sid, {}).get("status") != "unavailable"
+            ),
+            "",
+        )
+        one = _first_sentence(lead)
+    if rent is not None and price is not None:
         word = "more" if rent >= 0 else "less"
-        bill_line = f"A typical home in {geo.state} pays about ${abs(rent):.0f} {word} a month"
-        one = f"{one} {bill_line} than two years ago.".strip()
+        now, then = period_words(price)
+        who = (
+            f"A typical {truth.utility.name} home"
+            if truth is not None and truth.utility and truth.utility_price
+            else f"A typical home in {geo.state}"
+        )
+        verb = "paid" if now else "pays"
+        one = (
+            f"{one} {who} {verb} about ${abs(rent):.0f} {word} a month"
+            f"{' ' + now if now else ''} than {then}."
+        ).strip()
 
     return {
         "ai_rent_usd_per_month": rent,
@@ -85,20 +146,21 @@ def derive_headline(drafts: Drafts, geo: GeocodeResult) -> dict[str, Any]:
     }
 
 
-def bill_house_line(drafts: Drafts) -> dict[str, Any] | None:
+def bill_house_line(sections: Sections) -> dict[str, Any] | None:
     """The first sentence of the strip, from the price block alone. Modeled:
     the state's average price times a typical home's usage. No model writes it."""
-    bill = _ok(drafts.get("your_bill"))
-    price = bill.extra.get("price") if bill else None
-    if not bill or not price:
+    price = _price(sections)
+    if not price:
         return None
+    bill = sections["your_bill"]
     rent = monthly_change(price)
     lo, hi = monthly_range(price)
     word = "higher" if rent >= 0 else "lower"
+    now, then = period_words(price)
     text = (
-        f"Your power bill is about ${abs(rent):.0f} a month {word} than two years ago, "
-        f"somewhere between ${abs(lo):.0f} and ${abs(hi):.0f} depending on how much "
-        "electricity you use."
+        f"Your power bill {'was' if now else 'is'} about ${abs(rent):.0f} a month {word}"
+        f"{' ' + now if now else ''} than {then}, somewhere between ${abs(lo):.0f} and "
+        f"${abs(hi):.0f} depending on how much electricity you use."
     )
     if price.get("attribution"):
         text += " The people who set the rates say part of that is data-center load."
@@ -108,17 +170,72 @@ def bill_house_line(drafts: Drafts) -> dict[str, Any] | None:
         "text": text,
         "topic": "bill",
         "status": "modelled",
-        "confidence": max(0.0, min(1.0, bill.confidence)),
-        "sources": [],  # the assembler fills these from the bill section
+        "confidence": max(0.0, min(1.0, float(bill.get("confidence", 0.0)))),
+        "sources": list(bill.get("sources") or []),
+    }
+
+
+def noise_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
+    """Noise, modeled from distance to the nearest building in the facility
+    database. Low confidence by design: nobody has measured it."""
+    if truth.facilities is None:
+        return None
+    nearest = truth.nearest
+    if nearest is None:
+        return {
+            "text": "No data-center building within five miles of your house is listed in "
+            "PeeringDB or OpenStreetMap, so there is nothing nearby to hear.",
+            "topic": "noise",
+            "status": "measured",
+            "confidence": 0.8,
+            "sources": [],
+        }
+    miles = nearest.distance_km * KM_TO_MI
+    text = (
+        f"The nearest data-center building, {nearest.name}, is {miles:.1f} miles from your house."
+    )
+    if miles < 0.5:
+        text += (
+            " At that distance cooling fans and backup-generator tests can be heard outdoors, "
+            "especially at night. No sound measurement is public."
+        )
+        confidence = 0.4
+    elif miles < 1.5:
+        text += (
+            " At that distance its equipment is unlikely to carry over ordinary neighborhood "
+            "sound. No sound measurement is public."
+        )
+        confidence = 0.4
+    else:
+        text += " That is too far for its equipment to be heard from your house."
+        confidence = 0.5
+    return {
+        "text": text,
+        "topic": "noise",
+        "status": "modelled",
+        "confidence": confidence,
+        "sources": [
+            {
+                "title": nearest.source_title,
+                "url": nearest.source_url,
+                "retrieved_at": now_iso,
+                "quote": nearest.name,
+            }
+        ],
     }
 
 
 def derive_card(
-    drafts: Drafts, geo: GeocodeResult, claims: list[dict[str, Any]], *, verified: bool = True
+    card_lines: list[str],
+    geo: GeocodeResult,
+    claims: list[dict[str, Any]],
+    *,
+    verified: bool = True,
+    grounded: bool = False,
 ) -> dict[str, Any]:
     parts = [p.strip() for p in geo.display.split(",")]
     city = parts[-2] if len(parts) >= 2 else parts[0]
-    lines = [d.card_line.strip()[:80] for d in _reported(drafts) if d.card_line]
+    lines = [line.strip()[:80] for line in card_lines if line and line.strip()]
     lines = lines[:4] or ["Not enough public information yet"]
     hosts: list[str] = []
     for c in claims:
@@ -127,11 +244,16 @@ def derive_card(
             hosts.append(h)
     sources = ", ".join(hosts[:4]) if hosts else "none cited"
     checked = "checked by Muse Spark Open" if verified else "claims not yet checked"
+    drafted = (
+        "Facilities, utility and prices from public data; sentences by Muse Spark"
+        if grounded
+        else "Drafted by Muse Spark"
+    )
+    tail = "" if grounded else " Not verified against ground-truth data."
     return {
         "title": f"Who's on my grid: {city}, {geo.state}",
         "lines": lines,
-        "footer": f"Sources: {sources}. Drafted by Muse Spark, {checked}. "
-        "Not verified against ground-truth data.",
+        "footer": f"Sources: {sources}. {drafted}, {checked}.{tail}",
     }
 
 

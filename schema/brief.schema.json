@@ -126,7 +126,7 @@
         "operator": {"type": "string"},
         "operator_confidence": {"type": "number", "minimum": 0, "maximum": 1},
         "distance_km": {"type": "number"},
-        "status": {"enum": ["live", "under_construction", "announced"]},
+        "status": {"enum": ["live", "under_construction", "announced", "rejected"], "description": "rejected: announced or filed, then voted down or withdrawn. Shown greyed out, never counted as coming."},
         "estimated_mw": {"type": ["number", "null"]},
         "mw_basis": {"enum": ["filed", "reported", "class_estimate", null]},
         "shares_substation": {"type": ["boolean", "null"], "description": "Whether the facility is likely fed from the same transmission substation as the address. An inference from distance and public substation locations, never from utility records, which are not public at address level. The UI says 'likely' and never puts this in a headline."},
@@ -157,7 +157,8 @@
         "trend_pct": {"type": "number"},
         "window_months": {"type": "integer"},
         "typical_household_kwh_month": {"type": "number"},
-        "attribution": {"type": ["string", "null"], "description": "What a regulator or market monitor attributes to data-center load, quoted and cited. Never our own causal claim."}
+        "attribution": {"type": ["string", "null"], "description": "What a regulator or market monitor attributes to data-center load, quoted and cited. Never our own causal claim."},
+        "as_of": {"type": "string", "description": "YYYY-MM the 'now' window ends. Annual utility-level data runs a year behind the monthly state series; the UI labels the period instead of saying 'now'."}
       }
     },
     "tariff": {

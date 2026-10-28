@@ -12,6 +12,7 @@ from app.brief.fetch import HttpFetcher
 from app.brief.pipeline import BriefService
 from app.config import Settings, get_settings
 from app.geocode import CensusGeocoder
+from app.ground import get_ground
 from app.llm import get_draft_provider, get_verify_provider
 from app.routers import brief
 from app.telemetry import log_event, uptime_ms
@@ -25,14 +26,16 @@ def default_service(settings: Settings) -> BriefService:
         verify_provider=get_verify_provider(),
         fetcher=HttpFetcher(),
         cache=BriefCache(settings.data_path),
+        ground=get_ground(settings) if settings.brief_source == "full" else None,
     )
 
 
 def create_app(service: BriefService | None = None) -> FastAPI:
     settings = service.settings if service else get_settings()
-    if settings.brief_source not in ("fixtures", "agent"):
+    if settings.brief_source not in ("fixtures", "agent", "full"):
         raise RuntimeError(
-            f"GRID_BRIEF_SOURCE must be 'fixtures' or 'agent', got {settings.brief_source!r}"
+            "GRID_BRIEF_SOURCE must be 'fixtures', 'agent' or 'full', "
+            f"got {settings.brief_source!r}"
         )
     if settings.llm_provider not in ("openai", "fake"):
         raise RuntimeError(
@@ -40,11 +43,13 @@ def create_app(service: BriefService | None = None) -> FastAPI:
         )
     # The verifier is optional: without GRID_BASETEN_API_KEY claims stay unchecked.
     if (
-        settings.brief_source == "agent"
+        settings.brief_source in ("agent", "full")
         and settings.llm_provider == "openai"
         and not settings.openai_api_key
     ):
-        raise RuntimeError("GRID_OPENAI_API_KEY is required in agent mode (gateway virtual key)")
+        raise RuntimeError(
+            "GRID_OPENAI_API_KEY is required in agent and full mode (gateway virtual key)"
+        )
 
     logging.basicConfig(level=logging.INFO)
 

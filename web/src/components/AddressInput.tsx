@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 // A plain input by default. When VITE_GOOGLE_MAPS_API_KEY is set, Google
 // Places Autocomplete (US only) is mounted instead; if the script fails to
-// load, the plain input stays. Either way the parent gets a string.
+// load, or Google rejects the key for this origin, the plain input is used.
+// Either way the parent gets a string: the picked suggestion or the typed text.
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 
@@ -38,8 +39,20 @@ export default function AddressInput({ value, onChange, disabled }: Props) {
       await place.fetchFields({ fields: ['formattedAddress'] })
       if (place.formattedAddress) onChange(place.formattedAddress)
     }
+    // Typed text counts as the address too, so the form works when no
+    // suggestion is picked (or none arrives). `input` is composed, so it
+    // crosses the widget's shadow boundary.
+    const onInput = (e: Event) => {
+      const target = e.composedPath()[0]
+      if (target instanceof HTMLInputElement) onChange(target.value)
+    }
+    // A blocked key (wrong referrer, quota) must not take the address box
+    // down with it: go back to the plain input.
+    const onError = () => setPlaces(null)
     el.addEventListener('gmp-select', onSelect)
     el.addEventListener('gmp-placeselect', onSelect)
+    el.addEventListener('input', onInput)
+    el.addEventListener('gmp-requesterror', onError)
     host.current.replaceChildren(el)
     return () => { el.remove() }
   }, [places, onChange])
