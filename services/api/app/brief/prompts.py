@@ -5,6 +5,7 @@ prompt may ask the model to assert causation or to fill a gap with a guess.
 """
 
 from app.geocode import GeocodeResult
+from app.ground.facilities import compass
 from app.ground.types import GroundTruth
 
 KM_TO_MI = 0.621371
@@ -125,6 +126,15 @@ def ground_block(truth: GroundTruth | None, geo: GeocodeResult) -> str:
             )
         if len(truth.facilities) > MAX_FACILITY_LINES:
             lines.append(f"  ... and {len(truth.facilities) - MAX_FACILITY_LINES} more.")
+    if truth.beyond_ring is not None:
+        b = truth.beyond_ring
+        lines.append(
+            f"- Nearest campus with a known operator beyond the five-mile ring (searched to "
+            f"ten miles): {b.name} | {b.operator} | {b.distance_km * KM_TO_MI:.1f} mi to the "
+            f"{compass(geo.lat, geo.lon, b.lat, b.lon)} | {b.buildings} building"
+            f"{'s' if b.buildings != 1 else ''} | {b.source_url}. Say it is beyond the ring; "
+            f"never count it among the facilities within five miles."
+        )
     if truth.utility_price:
         p = truth.utility_price
         change = (p.rate_now - p.rate_then) * p.typical_kwh_month

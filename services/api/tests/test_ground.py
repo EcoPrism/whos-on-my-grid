@@ -2,7 +2,16 @@
 facilities, choosing a utility among overlapping territories, turning the
 EIA-861M rows into a 24-month price series. No network."""
 
-from app.ground.facilities import RawSite, build_facilities, norm_operator, operator_from_name
+from app.ground.facilities import (
+    Override,
+    RawSite,
+    build_facilities,
+    cluster_sites,
+    haversine_km,
+    nearest_beyond,
+    norm_operator,
+    operator_from_name,
+)
 from app.ground.prices import series_from_rows
 from app.ground.utility import choose, display_name
 
@@ -219,3 +228,76 @@ def test_same_operator_twice_gets_distinct_names() -> None:
     assert len(names) == 2 and len(set(names)) == 2
     assert names[0].startswith("Amazon Web Services (2 buildings), ")
     assert {n.rsplit(", ", 1)[1] for n in names} == {"north", "west"}
+
+
+APPLE = Override(
+    name="Apple Maiden data center",
+    operator="Apple",
+    lat=35.5876,
+    lon=-81.2614,
+    radius_m=1500,
+    source_url="https://example.org/apple",
+    source_title="Apple Newsroom",
+    quote="Apple is expanding the capacity of its data center in Maiden, North Carolina.",
+    claim="Apple operates a data center in Maiden, North Carolina.",
+)
+
+
+def test_override_names_an_operator_less_cluster_and_carries_its_source() -> None:
+    sites = [
+        RawSite("osm", "way/1", None, None, "live", 35.5876, -81.2614, "https://osm.org/way/1"),
+        RawSite("osm", "way/2", None, None, "live", 35.5880, -81.2615, "https://osm.org/way/2"),
+    ]
+    facs = build_facilities(sites, 35.577, -81.26, overrides=[APPLE])
+    assert len(facs) == 1
+    f = facs[0]
+    assert f.operator == "Apple" and f.operator_known and f.name == "Apple Maiden data center"
+    assert f.operator_source is not None and f.operator_source.url == "https://example.org/apple"
+    # A cluster with an operator of its own is left alone.
+    own = [RawSite("osm", "way/3", "Microsoft", "Microsoft", "live", 35.5876, -81.2614, "u")]
+    assert build_facilities(own, 35.577, -81.26, overrides=[APPLE])[0].operator == "Microsoft"
+    # Out of radius: untouched.
+    far = [RawSite("osm", "way/4", None, None, "live", 35.62, -81.2614, "u4")]
+    assert not build_facilities(far, 35.61, -81.26, overrides=[APPLE])[0].operator_known
+
+
+def test_nearest_beyond_prefers_a_known_operator_within_ten_miles() -> None:
+    sites = [
+        RawSite("osm", "way/9", None, None, "live", 40.40, -111.948, "u9"),  # 4 km, in the ring
+        RawSite("osm", "way/10", None, None, "live", 40.27, -111.95, "u10"),  # 10 km, unnamed
+        RawSite("osm", "way/11", "Meta", "Meta", "live", 40.268, -112.017, "u11"),  # 12 km
+        RawSite("peeringdb", "fac/12", "DataBank", "DataBank", "live", 40.48, -111.905, "u12"),
+    ]
+    clustered = cluster_sites(sites, 40.362, -111.948)
+    inside = build_facilities(sites, 40.362, -111.948)
+    assert [f.source_url for f in inside] == ["u9"]
+    beyond = nearest_beyond(clustered)
+    assert beyond is not None and beyond.operator == "Meta" and 11 < beyond.distance_km < 13
+    assert nearest_beyond(clustered, limit_km=9.0) is None
+
+
+def test_two_clusters_in_one_override_share_the_operator_not_the_name() -> None:
+    sites = [
+        RawSite("osm", "way/1", None, None, "live", 35.5876, -81.2614, "u1"),
+        RawSite("osm", "way/1b", None, None, "live", 35.5877, -81.2615, "u1b"),
+        RawSite("osm", "way/2", None, None, "live", 35.5904, -81.2646, "u2"),
+    ]
+    facs = build_facilities(sites, 35.577, -81.26, overrides=[APPLE])
+    assert [f.name for f in facs] == ["Apple Maiden data center", "Apple (1 building)"]
+    assert all(f.operator == "Apple" and f.operator_source for f in facs)
+
+
+def test_a_campus_is_in_the_ring_when_its_nearest_building_is() -> None:
+    # Five buildings of one campus run east from 4.9 to 5.9 miles out: the
+    # centroid is outside the five-mile line, the nearest building inside. The
+    # campus is listed, at the distance of its nearest building.
+    home = (36.388, -86.447)
+    sites = [
+        RawSite("osm", f"way/{i}", "Meta", "Meta", "live", 36.40, -86.36 + 0.0045 * i, f"u{i}")
+        for i in range(5)
+    ]
+    facs = build_facilities(sites, *home)
+    assert len(facs) == 1 and facs[0].operator == "Meta" and facs[0].buildings == 5
+    assert 7.8 < facs[0].distance_km < 8.047
+    centroid_km = haversine_km(*home, facs[0].lat, facs[0].lon)
+    assert centroid_km > 8.047

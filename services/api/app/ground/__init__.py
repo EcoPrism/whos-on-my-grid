@@ -143,7 +143,9 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         if ground.facilities is None:
             return
         try:
-            found, notes = await ground.facilities.near(geo.lat, geo.lon, truth.radius_km)
+            looked = await ground.facilities.lookup(geo.lat, geo.lon, truth.radius_km)
+            found, notes = looked.facilities, looked.notes
+            truth.beyond_ring = looked.beyond
         except GroundError as exc:
             log_event("ground_failed", provider="facilities", reason=str(exc)[:160])
             truth.notes.append(

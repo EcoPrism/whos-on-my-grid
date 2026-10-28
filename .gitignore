@@ -13,6 +13,7 @@ dist/
 # Voice Transcribe heard per meeting) are source, not cache. Imagery tiles and recordings are not.
 data/*
 !data/tariffs.json
+!data/facilities.json
 !data/perception/
 data/perception/*
 !data/perception/*.json

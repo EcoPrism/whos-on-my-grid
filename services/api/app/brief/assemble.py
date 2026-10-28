@@ -18,7 +18,7 @@ from app.brief.headline import (
 )
 from app.config import DRAFT_MODEL_ID
 from app.geocode import GeocodeResult
-from app.ground.facilities import haversine_km
+from app.ground.facilities import compass, haversine_km
 from app.ground.prices import EPM_TABLE_TITLE, EPM_TABLE_URL
 from app.ground.types import (
     ConstructionSite,
@@ -32,6 +32,7 @@ from app.schema import SECTION_IDS
 
 KM_TO_MI = 0.621371
 ENGINE_CLAIM_FACILITIES = 5  # nearest facilities that get their own checkable claim
+BEYOND_MENTION_MAX = 5  # a sparse ring names the campus beyond it; a dense one need not
 DECISION_RADIUS_KM = 25.0  # a campus voted on within 15 miles is this address's news
 MONTHS = [
     "January", "February", "March", "April", "May", "June", "July", "August", "September",
@@ -183,7 +184,7 @@ def _ground(
 ) -> tuple[dict[str, Any], str | None]:
     drafted = isinstance(d, DraftResult)
     if sid == "on_your_grid" and truth.facilities is not None:
-        return _grid_section(section, d, truth, claims, now_iso, drafted, card_line)
+        return _grid_section(section, d, truth, claims, now_iso, drafted, card_line, geo)
     if sid == "coming":
         return _coming_section(section, truth, claims, now_iso, geo, drafted, card_line)
     if sid == "hearing":
@@ -205,6 +206,7 @@ def _grid_section(
     now_iso: str,
     drafted: bool,
     card_line: str | None,
+    geo: GeocodeResult,
 ) -> tuple[dict[str, Any], str | None]:
     engine = truth.facilities or []
     spark = {_key(f["name"]): f for f in (section.get("facilities") or [])} if drafted else {}
@@ -224,19 +226,58 @@ def _grid_section(
         for n, f in enumerate(engine[:ENGINE_CLAIM_FACILITIES], start=first)
     ]
     claims.extend(own)
+    # A curated operator (data/facilities.json) gets its own claim citing the
+    # page that names it; the map record's claim above says nothing about who.
+    cited: set[str] = set()
+    for f in engine[:ENGINE_CLAIM_FACILITIES]:
+        src = f.operator_source
+        if src is not None and src.url not in cited:
+            cited.add(src.url)
+            claims.append(
+                _engine_claim(
+                    "on_your_grid",
+                    src.claim,
+                    src.url,
+                    src.title,
+                    src.quote,
+                    len(claims) + 1,
+                    now_iso,
+                )
+            )
+    # The campus just past the ring, when the ring itself is sparse: the
+    # thing a resident has heard of and would otherwise think we missed.
+    beyond = truth.beyond_ring if len(engine) < BEYOND_MENTION_MAX else None
+    if beyond is not None:
+        claims.append(
+            _engine_claim(
+                "on_your_grid",
+                _facility_claim(beyond),
+                beyond.source_url,
+                beyond.source_title,
+                beyond.name or "",
+                len(claims) + 1,
+                now_iso,
+            )
+        )
+        section["beyond_ring"] = _facility(beyond, None)
 
     live = sum(1 for f in engine if f.status == "live")
     building = len(engine) - live
     if not drafted:
-        section["summary"] = _grid_summary(engine, live, building)
+        section["summary"] = _grid_summary(engine, live, building, beyond, geo)
         section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes])) or None
     elif truth.notes:
         section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes]))
+    if drafted and beyond is not None and not _mentions(section.get("summary"), beyond):
+        section["summary"] = (
+            f"{(section.get('summary') or '').rstrip()} {_beyond_sentence(beyond, geo)}".strip()
+        )
     section["facilities"] = facilities
     section["status"] = "measured"
     section["confidence"] = 0.9 if not truth.notes else 0.7
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "on_your_grid"])
-    if not card_line:
+    # The count is the engine's arithmetic; a drafted card line that disagrees is dropped.
+    if truth.facilities is not None or not card_line:
         card_line = (
             f"{len(engine)} data center{'s' if len(engine) != 1 else ''} within 5 miles"
             if engine
@@ -257,19 +298,45 @@ def _facility_claim(f: GroundFacility) -> str:
     name = (
         f" named {f.name}"
         if f.name
+        and f.operator_source is None  # a curated name is not on the map page
         and not f.name.startswith(("Unnamed", f"{f.buildings} unnamed"))
         and "(" not in f.name
         else ""
     )
-    who = f", operator {f.operator}" if f.operator_known else ""
+    # A curated operator is not on the map page; its own claim cites its own page.
+    who = f", operator {f.operator}" if f.operator_known and f.operator_source is None else ""
     return f"OpenStreetMap maps {what}{name} here tagged as {tag}{who}."
 
 
-def _grid_summary(engine: list[GroundFacility], live: int, building: int) -> str:
+def _mentions(summary: str | None, b: GroundFacility) -> bool:
+    """Spark usually writes the campus beyond the ring in from the facts block;
+    the engine adds its sentence only when neither the name nor the operator
+    appears."""
+    text = (summary or "").lower()
+    return b.name.lower() in text or b.operator.lower() in text
+
+
+def _beyond_sentence(b: GroundFacility, geo: GeocodeResult) -> str:
+    what = b.name if b.operator.lower() in b.name.lower() else f"{b.name} ({b.operator})"
+    return (
+        f"The nearest large campus beyond the five-mile ring is {what}, "
+        f"{b.distance_km * KM_TO_MI:.1f} miles to the {compass(geo.lat, geo.lon, b.lat, b.lon)}, "
+        "outside the ring this brief measures."
+    )
+
+
+def _grid_summary(
+    engine: list[GroundFacility],
+    live: int,
+    building: int,
+    beyond: GroundFacility | None = None,
+    geo: GeocodeResult | None = None,
+) -> str:
+    tail = f" {_beyond_sentence(beyond, geo)}" if beyond is not None and geo is not None else ""
     if not engine:
         return (
             "No data-center facility within five miles of this address is listed in PeeringDB "
-            "or OpenStreetMap. Small server rooms inside offices are not in either database."
+            "or OpenStreetMap. Small server rooms inside offices are not in either database." + tail
         )
     nearest = engine[0]
     operators = []
@@ -288,7 +355,7 @@ def _grid_summary(engine: list[GroundFacility], live: int, building: int) -> str
     )
     if who:
         parts.append(f"Operators on record: {who}.")
-    return " ".join(parts)
+    return " ".join(parts) + tail
 
 
 def _facility(f: GroundFacility, spark: dict[str, Any] | None) -> dict[str, Any]:

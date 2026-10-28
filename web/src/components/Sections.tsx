@@ -96,8 +96,11 @@ export function SourceLink({ s }: { s: Source }) {
 
 function Facilities({ section }: { section: Section }) {
   const list = section.facilities ?? []
-  if (!list.length) return null
+  const beyond = section.beyond_ring
+  if (!list.length && !beyond) return null
   return (
+    <>
+    {list.length > 0 && (
     <table className="num mt-5 w-full max-w-[72ch] border-collapse text-[15px]">
       <thead>
         <tr className="border-b border-[var(--ink)] text-left text-sm text-[var(--ink-soft)]">
@@ -129,6 +132,13 @@ function Facilities({ section }: { section: Section }) {
         ))}
       </tbody>
     </table>
+    )}
+    {beyond && (
+      <p className="mt-3 max-w-[72ch] text-[15px] text-[var(--ink-soft)]">
+        Beyond the five-mile ring, within ten: <span className="font-semibold text-[var(--ink)]">{beyond.name}</span>, {beyond.operator}, <span className="num">{(beyond.distance_km * 0.621).toFixed(1)} mi</span> away. Not counted above.
+      </p>
+    )}
+    </>
   )
 }
 

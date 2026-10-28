@@ -123,3 +123,26 @@ from anything pre-existing.
   becomes a one-line "Checked. N claims, M supported, in S s" when the stream ends. Hearing
   quotes drop leading procedural sentences (captions run the chair's "moved and seconded"
   into the next speaker), so a quote starts at the speaker's own words.
+- 2026-10-28, closing the test set and demo hygiene. The brief cache is stamped with an engine
+  fingerprint (a hash of `services/api/app`, the schema and the curated data); a request for an
+  address whose cached brief was made by another engine regenerates it, while the old link still
+  opens. `data/facilities.json` is a second curated table: sites the maps draw without an operator,
+  with the official page that names them. An operator-less cluster inside an entry's radius takes
+  the operator and gets its own claim against that page (Apple's Maiden campus, from Apple's August
+  2025 release); the map record's claim still says only what the map shows. The facility lookup
+  now reaches ten miles: the ring stays five, and when it holds fewer than five facilities the
+  brief names the nearest campus with a known operator beyond it (Meta at Eagle Mountain and
+  Huntsville, Google at Council Bluffs), as a `beyond_ring` field, a sentence and a claim, never
+  counted among the five-mile facilities. The engine now owns the facility-count card line; a
+  drafted line that disagreed with the count is dropped. CLAUDE.md added.
+- 2026-10-28, two things the eval rerun exposed. The Census geocoder's geographies endpoint (the
+  one that adds the county) returned 502 for half an hour while its locations endpoint kept
+  answering, and every brief failed with it; the geocoder now falls back to the locations
+  endpoint and takes the county from the FCC area API (keyless), so a county outage degrades to
+  "county unknown" instead of "no brief". And a campus is now measured by its nearest building,
+  not its centroid: the ten-mile query pulled more of Meta's Gallatin buildings into one cluster
+  and the centroid slid from 5.0 to 5.01 miles, dropping the campus from the ring. Any part of a
+  campus inside five miles puts it on the list, and the noise line gets the nearest wall.
+  Eval after all of this (`eval/runs/step6`): 28 of 30. Maiden, Tucson and Manassas now pass;
+  New Albany waits on the SAM run; Elk Grove is a model-variance miss (the row wants PJM capacity
+  costs named in the bill attribution and Spark left them out this run).

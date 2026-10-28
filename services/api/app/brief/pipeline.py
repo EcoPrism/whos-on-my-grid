@@ -74,7 +74,7 @@ class BriefService:
         if geo is None:
             raise AddressNotFound()
         brief_id = brief_id_for(geo.matched)
-        cached = self.cache.get(brief_id)
+        cached = self.cache.get(brief_id, current_only=True)
         if cached is not None:
             log_event("brief_cache_hit", brief_id=brief_id)
             return cached

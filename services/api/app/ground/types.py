@@ -9,6 +9,18 @@ if TYPE_CHECKING:
     from app.ground.tariffs import TariffEntry
 
 FIVE_MILES_KM = 8.047
+BEYOND_RING_KM = 16.09  # ten miles: how far the engine looks for a campus past the ring
+
+
+@dataclass(frozen=True)
+class OperatorSource:
+    """The page that names a site's operator when the map does not
+    (data/facilities.json). The claim and quote are what the verifier checks."""
+
+    url: str
+    title: str
+    quote: str
+    claim: str
 
 
 @dataclass(frozen=True)
@@ -24,6 +36,7 @@ class GroundFacility:
     source_title: str
     buildings: int = 1
     providers: tuple[str, ...] = ()
+    operator_source: OperatorSource | None = None  # set when the operator is curated
 
 
 @dataclass(frozen=True)
@@ -193,6 +206,7 @@ class GroundTruth:
     decisions: list[Decision] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)  # provider failures, for gap text
     radius_km: float = FIVE_MILES_KM
+    beyond_ring: GroundFacility | None = None  # nearest known campus past the ring
 
     @property
     def live(self) -> list[GroundFacility]:

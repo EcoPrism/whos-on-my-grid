@@ -1,0 +1,16 @@
+{
+  "_about": "Hand-curated like data/tariffs.json: sites the facility databases map without an operator, with the official page that names who runs them. An entry applies to an operator-less cluster whose centre is within radius_m of (lat, lon). The claim and quote are what the verifier checks against source_url; a stale entry shows up as contradicted or unverifiable, never as fact.",
+  "entries": [
+    {
+      "name": "Apple Maiden data center",
+      "operator": "Apple",
+      "lat": 35.5876,
+      "lon": -81.2614,
+      "radius_m": 1500,
+      "source_url": "https://www.apple.com/newsroom/2025/08/apple-increases-us-commitment-to-600-billion-usd-announces-ambitious-program/",
+      "source_title": "Apple Newsroom, August 2025: Apple increases U.S. commitment to $600 billion",
+      "quote": "Apple is expanding the capacity of its state-of-the-art data center in Maiden, North Carolina.",
+      "claim": "Apple operates a data center in Maiden, North Carolina, and is expanding its capacity."
+    }
+  ]
+}

@@ -20,7 +20,8 @@ from typing import Any, Protocol
 
 import httpx
 
-from app.ground.types import FIVE_MILES_KM, GroundFacility
+from app.config import REPO_ROOT
+from app.ground.types import BEYOND_RING_KM, FIVE_MILES_KM, GroundFacility, OperatorSource
 from app.telemetry import log_event
 
 USER_AGENT = "WhosOnMyGrid/0.1 (+https://github.com/EcoPrism/whos-on-my-grid)"
@@ -274,11 +275,59 @@ def _link(a: RawSite, b: RawSite) -> bool:
     return d < 0.2
 
 
-def build_facilities(
-    sites: list[RawSite], lat: float, lon: float, radius_km: float = FIVE_MILES_KM
+OVERRIDES_PATH = REPO_ROOT / "data" / "facilities.json"
+
+
+@dataclass(frozen=True)
+class Override:
+    """A hand-curated fact about a site the maps draw without an operator:
+    who runs it, with the official page that says so. Applies to an
+    operator-less cluster whose centre is within radius_m of (lat, lon)."""
+
+    name: str
+    operator: str
+    lat: float
+    lon: float
+    radius_m: float
+    source_url: str
+    source_title: str
+    quote: str
+    claim: str
+
+
+def load_overrides(path: Path = OVERRIDES_PATH) -> list[Override]:
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    return [Override(**e) for e in raw.get("entries", [])]
+
+
+def apply_overrides(f: GroundFacility, overrides: list[Override]) -> GroundFacility:
+    """An operator-less cluster inside an override's radius takes its name and
+    operator, and carries the override's source so the claim cites the page
+    that names the operator rather than the map that does not."""
+    if f.operator_known:
+        return f
+    for o in overrides:
+        if haversine_km(f.lat, f.lon, o.lat, o.lon) * 1000 <= o.radius_m:
+            return replace(
+                f,
+                name=o.name,
+                operator=o.operator,
+                operator_known=True,
+                operator_source=OperatorSource(
+                    url=o.source_url, title=o.source_title, quote=o.quote, claim=o.claim
+                ),
+            )
+    return f
+
+
+def cluster_sites(
+    sites: list[RawSite], lat: float, lon: float, overrides: list[Override] | None = None
 ) -> list[GroundFacility]:
-    """Single-linkage clustering of raw records into facilities, then distance
-    from the address, nearest first."""
+    """Single-linkage clustering of raw records into facilities at any
+    distance, nearest first, with curated operators applied."""
     n = len(sites)
     parent = list(range(n))
 
@@ -297,13 +346,58 @@ def build_facilities(
     for i, s in enumerate(sites):
         groups.setdefault(find(i), []).append(s)
 
-    out = []
-    for members in groups.values():
-        f = _facility(members, lat, lon)
-        if f.distance_km <= radius_km:
-            out.append(f)
+    out = [apply_overrides(_facility(m, lat, lon), overrides or []) for m in groups.values()]
     out.sort(key=lambda f: f.distance_km)
-    return disambiguate(out[:MAX_FACILITIES], lat, lon)
+    return _one_name_per_override(out, overrides or [])
+
+
+def _one_name_per_override(
+    facilities: list[GroundFacility], overrides: list[Override]
+) -> list[GroundFacility]:
+    """Several clusters can sit inside one override's radius (a campus mapped
+    as separate buildings). The one nearest the override point carries its
+    name; the others keep the operator and are named by their buildings."""
+    out = list(facilities)
+    for o in overrides:
+        idx = [
+            i
+            for i, f in enumerate(out)
+            if f.operator_source and f.operator_source.url == o.source_url and f.name == o.name
+        ]
+        if len(idx) < 2:
+            continue
+        keep = min(idx, key=lambda i: haversine_km(out[i].lat, out[i].lon, o.lat, o.lon))
+        for i in idx:
+            if i != keep:
+                b = out[i].buildings
+                out[i] = replace(out[i], name=f"{o.operator} ({b} building{'s' if b != 1 else ''})")
+    return out
+
+
+def build_facilities(
+    sites: list[RawSite],
+    lat: float,
+    lon: float,
+    radius_km: float = FIVE_MILES_KM,
+    overrides: list[Override] | None = None,
+) -> list[GroundFacility]:
+    """The facilities within the ring, nearest first, names made distinct."""
+    inside = [f for f in cluster_sites(sites, lat, lon, overrides) if f.distance_km <= radius_km]
+    return disambiguate(inside[:MAX_FACILITIES], lat, lon)
+
+
+def nearest_beyond(
+    clustered: list[GroundFacility],
+    radius_km: float = FIVE_MILES_KM,
+    limit_km: float = BEYOND_RING_KM,
+) -> GroundFacility | None:
+    """The nearest facility with a known operator past the ring but within
+    limit_km: the campus a resident has heard of that the ring misses. An
+    unnamed building out there is not worth a sentence."""
+    for f in clustered:
+        if radius_km < f.distance_km <= limit_km and f.operator_known:
+            return f
+    return None
 
 
 _COMPASS = (
@@ -398,7 +492,9 @@ def _facility(members: list[RawSite], lat: float, lon: float) -> GroundFacility:
         status=status,
         lat=round(clat, 6),
         lon=round(clon, 6),
-        distance_km=round(haversine_km(lat, lon, clat, clon), 2),
+        # Distance to the nearest building, not the centroid: a campus is within
+        # five miles when any part of it is, and the noise line wants the nearest wall.
+        distance_km=round(min(haversine_km(lat, lon, m.lat, m.lon) for m in members), 2),
         source_url=anchor.url,
         source_title=source_title,
         buildings=buildings,
@@ -409,18 +505,35 @@ def _facility(members: list[RawSite], lat: float, lon: float) -> GroundFacility:
 # --- database ----------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class Lookup:
+    facilities: list[GroundFacility]  # within the ring, nearest first
+    beyond: GroundFacility | None  # nearest known campus past the ring, to ten miles
+    notes: list[str]
+
+
 class FacilityDatabase:
     """All sources asked in parallel; one failing is a note, all failing is an
     error the caller turns into an `unavailable` section."""
 
-    def __init__(self, sources: list[FacilitySource]) -> None:
+    def __init__(
+        self, sources: list[FacilitySource], overrides: list[Override] | None = None
+    ) -> None:
         self.sources = sources
+        self.overrides = load_overrides() if overrides is None else overrides
 
     async def near(
         self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM
     ) -> tuple[list[GroundFacility], list[str]]:
+        found = await self.lookup(lat, lon, radius_km)
+        return found.facilities, found.notes
+
+    async def lookup(self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM) -> Lookup:
+        """The sources are asked out to ten miles so the brief can name the
+        campus just past the ring; the ring itself stays five miles."""
+        reach = max(radius_km, BEYOND_RING_KM)
         results = await asyncio.gather(
-            *(s.near(lat, lon, radius_km) for s in self.sources), return_exceptions=True
+            *(s.near(lat, lon, reach) for s in self.sources), return_exceptions=True
         )
         sites: list[RawSite] = []
         notes: list[str] = []
@@ -434,7 +547,9 @@ class FacilityDatabase:
             sites.extend(res)
         if not ok:
             raise GroundError("; ".join(notes))
-        return build_facilities(sites, lat, lon, radius_km), notes
+        clustered = cluster_sites(sites, lat, lon, self.overrides)
+        inside = [f for f in clustered if f.distance_km <= radius_km][:MAX_FACILITIES]
+        return Lookup(disambiguate(inside, lat, lon), nearest_beyond(clustered, radius_km), notes)
 
 
 class FakeFacilityDatabase:
@@ -444,11 +559,17 @@ class FakeFacilityDatabase:
         *,
         fail: bool = False,
         notes: list[str] | None = None,
+        beyond: GroundFacility | None = None,
     ) -> None:
         self.facilities = facilities or []
         self.fail = fail
         self.notes = notes or []
+        self.beyond = beyond
         self.calls = 0
+
+    async def lookup(self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM) -> Lookup:
+        facilities, notes = await self.near(lat, lon, radius_km)
+        return Lookup(facilities, self.beyond, notes)
 
     async def near(
         self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM

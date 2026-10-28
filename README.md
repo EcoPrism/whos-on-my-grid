@@ -77,7 +77,9 @@ Nothing is wired to real data until the page already works on fixtures.
    so.
 5. **Ground-truth providers.** Facilities from PeeringDB and OpenStreetMap, serving utility from
    HIFLD's service-territory map, residential prices from EIA-861M (state, monthly) and EIA-861
-   (this utility, annual), large-load tariffs from a hand-curated table (`data/tariffs.json`).
+   (this utility, annual), large-load tariffs from a hand-curated table (`data/tariffs.json`),
+   operators the maps leave blank from a second one (`data/facilities.json`, each with the page
+   that names them). The engine looks ten miles out and names the nearest campus past the ring.
    The engine owns existence, location, distance, utility and price; Spark writes the sentences
    around them and adds what no dataset holds (announced and rejected campuses, codenames,
    attributions, hearings). `BRIEF_SOURCE=full`. Scored against a 30-address test set in `eval/`.

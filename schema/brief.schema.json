@@ -30,6 +30,10 @@
         "full"
       ]
     },
+    "engine": {
+      "type": "string",
+      "description": "Fingerprint of the engine code and curated data that made this brief. The cache regenerates a brief whose engine differs from the running one."
+    },
     "fixture": {
       "type": "boolean",
       "description": "True when the brief is synthetic test data. Operators and sources are fictional."
@@ -345,6 +349,10 @@
         },
         "hearing": {
           "$ref": "#/$defs/hearing"
+        },
+        "beyond_ring": {
+          "description": "On your grid only: the nearest facility with a known operator past the five-mile ring, within ten miles. Never counted among the facilities within the ring.",
+          "$ref": "#/$defs/facility"
         }
       }
     },

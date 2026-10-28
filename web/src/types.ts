@@ -85,6 +85,8 @@ export interface Section {
   gap?: string | null
   sources: Source[]
   facilities?: Facility[]
+  // On your grid: the nearest known campus past the five-mile ring, within ten.
+  beyond_ring?: Facility
   construction?: Construction[]
   price?: Price
   tariff?: Tariff
@@ -124,6 +126,7 @@ export interface Brief {
   generated_at: string
   source_mode: 'fixtures' | 'agent' | 'full'
   fixture?: boolean
+  engine?: string
   partial?: PartialInfo
   address: {
     display: string

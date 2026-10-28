@@ -10,7 +10,7 @@ from app.ground import (
     Ground,
 )
 from app.ground.tariffs import TariffEntry
-from app.ground.types import GroundFacility, PriceSeries, Utility
+from app.ground.types import GroundFacility, OperatorSource, PriceSeries, Utility
 from app.schema import SECTION_IDS, validate_brief
 from tests import fakes
 
@@ -129,6 +129,70 @@ async def test_engine_facts_own_the_brief(tmp_path) -> None:
     assert noise["sources"][0]["url"] == "https://www.peeringdb.com/fac/1"
     assert topics.count("noise") == 1  # Spark's noise line is replaced by the engine's
     assert "Facilities, utility and prices from public data" in brief["card"]["footer"]
+
+
+BEYOND = GroundFacility(
+    name="Meta (5 buildings)",
+    operator="Meta",
+    operator_known=True,
+    status="live",
+    lat=39.1,
+    lon=-77.4,
+    distance_km=10.8,
+    source_url="https://www.openstreetmap.org/way/900",
+    source_title="OpenStreetMap way 900",
+    buildings=5,
+    providers=("osm",),
+)
+
+
+async def test_sparse_ring_names_the_campus_beyond_it(tmp_path) -> None:
+    svc = fakes.service(tmp_path, brief_source="full")
+    svc.ground = ground(facilities=FakeFacilityDatabase([], beyond=BEYOND))
+    brief = await svc.brief_for_address("21715 Filigree Ct, Ashburn, VA")
+    validate_brief(brief)
+    grid = brief["sections"]["on_your_grid"]
+    assert grid["facilities"] == []
+    assert grid["beyond_ring"]["operator"] == "Meta" and grid["beyond_ring"]["distance_km"] == 10.8
+    assert "beyond the five-mile ring is Meta (5 buildings), 6.7 miles to the" in grid["summary"]
+    urls = [c["source"]["url"] for c in brief["claims"] if c["drafted_by"] == "engine"]
+    assert "https://www.openstreetmap.org/way/900" in urls
+    # The map's facility count and the headline stay at zero: it is not in the ring.
+    assert brief["card"]["lines"][0].startswith("No data centers listed within 5 miles")
+
+
+async def test_curated_operator_gets_its_own_claim(tmp_path) -> None:
+    apple = GroundFacility(
+        name="Apple Maiden data center",
+        operator="Apple",
+        operator_known=True,
+        status="live",
+        lat=39.02,
+        lon=-77.45,
+        distance_km=1.2,
+        source_url="https://www.openstreetmap.org/way/116005354",
+        source_title="OpenStreetMap way 116005354",
+        buildings=2,
+        providers=("osm",),
+        operator_source=OperatorSource(
+            url="https://example.org/apple",
+            title="Apple Newsroom",
+            quote="Apple is expanding the capacity of its data center in Maiden.",
+            claim="Apple operates a data center in Maiden, North Carolina.",
+        ),
+    )
+    svc = fakes.service(tmp_path, brief_source="full")
+    svc.ground = ground(facilities=FakeFacilityDatabase([apple]))
+    brief = await svc.brief_for_address("21715 Filigree Ct, Ashburn, VA")
+    validate_brief(brief)
+    assert brief["sections"]["on_your_grid"]["facilities"][0]["operator"] == "Apple"
+    engine = [c for c in brief["claims"] if c["drafted_by"] == "engine"]
+    by_url = {c["source"]["url"]: c for c in engine}
+    # The map record's claim says what the map shows: buildings, no operator.
+    assert "operator" not in by_url["https://www.openstreetmap.org/way/116005354"]["text"]
+    # The operator has its own claim against the page that names it.
+    assert by_url["https://example.org/apple"]["text"].startswith("Apple operates")
+    assert by_url["https://example.org/apple"]["source"]["quote"].startswith("Apple is expanding")
 
 
 async def test_no_facilities_calms_the_brief(tmp_path) -> None:
