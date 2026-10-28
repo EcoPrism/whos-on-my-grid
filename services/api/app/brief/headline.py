@@ -225,6 +225,48 @@ def noise_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
     }
 
 
+FOOTBALL_FIELD_ACRES = 1.32
+
+
+def land_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
+    """Land, measured: what SAM 3.1 found between two imagery vintages. Only
+    roofs beside listed data centers count; the sentence says what it saw."""
+    img = truth.imagery
+    if img is None:
+        return None
+    then, now = img.vintages
+    sources = [
+        {"title": item.title, "url": item.url, "retrieved_at": now_iso, "quote": item.id}
+        for vintage in (img.then, img.now)
+        for item in vintage.items
+    ][:2]
+    counted = img.counted
+    if not counted:
+        return {
+            "text": f"Comparing the {then} and {now} aerial photos, no new large data-center roof "
+            "appeared within five miles of your house.",
+            "topic": "land",
+            "status": "measured",
+            "confidence": 0.7,
+            "sources": sources,
+        }
+    acres = img.new_acres
+    fields = acres / FOOTBALL_FIELD_ACRES
+    nearest = counted[0]
+    text = (
+        f"Comparing the {then} and {now} aerial photos, about {acres:.0f} acres of new data-center "
+        f"roof went up within five miles of your house, roughly {fields:.0f} football fields. "
+        f"The closest, {nearest.label}, is {nearest.distance_km * KM_TO_MI:.1f} miles away."
+    )
+    return {
+        "text": text,
+        "topic": "land",
+        "status": "measured",
+        "confidence": 0.7,
+        "sources": sources,
+    }
+
+
 def derive_card(
     card_lines: list[str],
     geo: GeocodeResult,

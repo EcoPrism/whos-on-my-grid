@@ -12,6 +12,7 @@ from app.brief.headline import (
     bill_house_line,
     derive_card,
     derive_headline,
+    land_house_line,
     monthly_change,
     noise_house_line,
 )
@@ -19,11 +20,19 @@ from app.config import DRAFT_MODEL_ID
 from app.geocode import GeocodeResult
 from app.ground.facilities import haversine_km
 from app.ground.prices import EPM_TABLE_TITLE, EPM_TABLE_URL
-from app.ground.types import GroundFacility, GroundTruth, PriceSeries
+from app.ground.types import (
+    ConstructionSite,
+    Decision,
+    GroundFacility,
+    GroundTruth,
+    ImageryResult,
+    PriceSeries,
+)
 from app.schema import SECTION_IDS
 
 KM_TO_MI = 0.621371
 ENGINE_CLAIM_FACILITIES = 5  # nearest facilities that get their own checkable claim
+DECISION_RADIUS_KM = 25.0  # a campus voted on within 15 miles is this address's news
 MONTHS = [
     "January", "February", "March", "April", "May", "June", "July", "August", "September",
     "October", "November", "December",
@@ -175,9 +184,10 @@ def _ground(
     drafted = isinstance(d, DraftResult)
     if sid == "on_your_grid" and truth.facilities is not None:
         return _grid_section(section, d, truth, claims, now_iso, drafted, card_line)
-    if sid == "coming" and truth.facilities is not None:
-        section["facilities"] = _coming_facilities(section.get("facilities") or [], truth, geo)
-        return section, card_line
+    if sid == "coming":
+        return _coming_section(section, truth, claims, now_iso, geo, drafted, card_line)
+    if sid == "hearing":
+        return _hearing_section(section, truth, claims, now_iso, geo, card_line)
     if sid == "your_bill" and truth.best_price is not None:
         return _bill_section(section, d, truth, claims, now_iso, geo, drafted, card_line)
     if sid == "protection" and truth.tariff is not None:
@@ -305,6 +315,297 @@ def _facility(f: GroundFacility, spark: dict[str, Any] | None) -> dict[str, Any]
             out["operator"] = spark["operator"]
             out["operator_confidence"] = min(0.6, float(spark.get("operator_confidence") or 0.5))
     return out
+
+
+def _coming_section(
+    section: dict[str, Any],
+    truth: GroundTruth,
+    claims: list[dict[str, Any]],
+    now_iso: str,
+    geo: GeocodeResult,
+    drafted: bool,
+    card_line: str | None,
+) -> tuple[dict[str, Any], str | None]:
+    """What is coming, from three places: the model's announced campuses
+    (kept, minus anything the database already has), the public record of
+    votes on named campuses (the engine's `decisions`), and what SAM 3.1
+    measured between two imagery vintages (the engine's `construction`)."""
+    facilities = section.get("facilities") or []
+    if truth.facilities is not None:
+        facilities = _coming_facilities(facilities, truth, geo)
+    decided = _decision_facilities(truth.decisions, geo, claims, now_iso)
+    if decided:
+        keys = {_key(f["name"]) for f in decided} | {_key(f.get("codename")) for f in decided}
+        facilities = [
+            f
+            for f in facilities
+            if _key(f["name"]) not in keys and _key(f.get("codename")) not in keys
+        ]
+    section["facilities"] = [*decided, *facilities]
+
+    img = truth.imagery
+    if img is None:
+        if geo.county:
+            section["gap"] = " ".join(
+                filter(
+                    None,
+                    [
+                        section.get("gap"),
+                        f"Aerial imagery has not been indexed for {geo.county} County yet, so new "
+                        "construction here comes only from OpenStreetMap tags and public "
+                        "announcements.",
+                    ],
+                )
+            )
+        if decided and not drafted:
+            section["summary"] = _coming_summary(None, section["facilities"])
+            section["status"] = "reported"
+            section["confidence"] = 0.7
+            section["sources"] = _distinct_sources([c for c in claims if c["section"] == "coming"])
+        return section, card_line
+
+    section["construction"] = [_construction(s, img) for s in img.sites]
+    for vintage in (img.then, img.now):
+        for item in vintage.items:
+            claims.append(
+                _engine_claim(
+                    "coming",
+                    f"USDA NAIP aerial imagery {item.id}, acquired {item.date}, covers this area "
+                    f"({vintage.source}).",
+                    item.url,
+                    item.title,
+                    item.id,
+                    len(claims) + 1,
+                    now_iso,
+                )
+            )
+    section["summary"] = _coming_summary(img, section["facilities"])
+    section["status"] = "measured"
+    section["model"] = img.model
+    section["confidence"] = 0.8 if img.counted else 0.7
+    section["gap"] = (
+        "Roofs are measured from public aerial imagery; what is inside them is not. A large "
+        "roof in no database is counted only when it adjoins a listed data center."
+    )
+    section["sources"] = _distinct_sources([c for c in claims if c["section"] == "coming"])
+    acres = img.new_acres
+    if acres > 0:
+        card_line = f"{acres:.0f} acres of new data-center roof since {img.then.year}"[:80]
+    elif not card_line:
+        card_line = f"No new large data-center roof since {img.then.year} imagery"
+    return section, card_line
+
+
+def _construction(s: ConstructionSite, img: ImageryResult) -> dict[str, Any]:
+    return {
+        "label": s.label,
+        "kind": s.kind,
+        "distance_km": s.distance_km,
+        "footprint_acres_then": s.footprint_acres_then,
+        "footprint_acres_now": s.footprint_acres_now,
+        "vintages": list(img.vintages),
+        "in_database": s.in_database,
+        "near_cluster": s.near_cluster,
+        "polygon": [list(p) for p in s.polygon],
+    }
+
+
+def _coming_summary(img: ImageryResult | None, facilities: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
+    if img is not None:
+        counted = img.counted
+        other = [s for s in img.sites if not s.counted]
+        then, now = img.vintages
+        if counted:
+            exp = sum(1 for s in counted if s.kind == "expansion")
+            new = len(counted) - exp
+            what = []
+            if new:
+                what.append(f"{new} new large roof{'s' if new != 1 else ''}")
+            if exp:
+                what.append(f"{exp} expansion{'s' if exp != 1 else ''} of a listed data center")
+            nearest = counted[0]
+            parts.append(
+                f"Between the {then} and {now} aerial imagery, {' and '.join(what)} appeared "
+                f"within five miles, about {img.new_acres:.0f} acres of roof in all. The nearest "
+                f"is {nearest.label}, {nearest.distance_km * KM_TO_MI:.1f} miles away."
+            )
+        else:
+            parts.append(
+                f"Between the {then} and {now} aerial imagery, no new large roof appeared within "
+                "five miles next to a listed data center."
+            )
+        if other:
+            parts.append(
+                f"{len(other)} other large roof{'s' if len(other) != 1 else ''} went up in that "
+                "time with no data center listed nearby; the imagery cannot say what they are."
+            )
+    rejected = [f for f in facilities if f.get("status") == "rejected"]
+    announced = [f for f in facilities if f.get("status") in ("announced", "under_construction")]
+    for f in rejected:
+        parts.append(
+            f"{f['name']}{' (' + f['codename'] + ')' if f.get('codename') else ''}, "
+            f"{f['distance_km'] * KM_TO_MI:.0f} miles away, was voted down or withdrawn."
+        )
+    if announced:
+        names = ", ".join(
+            f"{f['name']} ({f['operator']})" if f.get("operator") else f["name"]
+            for f in announced[:3]
+        )
+        parts.append(f"Announced or filed: {names}.")
+    return " ".join(parts) or "Not known."
+
+
+def _decision_facilities(
+    decisions: list[Decision],
+    geo: GeocodeResult,
+    claims: list[dict[str, Any]],
+    now_iso: str,
+) -> list[dict[str, Any]]:
+    """A campus a county or city voted on, as a Coming entry with the vote as
+    its claim. Within fifteen miles: a rejected campus is this address's news
+    even when it sits outside the five-mile ring, and the distance is shown."""
+    out = []
+    for d in decisions:
+        if d.lat is None or d.lon is None:
+            continue
+        dist = round(haversine_km(geo.lat, geo.lon, d.lat, d.lon), 2)
+        if dist > DECISION_RADIUS_KM:
+            continue
+        status = {"rejected": "rejected", "approved": "announced", "announced": "announced"}.get(
+            d.status, "rejected"
+        )
+        claims.append(
+            _engine_claim(
+                "coming", d.text, d.source_url, d.source_title, d.quote, len(claims) + 1, now_iso
+            )
+        )
+        out.append(
+            {
+                "name": d.project,
+                "codename": d.codename,
+                "operator": d.operator or "Not known",
+                "operator_confidence": 0.9 if d.operator else 0.0,
+                "distance_km": dist,
+                "status": status,
+                "estimated_mw": d.estimated_mw,
+                "mw_basis": "filed" if d.estimated_mw else None,
+                "shares_substation": None,
+                "lat": d.lat,
+                "lon": d.lon,
+            }
+        )
+    return out
+
+
+def _hearing_section(
+    section: dict[str, Any],
+    truth: GroundTruth,
+    claims: list[dict[str, Any]],
+    now_iso: str,
+    geo: GeocodeResult,
+    card_line: str | None,
+) -> tuple[dict[str, Any], str | None]:
+    """The last indexed hearing for this county, quoted verbatim from the
+    transcript of the official recording. Without an index the model's
+    recollection stands, and the gap says so."""
+    h = truth.hearing
+    if h is None:
+        why = truth.hearing_note or (
+            f"Hearings for {geo.county} County are not indexed yet (docs/counties.md)"
+            if geo.county
+            else None
+        )
+        if why:
+            section["gap"] = " ".join(
+                filter(
+                    None,
+                    [
+                        section.get("gap"),
+                        f"{why.rstrip('.')}, so this section is the model's recollection, not "
+                        "a transcript.",
+                    ],
+                )
+            )
+        return section, card_line
+
+    said = []
+    for q in h.quotes:
+        said.append(
+            {
+                "speaker_role": q.role,
+                "speaker_name": q.name,
+                "quote": q.text,
+                "timestamp_s": q.start_s,
+            }
+        )
+        who = (
+            f"{q.name}, {q.role}"
+            if q.name
+            else f"a {q.role}"
+            if q.role != "unknown"
+            else "a speaker"
+        )
+        claims.append(
+            _engine_claim(
+                "hearing",
+                f"At the {h.body} meeting on {h.date} ({h.subject}), {who} said: “{q.text}”",
+                h.page_url,
+                h.page_title,
+                q.text,
+                len(claims) + 1,
+                now_iso,
+            )
+        )
+    upcoming = h.upcoming if h.upcoming and h.upcoming.date >= now_iso[:10] else None
+    section["hearing"] = {
+        "next_date": upcoming.date if upcoming else None,
+        "body": h.body,
+        "subject": h.subject,
+        "last_meeting_date": h.date,
+        "last_meeting_said": said,
+    }
+    first = h.quotes[0]
+    who = (
+        f"{first.name} ({first.role})"
+        if first.name
+        else f"a {first.role}"
+        if first.role != "unknown"
+        else "a speaker"
+    )
+    text = (
+        f"At the {h.body} meeting on {_date_words(h.date)}, on {h.subject}, {who} said: "
+        f"“{first.text}”"
+    )
+    text += (
+        f" The next listed hearing is {upcoming.subject} on {_date_words(upcoming.date)}."
+        if upcoming
+        else " No upcoming data-center hearing is listed for this body."
+    )
+    section["summary"] = text
+    section["status"] = "measured"
+    section["model"] = h.model
+    if h.model and h.agreement is not None:
+        section["confidence"] = round(0.6 + 0.3 * max(0.0, min(1.0, h.agreement)), 2)
+    else:
+        section["confidence"] = 0.75 if h.model else 0.8
+    section["gap"] = (
+        f"Only part of the recording is indexed: {h.coverage}. Speaker roles are inferred from "
+        "the transcript; the words are verbatim."
+        if h.coverage
+        else "Speaker roles are inferred from the transcript; the words are verbatim."
+    )
+    section["sources"] = _distinct_sources([c for c in claims if c["section"] == "hearing"])
+    card_line = f"On the record {h.date[:4]}: {h.subject}"[:80]
+    return section, card_line
+
+
+def _date_words(d: str) -> str:
+    try:
+        y, m, day = (int(x) for x in d.split("-"))
+        return f"{day} {MONTHS[m - 1]} {y}"
+    except (ValueError, IndexError):
+        return d
 
 
 def _coming_facilities(
@@ -500,9 +801,14 @@ def _strip(
     engine_noise = noise_house_line(truth, now_iso) if truth is not None else None
     if engine_noise:
         out.append(engine_noise)
+    engine_land = land_house_line(truth, now_iso) if truth is not None else None
+    if engine_land:
+        out.append(engine_land)
     grounded_empty = truth is not None and truth.facilities is not None and not truth.facilities
     for line in house:
         if engine_noise and line["topic"] == "noise":
+            continue
+        if engine_land and line["topic"] == "land":
             continue
         if (
             grounded_empty

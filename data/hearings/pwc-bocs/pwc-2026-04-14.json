@@ -1,0 +1,1002 @@
+{
+ "meeting_id": "pwc-2026-04-14",
+ "body_id": "pwc-bocs",
+ "body": "Prince William County Board of County Supervisors",
+ "date": "2026-04-14",
+ "clip_id": 3817,
+ "page_url": "https://pwcgov.granicus.com/player/clip/3817?view_id=23",
+ "subject": "Resolution not to appeal the court rulings voiding the Digital Gateway rezonings",
+ "indexed_at": "2026-10-28T16:31:16Z",
+ "models": {
+  "transcribe": null,
+  "roles": "muse-spark-1.3"
+ },
+ "captions": true,
+ "agreement": null,
+ "quality": 0.249,
+ "usable": false,
+ "coverage": "Public comment time, Resolution not to file a petition for a writ of appeal (Digital Gateway) (21 min of a 7 h 46 min recording)",
+ "windows": [
+  {
+   "item": "Public comment time",
+   "start_s": 52,
+   "end_s": 1064
+  },
+  {
+   "item": "Resolution not to file a petition for a writ of appeal (Digital Gateway)",
+   "start_s": 1700,
+   "end_s": 1960
+  }
+ ],
+ "index_points": [
+  {
+   "time_s": 52.0,
+   "title": "3) Public Comment Time"
+  },
+  {
+   "time_s": 1064.0,
+   "title": "4) County Executive"
+  },
+  {
+   "time_s": 1713.0,
+   "title": "Motion to Authorize the Public Hearing for 9349 Hornbaker Road (Hailes Castle, LLC) Moved by Supervisor Gordy, seconded by Supervisor Bailey."
+  },
+  {
+   "time_s": 1720.0,
+   "title": "Vote to Authorize the Public Hearing for 9349 Hornbaker Road (Hailes Castle, LLC) (Approved)"
+  },
+  {
+   "time_s": 1727.0,
+   "title": "Action After CM - Appoint Supervisor Vega as a Regular Member of PRTC"
+  },
+  {
+   "time_s": 1741.0,
+   "title": "Motion to Approve Supervisor Vega's Regular Member Appointment to PRTC. Moved by Supervisor Angry, seconded by Supervisor Boddye."
+  },
+  {
+   "time_s": 1750.0,
+   "title": "Vote to Approve Supervisor Vega's Regular Member Appointment to PRTC. (Approved)"
+  },
+  {
+   "time_s": 1761.0,
+   "title": "Action After CM - Direct - County Attorney and Outside Legal Counsel Not to File a Petition for a Writ of Appeal to the Virginia Supreme Court of the Virginia Court of Appeals' Decision, Issued on March 31, 2026, Regarding the Two Digital Gateway Rezoning Lawsuits, Katy Burke, et al. v. Board of County Supervisors of Prince William County, et al., and Board of County Supervisors of Prince William County, et al. v. Oak Valley Homeowners Association, et al. (Court of Appeals Record Nos. 1590-25-4, 1584-25-4, 1592-25-4, and 2025-24-4)"
+  },
+  {
+   "time_s": 1937.0,
+   "title": "Motion to Approve the Resolution Directing County Attorney and Outside Legal Counsel Not to File a Petition for a Writ of Appeal Regarding Digital Gateway Rezoning Lawsuits. Moved by Supervisor Angry, seconded by Supervisor Stewart."
+  },
+  {
+   "time_s": 1945.0,
+   "title": "Vote to Approve the Resolution Directing County Attorney and Outside Legal Counsel Not to File a Petition for a Writ of Appeal Regarding Digital Gateway Rezoning Lawsuits. (Approved)"
+  },
+  {
+   "time_s": 1952.0,
+   "title": "7) Supervisors' Time"
+  }
+ ],
+ "turns": [
+  {
+   "start_s": 53.8,
+   "end_s": 53.8,
+   "speaker": "0:t0",
+   "role": "unknown",
+   "name": null,
+   "text": "libeand justicfoall.",
+   "source": "captions"
+  },
+  {
+   "start_s": 54.8,
+   "end_s": 56.0,
+   "speaker": "0:t1",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "c Jeson:hank you evne. We going to in",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 61.6,
+   "end_s": 84.8,
+   "speaker": "0:t2",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "blic commetime if you w likto sig, thgn-usheets in the ba. M going toin bcallin pe in groupsfive n the backthe ne up in pleaseak begin ing ur namere you resi. You are ide e coun u cajust s -- oyour outside the untry hopelly you are not re in on.He uld saat ea wre you side t yoneas thrminute m gointo staith rianne",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 90.6,
+   "end_s": 90.6,
+   "speaker": "0:t3",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "mmy nina, jiand",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 101.0,
+   "end_s": 115.1,
+   "speaker": "0:t4",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "steve. Goodernoon chaeffeon the member theboard. Name arianne and I in tgainlle distri paynn ne. I'm felo residef prinwilliaunty beeon page ne for 45 yrs and I've ba",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 119.4,
+   "end_s": 127.6,
+   "speaker": "0:t5",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "mmercibr briing ecomic oement rinc iam ty f about sameiod of. M he todaythe of 40sidents your",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 133.2,
+   "end_s": 135.3,
+   "speaker": "0:t6",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "constitu whme togethe good h to channd ret a changethe coence plan and a",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 139.7,
+   "end_s": 154.3,
+   "speaker": "0:t7",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "rezong on pagelan wee th decisiecau realy change oucommunis no long world. We are surred bdomi smison corridnd w have a onehundfoot comingoughew eas on the",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 159.3,
+   "end_s": 163.0,
+   "speaker": "0:t8",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "prty. Laut n leastwe have gavillcrossingch ia 3 ion uare the data nter wapprovedin decr",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 169.0,
+   "end_s": 179.1,
+   "speaker": "0:t9",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "2019on gordnext dto th ssas battfield. That was prov a 90 te stto nish there no ries from heritaget, no outcrieom thnass battlefielrk",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 184.4,
+   "end_s": 194.4,
+   "speaker": "0:t10",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "oroak valley at hpened the dil gateis difnt. Itbeen dn byindivis and organizas who ot lin gordne w did not bear tims woul and who notlways esented",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 198.6,
+   "end_s": 199.6,
+   "speaker": "0:t11",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "oucommunuthfly les eating a naative",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 204.2,
+   "end_s": 205.3,
+   "speaker": "0:t12",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "oviting the proper owne e seen thabefore",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 216.2,
+   "end_s": 228.1,
+   "speaker": "0:t13",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "maas battled tries take propertieen they created by counarkway. We fouthem then protec properrights we will to do thaherein. Digital gay wa erturnot on merit due to our unty pdural ror. That impac been lutely carophic ourommuni d yet people most affectay the verast.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 232.2,
+   "end_s": 247.7,
+   "speaker": "0:t14",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "Pleaemember wee yo nstitu. We aot othe people's o spac plee reme we are nothe recrescent. We are fies,e e xpayers. Want to beeated the weight as youatedhe oplenvent road theydecitheyeeded to chge theerti.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 252.3,
+   "end_s": 262.9,
+   "speaker": "0:t15",
+   "role": "resident",
+   "name": "Arianne",
+   "text": "Wie ba beforyou becausthinabout our siation s changed. Wee committe inging foard a plangoodnd be thawhat you've s before haou f your .",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 263.9,
+   "end_s": 269.0,
+   "speaker": "0:t16",
+   "role": "resident",
+   "name": null,
+   "text": "Cir Jeffersoext ker,lease. Ublic Spker: mme is tommsh. Ve hayma.",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 274.1,
+   "end_s": 275.5,
+   "speaker": "0:t17",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "ir ffern: ple just ticrophoneswe caar you.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 276.2,
+   "end_s": 277.9,
+   "speaker": "0:t18",
+   "role": "resident",
+   "name": null,
+   "text": "Pu Speaker: at better?",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 285.0,
+   "end_s": 310.2,
+   "speaker": "0:t19",
+   "role": "resident",
+   "name": null,
+   "text": "The ief operatoffir the g eric staurant and had beith e compfor the st 3 s. I'resint outere d en with mmilyive in princeliamcounty over ars I'vent the lasto 10 s trng to convinmy mpanto comt to princ lliam ty for thrst me . Tryi to coce the on ly whe the owneof the gramer rerants ake our fistep prinwillcounty.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 310.8,
+   "end_s": 311.7,
+   "speaker": "0:t20",
+   "role": "resident",
+   "name": null,
+   "text": "I'ry excitede open up orst rerant in",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 316.5,
+   "end_s": 319.5,
+   "speaker": "0:t21",
+   "role": "unknown",
+   "name": null,
+   "text": "gaville later thear our any coues to",
+   "source": "captions"
+  },
+  {
+   "start_s": 324.3,
+   "end_s": 329.1,
+   "speaker": "0:t22",
+   "role": "resident",
+   "name": null,
+   "text": "lookto gw we hbeenased out of fairx counnce 19 meals has mat less",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 334.7,
+   "end_s": 334.7,
+   "speaker": "0:t23",
+   "role": "unknown",
+   "name": null,
+   "text": "derable ty look",
+   "source": "captions"
+  },
+  {
+   "start_s": 340.0,
+   "end_s": 342.6,
+   "speaker": "0:t24",
+   "role": "resident",
+   "name": null,
+   "text": "contingrow. I'm mply hto we reed the metax",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 352.1,
+   "end_s": 358.5,
+   "speaker": "0:t25",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "if repd grameran restrants cont to idenfy morloons ince wiiam co and will oup more rerant k you for ti. Cha Jeffersohankyou.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 365.0,
+   "end_s": 365.0,
+   "speaker": "0:t26",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "Spker, please",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 366.0,
+   "end_s": 374.6,
+   "speaker": "0:t27",
+   "role": "resident",
+   "name": null,
+   "text": "Plic Speaker:names ji I've beeresint in ce iam unty fclose to years am a cnt 30 year lo empl of -- m he to",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 381.5,
+   "end_s": 398.1,
+   "speaker": "0:t28",
+   "role": "resident",
+   "name": null,
+   "text": "speaabout s ta. Eemsery un we tax th one indu thathey hto theurden hat. Have current catis in prince lliacounty wee muiple locatiin fax. Re ming okota we are looking tow agaicoming t ince william ty wh this",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 404.4,
+   "end_s": 413.6,
+   "speaker": "0:t29",
+   "role": "resident",
+   "name": null,
+   "text": "mealtax make a hard sell to opeere ther a meals x. We aly fighting creased lacostand incrd fo costs all e cos of g are goin rough roofanwe had keepraisg prico abl",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 420.6,
+   "end_s": 438.1,
+   "speaker": "0:t30",
+   "role": "resident",
+   "name": null,
+   "text": "to mch those and youadd als x on top of t thatan additioburden to thguests whot tocome to o restaurantand we our trc paerns are ee iin fai county an will t seeing I ce wliam cy two. M re to ask repealthe meals tax at nimum long oedipusoro or whatevere boarn do would",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 444.4,
+   "end_s": 452.5,
+   "speaker": "0:t31",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "be gatly apiateand aned towarory da wantto binvo more in ince willico. Thyou for time. Hair Jeffe: thk you. Next spe, please",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 455.4,
+   "end_s": 455.4,
+   "speaker": "0:t32",
+   "role": "resident",
+   "name": null,
+   "text": "lic ker: I'm s",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 459.7,
+   "end_s": 479.0,
+   "speaker": "0:t33",
+   "role": "resident",
+   "name": null,
+   "text": "is is -- attle b a rest of gainville distrind I have been tax the co for24rs. Here t because loca governs shouerve its pe and not tthemo urt. Beenpendinour y used tnd peals agai the meowners werelected tove.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 483.5,
+   "end_s": 484.6,
+   "speaker": "0:t34",
+   "role": "resident",
+   "name": null,
+   "text": "That's not od goveance, that's a beayal oe publ ust.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 488.9,
+   "end_s": 492.5,
+   "speaker": "0:t35",
+   "role": "resident",
+   "name": null,
+   "text": "Thisan stotoda simply aski threengs of tboard .",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 497.0,
+   "end_s": 513.8,
+   "speaker": "0:t36",
+   "role": "resident",
+   "name": null,
+   "text": "Cut off thgal ending not morellar publi ney to the edless figh of the ap now . St diggi de hol co to a moransrent goveing prs. Mber shortc no boom de and a's.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 518.3,
+   "end_s": 518.3,
+   "speaker": "0:t37",
+   "role": "resident",
+   "name": null,
+   "text": "3, a a newapplation t",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 523.5,
+   "end_s": 548.0,
+   "speaker": "0:t38",
+   "role": "resident",
+   "name": null,
+   "text": "over fzero with proper publicnotice done right,except. Rely ife does ont to do over here you an thisyourhance . Citins of county work hard ead it at ment we showed voic our opinionswe did no aw. O squaer thi opporty. Not s one re te",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 552.2,
+   "end_s": 556.2,
+   "speaker": "0:t39",
+   "role": "resident",
+   "name": null,
+   "text": "defending wsui ch to ad, oose to en. Start healthisommuni toda",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 560.9,
+   "end_s": 564.1,
+   "speaker": "1:t40",
+   "role": "resident",
+   "name": null,
+   "text": "e peopho elecd you hereht now andwe aredy trusm again anwithll due reect, d let down.",
+   "source": "captions",
+   "role_confidence": 0.6
+  },
+  {
+   "start_s": 568.8,
+   "end_s": 576.2,
+   "speaker": "1:t41",
+   "role": "chair",
+   "name": null,
+   "text": "Thank u. Haireffersi want call last o pele. Timmy rtonand je if yougo to back thank you. We woulde yoto com",
+   "source": "captions",
+   "role_confidence": 0.55
+  },
+  {
+   "start_s": 615.3,
+   "end_s": 619.6,
+   "speaker": "1:t42",
+   "role": "resident",
+   "name": null,
+   "text": "Is e overhead wng? Goodfternom chr, board couy pervors. I'm eve frhe occoqu",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 626.4,
+   "end_s": 631.1,
+   "speaker": "1:t43",
+   "role": "resident",
+   "name": null,
+   "text": "dist. Todai'm reasizing ab our al esttaxes, partularly the 2027 et buthe. I likebring to the bo",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 636.1,
+   "end_s": 650.4,
+   "speaker": "1:t44",
+   "role": "resident",
+   "name": null,
+   "text": "factso you of facts fr a taxpaycoun dent has ined throufreem of informatprivy ac ested thatunty. Appriate tindivis who helped me developi is. I t agree th theposed",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 655.6,
+   "end_s": 664.3,
+   "speaker": "1:t45",
+   "role": "resident",
+   "name": null,
+   "text": "0.906 pe00 realstate ba te r our taxe eds to be r. Rsonly, er $1700 iat",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 670.3,
+   "end_s": 678.6,
+   "speaker": "1:t46",
+   "role": "resident",
+   "name": null,
+   "text": "my fies xes s rais oversol erty taxes within 1ars the county s really sup. The things I emasize thcht fit of as a surp",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 683.2,
+   "end_s": 684.2,
+   "speaker": "1:t47",
+   "role": "resident",
+   "name": null,
+   "text": "surpluter 6+cal ars nclu the projted 65",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 688.3,
+   "end_s": 693.1,
+   "speaker": "1:t48",
+   "role": "resident",
+   "name": null,
+   "text": "millr 2026. Ov thi buiing llars nerad in t countythere are wayse",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 697.8,
+   "end_s": 708.2,
+   "speaker": "1:t49",
+   "role": "resident",
+   "name": null,
+   "text": "uld foresevenusoh sus. We sell a of ucts. Attack sitesn'se prod , taxing hi send are ll-te uivale",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 713.2,
+   "end_s": 719.2,
+   "speaker": "1:t50",
+   "role": "resident",
+   "name": null,
+   "text": "near0% ovhese past fiscal yeathunty has grown and emees. I' nothiainshiring",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 723.9,
+   "end_s": 726.1,
+   "speaker": "1:t51",
+   "role": "resident",
+   "name": null,
+   "text": "more es . Int, ielieve first redersnd safsh be",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 730.4,
+   "end_s": 746.0,
+   "speaker": "1:t52",
+   "role": "resident",
+   "name": null,
+   "text": "thrst onesto gou te equilents ed fu evody se we have to a harder s. Er 920 ftes authed er the timme.Goment th isre areat am cos .",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 750.2,
+   "end_s": 759.0,
+   "speaker": "1:t53",
+   "role": "resident",
+   "name": null,
+   "text": "It a musy bi. St thinabout u haveretiment, yove l these otbene . Th is a pay bill. Inead ofribung our",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 763.6,
+   "end_s": 769.3,
+   "speaker": "1:t54",
+   "role": "resident",
+   "name": null,
+   "text": "equityough all t dient socialseice ograms need to ten oudget. Moreple e leaving th unty because of hig",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 774.2,
+   "end_s": 779.0,
+   "speaker": "1:t55",
+   "role": "resident",
+   "name": null,
+   "text": "taxe please conr threstate baax rate to0.84pe hundre th would ide x reli",
+   "source": "captions",
+   "role_confidence": 0.75
+  },
+  {
+   "start_s": 784.5,
+   "end_s": 794.7,
+   "speaker": "1:t56",
+   "role": "resident",
+   "name": null,
+   "text": "and thyou ou all fro e ard he resed your ails preciate I especi oviding thta to you and becausthink more factbased ional baseth helps the decion-makfor you all.",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 809.4,
+   "end_s": 821.4,
+   "speaker": "1:t57",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "Ha great afton. Ank yo jeffn inhe boarof supervs tan the timeo list y nas timmnorton I'mrom irfavirgin am a per with eat aman restaus but my ther I74 artethe company eat erican staura ashfor 52 ars and as",
+   "source": "captions",
+   "role_confidence": 0.75
+  },
+  {
+   "start_s": 828.6,
+   "end_s": 831.1,
+   "speaker": "1:t58",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "twys a we brground at mmy's amer, whh woul just a 29 66. We excite comto the",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 835.8,
+   "end_s": 841.5,
+   "speaker": "1:t59",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "coty. We are veratef that willse tproduce meal from3% in JANUARY. Are as is you could real thels tax wou",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 847.8,
+   "end_s": 855.3,
+   "speaker": "1:t60",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "adntageofoour restauranturs asl as th ty in geral. I live in fafax co and mes taxee real thi. Itts min tax alone er",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 860.4,
+   "end_s": 863.8,
+   "speaker": "1:t61",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "$1500 a ye fory fami to spe300 ek and mea tax alone. And absolutelwod",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 869.6,
+   "end_s": 870.5,
+   "speaker": "1:t62",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "fect ouconstits and ask yovote trepeal mea",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 878.5,
+   "end_s": 878.5,
+   "speaker": "1:t63",
+   "role": "resident",
+   "name": "Timmy Norton",
+   "text": "thank for ur tim",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 879.5,
+   "end_s": 880.0,
+   "speaker": "1:t64",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "Cir Jeffersoext spr, pase.",
+   "source": "captions",
+   "role_confidence": 0.6
+  },
+  {
+   "start_s": 880.6,
+   "end_s": 892.1,
+   "speaker": "1:t65",
+   "role": "resident",
+   "name": null,
+   "text": "Plic Spr: good afrnoon. Mye isary with g day auras. If yant know why you ha so many restat folks up he toda, our ness liand eathesh",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 896.3,
+   "end_s": 896.9,
+   "speaker": "1:t66",
+   "role": "resident",
+   "name": null,
+   "text": "stomer he wiumber inry seems t under",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 902.3,
+   "end_s": 906.9,
+   "speaker": "1:t67",
+   "role": "resident",
+   "name": null,
+   "text": "attack. I t list thel bu ything frofo costs labosts and evything coulink of ems be hitting the staura",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 912.8,
+   "end_s": 916.2,
+   "speaker": "1:t68",
+   "role": "resident",
+   "name": null,
+   "text": "indust are irvival mod m not ing about y ys, I'lking aboue indu in genera",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 922.4,
+   "end_s": 929.7,
+   "speaker": "1:t69",
+   "role": "resident",
+   "name": null,
+   "text": "attend national ciatn eting two s agand th gavea stgeringisti % not profit. Th",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 935.3,
+   "end_s": 936.8,
+   "speaker": "1:t70",
+   "role": "resident",
+   "name": null,
+   "text": "es remng othe% or th make age of 5 t% are ng 2 to 3%",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 942.3,
+   "end_s": 944.1,
+   "speaker": "1:t71",
+   "role": "resident",
+   "name": null,
+   "text": "the on I g those s upbecause",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 948.4,
+   "end_s": 955.7,
+   "speaker": "1:t72",
+   "role": "resident",
+   "name": null,
+   "text": "restrants thera clear pattwhen price up cuer accouno do. People net out uency or pe spend .",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 959.8,
+   "end_s": 973.7,
+   "speaker": "1:t73",
+   "role": "resident",
+   "name": null,
+   "text": "So somes yosee bu stauraand they shey mube making coupucks, bue reity isyou can' nfuse saand profitana t of reaurante rting the on ibring up t industtatiics a fact",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 979.1,
+   "end_s": 990.8,
+   "speaker": "1:t74",
+   "role": "resident",
+   "name": null,
+   "text": "thatrginia is ue in2 e lagot pa inhmon thatowedountie implemenmealxes. I doknow of anotstate think e might he oy excen th allowle s. Ook it asunfair",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 996.5,
+   "end_s": 1009.8,
+   "speaker": "1:t75",
+   "role": "resident",
+   "name": null,
+   "text": "and lays whiche gave you power to dat. Foears ago wshoue beere tellyou not todo it but e factour number ow thesults. Ery me we a meals ta salego dow the wthere are t of leatur that think ths",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 1014.5,
+   "end_s": 1034.0,
+   "speaker": "1:t76",
+   "role": "resident",
+   "name": null,
+   "text": "no impactto the resants t'passthrough to consumer don'tt to pass ugh. we don'tn li raisiour prices bec we ow we cusmers. There isimpa . The averagory days will spen$3800 year anding creditd fe collehe metax for yoand wee 35 resants so yon kia",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 1038.3,
+   "end_s": 1044.3,
+   "speaker": "1:t77",
+   "role": "resident",
+   "name": null,
+   "text": "the maththat wesk vertelynythin yocan doal t tax that 't negatimpact on consumand the buss w d apprecia",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 1049.3,
+   "end_s": 1049.3,
+   "speaker": "1:t78",
+   "role": "resident",
+   "name": null,
+   "text": "thank for your.",
+   "source": "captions",
+   "role_confidence": 0.7
+  },
+  {
+   "start_s": 1050.4,
+   "end_s": 1055.4,
+   "speaker": "1:t79",
+   "role": "chair",
+   "name": "Jefferson",
+   "text": "ir Jeffson: t you soy much. I'm goto turn it t rvisor any virtual comment.",
+   "source": "captions",
+   "role_confidence": 0.65
+  },
+  {
+   "start_s": 1056.4,
+   "end_s": 1056.8,
+   "speaker": "2:t80",
+   "role": "unknown",
+   "name": null,
+   "text": "Vice r Angrt looks we have t",
+   "source": "captions"
+  },
+  {
+   "start_s": 1805.8,
+   "end_s": 1808.8,
+   "speaker": "2:t81",
+   "role": "unknown",
+   "name": null,
+   "text": "Cirffern: congtulaonsurvor vega let'ta o tes",
+   "source": "captions"
+  },
+  {
+   "start_s": 1818.7,
+   "end_s": 1823.4,
+   "speaker": "2:t82",
+   "role": "unknown",
+   "name": null,
+   "text": "otion ssesunanouy survorega abaini fm vote Cirefrson: l rit. Anthenur nt motion",
+   "source": "captions"
+  },
+  {
+   "start_s": 1825.3,
+   "end_s": 1829.3,
+   "speaker": "2:t83",
+   "role": "unknown",
+   "name": null,
+   "text": "icChair gry:moone directthe un aory d outsidlegaunl t to",
+   "source": "captions"
+  },
+  {
+   "start_s": 1835.9,
+   "end_s": 1837.9,
+   "speaker": "2:t84",
+   "role": "unknown",
+   "name": null,
+   "text": "le a peti f awr of apalo thvirgiasupre uronthvirgia ciuit",
+   "source": "captions"
+  },
+  {
+   "start_s": 1842.3,
+   "end_s": 1844.1,
+   "speaker": "2:t85",
+   "role": "unknown",
+   "name": null,
+   "text": "apaldesion ised mah, 26egardi the two gitagatey zong",
+   "source": "captions"
+  },
+  {
+   "start_s": 1853.0,
+   "end_s": 1858.2,
+   "speaker": "2:t86",
+   "role": "unknown",
+   "name": null,
+   "text": "wsui kae rkatll rsus poerouy survorof prce wli untyt alimrtt unty pervorofprin wilam untyt al e k vall homene",
+   "source": "captions"
+  },
+  {
+   "start_s": 1864.1,
+   "end_s": 1864.1,
+   "speaker": "2:t87",
+   "role": "unknown",
+   "name": null,
+   "text": "asciiocot aea",
+   "source": "captions"
+  },
+  {
+   "start_s": 1872.9,
+   "end_s": 1879.4,
+   "speaker": "2:t88",
+   "role": "unknown",
+   "name": null,
+   "text": "cos mb 15-25-1 25, 19? 2? Ur and025 24fo gamesf magistial stct ote mar 3 26 e virgia urofppls",
+   "source": "captions"
+  },
+  {
+   "start_s": 1886.7,
+   "end_s": 1890.8,
+   "speaker": "2:t89",
+   "role": "unknown",
+   "name": null,
+   "text": "ised I disn regardg two gitagawarezoni laui kie bur at l rs pter coty peiss haveprin wli un aaland prce",
+   "source": "captions"
+  },
+  {
+   "start_s": 1898.8,
+   "end_s": 1905.0,
+   "speaker": "2:t90",
+   "role": "unknown",
+   "name": null,
+   "text": "llm un et al thoavaey homeners assoatn a urt appes rerd nbe 190-t 5-",
+   "source": "captions"
+  },
+  {
+   "start_s": 1911.4,
+   "end_s": 1928.1,
+   "speaker": "2:t91",
+   "role": "unknown",
+   "name": null,
+   "text": "59-2 and0224 24. Theforbeesved byhe incipathembod survors th theount attoey a outsidlega unl e direed n to fi a petion fowritf apals to t virnisupre cot ofheirnirct court appes cion isedar 31 2026egdi thtwo gil tey",
+   "source": "captions"
+  },
+  {
+   "start_s": 1937.6,
+   "end_s": 1944.8,
+   "speaker": "2:t92",
+   "role": "unknown",
+   "name": null,
+   "text": "reni lsus reatie rke alimrtant un surviss veusrie wiiam coty aalimrtt untyupvirsersus incewiiacoty at all e k ll meowrs asciatn cot appea",
+   "source": "captions"
+  },
+  {
+   "start_s": 1950.0,
+   "end_s": 1958.3,
+   "speaker": "2:t93",
+   "role": "unknown",
+   "name": null,
+   "text": "cords mber9054 15-2, 92? 25?Our an 25? 2? Fo. Be it rthesoedhat th aracknowdgesnd",
+   "source": "captions"
+  }
+ ]
+}

@@ -85,3 +85,41 @@ from anything pre-existing.
   also fixes duplicate React keys on the map. The address box passes typed text through when
   Google's autocomplete widget is mounted but blocked, and a dropdown of test-set addresses sits
   under it in agent and full mode.
+- 2026-10-28, step 4, perception and hearings. Two offline indexers and two file-backed
+  providers. `app.perception.index` covers an area's five-mile ring with 1.2 km tiles at 1 m per
+  pixel, fetches the earlier NAIP vintage from Planetary Computer's keyless crop endpoint (its
+  `naip` collection ends at 2023; a tile that straddles two quarter quads is composited) and the
+  latest from USDA FPAC's imagery service (2025 for OH, VA, AZ), runs SAM 3.1 (`sam-3.1`, Meta
+  Model API, concept prompt "building", decoded with Meta's `meta-sam-parser`) on both, turns
+  masks into Mercator polygons with the latitude correction, keeps roofs of two acres or more,
+  and diffs the vintages: no earlier overlap is `new`, thirty percent larger is `expansion`. A
+  roof is counted as data-center construction only when it adjoins a facility the database
+  lists; other large roofs are shown but not counted, because the imagery cannot say what they
+  are. `app.hearings.index` reads a meeting's agenda index points and closed captions from the
+  Granicus JSON index, cuts the chosen windows of the recording into ten-minute mono WAV chunks
+  (bundled ffmpeg), sends them to Muse Voice Transcribe in diarization mode, shifts the turns to
+  recording time, scores agreement with the captions where both exist, and asks Muse Spark to
+  label each speaker's role from the transcript; the words stay verbatim. Both write committed
+  JSON under `data/perception/` and `data/hearings/`; the brief reads the index, so a request
+  never waits on imagery or audio. Coming becomes `measured` (`sam-3.1`) with green footprints
+  and an engine summary; Hearing becomes `measured` (`muse-voice-transcribe-1.0`, or `null` when
+  the archive's own captions were used) with dated, timestamped quotes, and its claims cite the
+  archive page while the verifier is handed the transcript. Votes on named campuses (Tucson's
+  Project Blue rejection on 2025-08-06; Prince William's Digital Gateway rezoning, voided by the
+  court and not appealed on 2026-04-14) are hand-entered decisions that appear in Coming as
+  `rejected` with the official page as a claim. Archive research: Prince William, Loudoun and
+  Pima are on Granicus (player page, `JSON.php` index points and captions, `DownloadFile.php`
+  media redirect; the media host refuses a bare library User-Agent); the Digital Gateway
+  marathon (12–13 Dec 2023, clip 3410, 26.8 hours) has no captions, so it needs the audio pass;
+  Pima's June 2025 Project Blue video is missing from the archive; Tucson has no non-video-
+  platform recording, so its written Legal Action Report is the source. Eval: measured roofs
+  beside listed data centers count toward `announced_min`; hearing is scored where a hook is
+  expected and the county is indexed.
+- Streaming briefs now say what is final and what is a draft. While a brief streams, facts
+  (map, facilities, utility, prices, bill number) look finished; every sentence a model wrote
+  carries a Draft tag with no confidence, the headline shows a placeholder until a section
+  exists, the at-your-house strip and claims appendix say the check is running, and Share is
+  disabled until every claim is checked. A sticky progress strip explains the split and
+  becomes a one-line "Checked. N claims, M supported, in S s" when the stream ends. Hearing
+  quotes drop leading procedural sentences (captions run the chair's "moved and seconded"
+  into the next speaker), so a quote starts at the speaker's own words.

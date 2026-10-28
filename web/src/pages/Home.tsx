@@ -46,7 +46,7 @@ export default function Home() {
         const first = id === null
         const bid = ev.brief.brief_id
         id = bid
-        setLive(bid, { brief: ev.brief, stage: ev.stage, verified: 0, claims: 0, startedAt })
+        setLive(bid, { brief: ev.brief, stage: ev.stage, verified: 0, claims: 0, startedAt, endedAt: ev.stage === 'done' ? Date.now() : undefined })
         if (first) nav(`/b/${bid}`)
       })
     } catch (err) {

@@ -16,6 +16,16 @@ dependencies = [
 ]
 
 [dependency-groups]
+# The offline indexers (app.perception, app.hearings): imagery, geometry, audio, SAM decoding.
+# The API itself reads their JSON output and needs none of this.
+index = [
+    "meta-sam-parser>=0.1.0",
+    "numpy>=2.0",
+    "pillow>=10.0",
+    "shapely>=2.0",
+    "rasterio>=1.4",
+    "imageio-ffmpeg>=0.5",
+]
 dev = [
     "ruff>=0.8",
     "pytest>=8.3",

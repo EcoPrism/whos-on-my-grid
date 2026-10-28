@@ -16,6 +16,8 @@ from app.ground.facilities import (
     OverpassSource,
     PeeringDBSource,
 )
+from app.ground.hearings import FakeHearingIndex, HearingIndex
+from app.ground.imagery import FakeImageryIndex, ImageryIndex
 from app.ground.prices import (
     Eia861mPrices,
     Eia861UtilityPrices,
@@ -25,7 +27,21 @@ from app.ground.prices import (
     UtilityPriceProvider,
 )
 from app.ground.tariffs import FakeTariffs, TariffEntry, TariffTable
-from app.ground.types import FIVE_MILES_KM, GroundFacility, GroundTruth, PriceSeries, Utility
+from app.ground.types import (
+    FIVE_MILES_KM,
+    ConstructionSite,
+    Decision,
+    GroundFacility,
+    GroundTruth,
+    HearingQuote,
+    HearingResult,
+    ImageryItem,
+    ImageryResult,
+    ImageryVintage,
+    PriceSeries,
+    Upcoming,
+    Utility,
+)
 from app.ground.utility import (
     RETAIL_TYPES,
     FakeUtility,
@@ -48,6 +64,8 @@ class Ground:
     prices: PriceProvider | None = None
     utility_prices: UtilityPriceProvider | None = None
     tariffs: Tariffs | None = None
+    imagery: ImageryIndex | FakeImageryIndex | None = None
+    hearings: HearingIndex | FakeHearingIndex | None = None
 
 
 def get_ground(settings: Settings) -> Ground:
@@ -62,6 +80,8 @@ def get_ground(settings: Settings) -> Ground:
         prices=Eia861mPrices(cache, timeout=max(60.0, t)),
         utility_prices=Eia861UtilityPrices(cache, timeout=max(120.0, t)),
         tariffs=TariffTable(),
+        imagery=ImageryIndex(settings.perception_path),
+        hearings=HearingIndex(settings.hearings_path),
     )
 
 
@@ -173,6 +193,27 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
             )
 
     await asyncio.gather(facilities(), utility_then_its_prices(), prices())
+
+    # The two indexes are local files: no await, and a broken file is a note,
+    # never a failed brief.
+    if ground.imagery is not None:
+        try:
+            truth.imagery = ground.imagery.near(geo.lat, geo.lon, truth.radius_km)
+        except Exception as exc:  # noqa: BLE001
+            log_event("ground_failed", provider="perception", reason=str(exc)[:160])
+            truth.notes.append("The aerial-imagery index could not be read.")
+    if ground.hearings is not None:
+        try:
+            truth.hearing = ground.hearings.for_place(
+                geo.state, geo.county, truth.utility.name if truth.utility else None
+            )
+            truth.decisions = ground.hearings.decisions_for(geo.state, geo.county)
+            if truth.hearing is None:
+                truth.hearing_note = ground.hearings.coverage_note(geo.state, geo.county)
+        except Exception as exc:  # noqa: BLE001
+            log_event("ground_failed", provider="hearings", reason=str(exc)[:160])
+            truth.notes.append("The hearing index could not be read.")
+
     log_event(
         "ground",
         facilities=None if truth.facilities is None else len(truth.facilities),
@@ -180,6 +221,10 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         utility_price=bool(truth.utility_price),
         state_price=bool(truth.price),
         tariff=truth.tariff.status if truth.tariff else None,
+        imagery=truth.imagery.area_id if truth.imagery else None,
+        construction=len(truth.imagery.sites) if truth.imagery else None,
+        hearing=truth.hearing.meeting_id if truth.hearing else None,
+        decisions=len(truth.decisions),
         notes=len(truth.notes),
     )
     return truth
@@ -187,7 +232,11 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
 
 __all__ = [
     "FIVE_MILES_KM",
+    "ConstructionSite",
+    "Decision",
     "FakeFacilityDatabase",
+    "FakeHearingIndex",
+    "FakeImageryIndex",
     "FakePrices",
     "FakeTariffs",
     "FakeUtility",
@@ -195,8 +244,16 @@ __all__ = [
     "Ground",
     "GroundFacility",
     "GroundTruth",
+    "HearingIndex",
+    "HearingQuote",
+    "HearingResult",
+    "ImageryIndex",
+    "ImageryItem",
+    "ImageryResult",
+    "ImageryVintage",
     "PriceSeries",
     "TariffEntry",
+    "Upcoming",
     "Utility",
     "gather_ground",
     "get_ground",

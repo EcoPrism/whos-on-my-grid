@@ -58,6 +58,128 @@ class PriceSeries:
     eia_id: str | None = None
 
 
+# --- perception: what SAM 3.1 measured on two imagery vintages -----------------
+
+
+@dataclass(frozen=True)
+class ImageryItem:
+    """One NAIP record a claim can cite: the STAC item or the FPAC catalog row."""
+
+    id: str
+    date: str  # YYYY-MM-DD acquisition date
+    url: str
+    title: str
+
+
+@dataclass(frozen=True)
+class ImageryVintage:
+    year: int
+    source: str  # "USDA NAIP via Microsoft Planetary Computer" ...
+    items: tuple[ImageryItem, ...]
+
+
+@dataclass(frozen=True)
+class ConstructionSite:
+    id: str
+    label: str
+    kind: str  # new | expansion
+    lat: float
+    lon: float
+    distance_km: float
+    footprint_acres_then: float
+    footprint_acres_now: float
+    in_database: bool  # grew out of a facility the database lists
+    near_cluster: bool  # within 1.5 km of a listed data center
+    facility: str | None  # the listed facility it belongs to or adjoins
+    polygon: tuple[tuple[float, float], ...]  # (lat, lon) ring
+    confidence: float = 0.8
+
+    @property
+    def counted(self) -> bool:
+        """A roof the brief counts as data-center construction: an expansion of
+        a listed facility or a new roof beside one. Other large roofs are shown
+        but not counted; a warehouse is not a data center."""
+        return self.in_database or self.near_cluster
+
+
+@dataclass(frozen=True)
+class ImageryResult:
+    area_id: str
+    area_name: str
+    model: str  # sam-3.1
+    then: ImageryVintage
+    now: ImageryVintage
+    sites: tuple[ConstructionSite, ...]  # within the ring, nearest first
+    indexed_at: str
+
+    @property
+    def vintages(self) -> tuple[int, int]:
+        return (self.then.year, self.now.year)
+
+    @property
+    def counted(self) -> list[ConstructionSite]:
+        return [s for s in self.sites if s.counted]
+
+    @property
+    def new_acres(self) -> float:
+        return round(sum(s.footprint_acres_now - s.footprint_acres_then for s in self.counted), 1)
+
+
+# --- hearings: what Muse Voice Transcribe heard in the official recording -------
+
+
+@dataclass(frozen=True)
+class HearingQuote:
+    text: str  # verbatim transcript text
+    start_s: float
+    role: str  # chair | supervisor | ... | unknown
+    name: str | None
+    source: str  # transcribe | captions
+
+
+@dataclass(frozen=True)
+class Upcoming:
+    date: str  # YYYY-MM-DD
+    subject: str
+    url: str
+
+
+@dataclass(frozen=True)
+class Decision:
+    """What a body did to a campus, on the record: the engine's answer to
+    'rejected or withdrawn' that no facility database holds."""
+
+    project: str
+    codename: str | None
+    operator: str | None
+    status: str  # rejected | approved | announced
+    date: str
+    body: str
+    text: str  # one sentence a claim can carry
+    source_url: str
+    source_title: str
+    quote: str
+    lat: float | None = None
+    lon: float | None = None
+    estimated_mw: float | None = None
+
+
+@dataclass(frozen=True)
+class HearingResult:
+    body_id: str
+    body: str
+    meeting_id: str
+    date: str
+    subject: str
+    page_url: str
+    page_title: str
+    quotes: tuple[HearingQuote, ...]
+    model: str | None  # the transcription model, None when quotes come from captions
+    agreement: float | None  # transcript vs captions, when both exist
+    upcoming: Upcoming | None
+    coverage: str  # "items 7 and 8, 1 h 20 min" for the gap text
+
+
 @dataclass
 class GroundTruth:
     facilities: list[GroundFacility] | None = None  # None: no facility source answered
@@ -65,6 +187,10 @@ class GroundTruth:
     price: PriceSeries | None = None  # statewide, monthly
     utility_price: PriceSeries | None = None  # this utility, annual
     tariff: "TariffEntry | None" = None
+    imagery: ImageryResult | None = None  # None: no indexed imagery covers the address
+    hearing: HearingResult | None = None  # None: county not indexed
+    hearing_note: str | None = None  # why not, when the county is in the index
+    decisions: list[Decision] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)  # provider failures, for gap text
     radius_km: float = FIVE_MILES_KM
 

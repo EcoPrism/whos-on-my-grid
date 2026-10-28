@@ -10,7 +10,7 @@ const MARK: Record<Verdict, { glyph: string; word: string; cls: string }> = {
 
 // The appendix. Each claim: what was said, the quote it rests on, and what the
 // second model made of it. Disagreements are shown, not hidden.
-export default function Claims({ claims }: { claims: Claim[] }) {
+export default function Claims({ claims, checking = false }: { claims: Claim[]; checking?: boolean }) {
   if (!claims.length) return null
   const verifier = claims.find((c) => c.verified_by)?.verified_by
   return (
@@ -18,7 +18,9 @@ export default function Claims({ claims }: { claims: Claim[] }) {
       <h2 className="text-3xl font-bold leading-none">Every claim, checked</h2>
       <p className="mt-3 max-w-[64ch] text-[15px] text-[var(--ink-soft)]">
         Each claim rests on a verbatim quote from its source.{' '}
-        {verifier ? `A second, independent model (${verifier}) re-read each source and gave a verdict.` : 'No verifier has run on this brief yet.'}
+        {checking
+          ? 'A second, independent model is checking each claim against its source now. A dot marks a claim it has not reached yet.'
+          : verifier ? `A second, independent model (${verifier}) re-read each source and gave a verdict.` : 'No verifier has run on this brief yet.'}
       </p>
       <ol className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
         {claims.map((c) => {

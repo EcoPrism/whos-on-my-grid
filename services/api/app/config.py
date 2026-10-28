@@ -60,6 +60,17 @@ class Settings(BaseSettings):
     # Downloaded datasets (PeeringDB snapshot, EIA workbooks). Shared by every brief
     # cache directory, so an eval run with its own GRID_DATA_DIR does not re-download.
     ground_dir: str = "data/ground"
+    # Step 4 indexes: what SAM 3.1 measured per area and what Voice Transcribe heard per
+    # meeting. Committed data products; the API reads them, the indexers write them.
+    perception_dir: str = "data/perception"
+    hearings_dir: str = "data/hearings"
+
+    # Meta Model API, direct: used only by the offline indexers (app.perception,
+    # app.hearings), never on the request path. Key from dev.meta.ai.
+    meta_api_key: str = ""
+    meta_base_url: str = "https://api.meta.ai/v1"
+    sam_model: str = "sam-3.1"
+    transcribe_model: str = "muse-voice-transcribe-1.0"
 
     data_dir: str = "data/briefs"
     cors_origins: str = "http://localhost:5173,http://localhost:5180"
@@ -77,6 +88,16 @@ class Settings(BaseSettings):
     @property
     def ground_path(self) -> Path:
         p = Path(self.ground_dir)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def perception_path(self) -> Path:
+        p = Path(self.perception_dir)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def hearings_path(self) -> Path:
+        p = Path(self.hearings_dir)
         return p if p.is_absolute() else REPO_ROOT / p
 
 

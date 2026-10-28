@@ -68,7 +68,13 @@ Nothing is wired to real data until the page already works on fixtures.
    own knowledge (no search API yet); the service fetches every cited page and Spark Open verifies
    each claim against it. Every section is `reported`. `BRIEF_SOURCE=agent`.
 4. **Perception.** SAM 3.1 on two imagery vintages makes "Coming" `measured`. Voice Transcribe on
-   pre-indexed hearings for a first set of counties makes "Hearing" `measured`.
+   pre-indexed hearings for a first set of counties makes "Hearing" `measured`. Both run as
+   offline indexers (`app.perception.index`, `app.hearings.index`) whose output is committed
+   under `data/perception/` and `data/hearings/`; the brief reads the index, so a request never
+   waits on imagery or audio. Areas and bodies covered so far: `data/perception/areas.json`,
+   `docs/counties.md`. Votes on named campuses (a rejection, a court-voided rezoning) are
+   hand-entered decisions in the hearing sources and appear in "Coming" with the page that says
+   so.
 5. **Ground-truth providers.** Facilities from PeeringDB and OpenStreetMap, serving utility from
    HIFLD's service-territory map, residential prices from EIA-861M (state, monthly) and EIA-861
    (this utility, annual), large-load tariffs from a hand-curated table (`data/tariffs.json`).
@@ -116,6 +122,23 @@ service refuses to start in agent mode without them. `uv run pytest -m live --ru
 small call to each endpoint to prove the keys and the structured-output path. Optional:
 `VITE_GOOGLE_MAPS_API_KEY` in `web/.env` turns the address box into Google Places autocomplete.
 
+The two step-4 indexers need `GRID_META_API_KEY` (Meta Model API, direct, from dev.meta.ai);
+the brief service itself never does. `uv sync --group index` adds their dependencies
+(numpy, Pillow, shapely, rasterio, meta-sam-parser, a bundled ffmpeg). Then:
+
+```
+cd services/api
+uv run python -m app.perception.index --area new_albany          # SAM 3.1 on NAIP 2023 vs 2025
+uv run python -m app.hearings.index --meeting loudoun-2025-03-18 --captions-only
+uv run python -m app.hearings.index --meeting pwc-2023-12-12 --audio data/hearings/audio/pwcgov_3410.mp3
+```
+
+Imagery is keyless and public domain (Planetary Computer for the earlier vintage, USDA FPAC for
+the latest). Recordings come from the official archive page (download the MP3 in a browser into
+`data/hearings/audio/`, or pass `--download`); `--captions-only` builds the transcript from the
+archive's closed captions where it publishes them, and the section then says no model of ours
+produced the words.
+
 Full mode needs no further keys. PeeringDB's US facility list, the EIA workbooks and the
 OpenStreetMap query are free and keyless; snapshots are cached under `data/ground/` (gitignored).
 Overpass is queried on `overpass.openstreetmap.fr` first (the only mirror reachable from some
@@ -134,7 +157,9 @@ cd services/api && GRID_BRIEF_SOURCE=full GRID_DATA_DIR=eval/runs/full/cache   u
 python eval/run_eval.py --api http://localhost:8010 --out eval/runs/full
 ```
 
-Hearing is scored as information only: no dataset of minutes exists yet (step 4).
+Hearing is scored where a hook is expected and the county is indexed (`docs/counties.md`), and
+as information only elsewhere. Measured construction that adjoins a listed data center counts
+toward a row's "announced or under construction" expectation.
 
 Generated briefs are cached in `data/briefs/` by a hash of the address, gitignored.
 

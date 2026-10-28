@@ -32,11 +32,15 @@ export interface Facility {
 
 export interface Construction {
   label?: string
+  // new: no roof there in the earlier imagery; expansion: a listed facility grew.
+  kind?: 'new' | 'expansion'
   distance_km: number
   footprint_acres_then: number
   footprint_acres_now: number
   vintages: [number, number]
   in_database?: boolean
+  // Within 1.5 km of a listed data center; only then is an unlisted roof counted.
+  near_cluster?: boolean
   polygon?: [number, number][]
 }
 

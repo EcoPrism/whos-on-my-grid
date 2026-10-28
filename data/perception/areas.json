@@ -1,0 +1,27 @@
+{
+  "_about": "Areas whose imagery pair has been (or is to be) indexed by app.perception.index. The earlier vintage comes from Planetary Computer's NAIP collection (ends 2023), the latest from USDA FPAC's imagery service (2025 for OH, VA, AZ). radius_km matches the brief's five-mile ring.",
+  "areas": [
+    {
+      "id": "new_albany",
+      "name": "New Albany, OH (Beech Road corridor)",
+      "state": "OH",
+      "county": "Licking",
+      "lat": 40.08,
+      "lon": -82.753,
+      "radius_km": 8.05,
+      "then": {"source": "planetary-computer", "year": 2023},
+      "now": {"source": "fpac", "year": 2025}
+    },
+    {
+      "id": "ashburn",
+      "name": "Ashburn, VA (Loudoun County)",
+      "state": "VA",
+      "county": "Loudoun",
+      "lat": 39.0163,
+      "lon": -77.4588,
+      "radius_km": 8.05,
+      "then": {"source": "planetary-computer", "year": 2023},
+      "now": {"source": "fpac", "year": 2025}
+    }
+  ]
+}

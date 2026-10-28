@@ -108,6 +108,8 @@ async def verify_claims(
             note = str(result.get("note") or "").strip()
             if quote and at is None:
                 note = f"{note} The quoted text was not found verbatim on the page.".strip()
+            if page.note:
+                note = f"{note} Checked against the {page.note}.".strip()
             claim["verifier_note"] = note or None
 
     await asyncio.gather(*(one(c) for c in claims))

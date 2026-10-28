@@ -1,0 +1,538 @@
+{
+ "meeting_id": "pima-2025-12-16",
+ "body_id": "pima-bos",
+ "body": "Pima County Board of Supervisors",
+ "date": "2025-12-16",
+ "clip_id": 1873,
+ "page_url": "https://pima.granicus.com/player/clip/1873?view_id=3",
+ "subject": "Binding Memorandum of Agreement, Houghton Data Center Project (Project Blue)",
+ "indexed_at": "2026-10-28T16:42:43Z",
+ "models": {
+  "transcribe": null,
+  "roles": "muse-spark-1.3"
+ },
+ "captions": true,
+ "agreement": null,
+ "quality": 0.557,
+ "usable": true,
+ "coverage": "Item 6, Binding Memorandum of Agreement, Houghton Data Center Project (22 min of a 7 h 33 min recording)",
+ "windows": [
+  {
+   "item": "Item 6, Binding Memorandum of Agreement, Houghton Data Center Project",
+   "start_s": 23241,
+   "end_s": 24583
+  }
+ ],
+ "index_points": [
+  {
+   "time_s": 23241.0,
+   "title": "6. File ID 19642 Binding Memorandum of Agreement Houghton Data Center Project Discussion/Direction/Action: Consideration of Binding Memorandum of Agreement with Humphrey's Peak Properties, L.L.C., a single purpose entity of Beale Infrastructure, outlining Community Benefit Commitments by Beale Infrastructure in connection with development of the Data Center Project known as Project Blue. Contract Humphrey's Peak Properties, L.L.C., to provide a Binding Memorandum of Agreement Houghton Data Center Project, no cost/perpetual (CT2500000087)"
+  },
+  {
+   "time_s": 24583.0,
+   "title": "4. File ID 19655 Short-Term Crisis and Emergency Resources (STCER) Grant Program Funding Recommendations The Outside Agency Citizen Review Committee and staff recommend approval of the following STCER awards: Food Assistance Service Category Agency/Program/Amount Requested/Recommendation Catholic Community Services of Southern Arizona, Inc./Food Pantry and Clothing Closet/$75,000/$25,000 Community Food Bank of Southern Arizona/Emergency Food Assistance/$75,000/$57,000 Compass Affordable Housing/Your Healthy Home Market (YHHM)/$25,000/$25,000 Friends of Robles Ranch/Robles Ranch Food Bank/$30,000/$25,000 Greater Vail Community ReSources/Emergency Food Program/$25,000/$25,000 IMPACT of Southern Arizona/Outside Agency Food and Clothing Banks/$40,000/$25,000 International Rescue Committee, Inc./Food - Outside Agency Program Job Readiness Training and Medical Case Management/$75,000/$25,000 Mobile Meals of Southern Arizona/Critical Nutrition Access for Vulnerable Adults/$44,000/$25,000 Portable Practical Educational Preparation Inc./Amado Youth Center Food Project/$27,500/$25,000 Sahuarita Food Bank, d.b.a. Marana Food Bank & Community Resource Center/Emergency Food/$30,000/$25,000 Sahuarita Food Bank, d.b.a. Sahuarita Food Bank & Community Resource Center/Emergency Food/$45,000/$25,000 Southern Arizona AIDS Foundation/Enhanced Support Services of Southern Arizona/$75,000/$25,000 Amistades, Inc./Pima County Community Development Block Grant - The Leaders in Action, Youth Prevention Program (2013-2021)/$34,000/$0 St. Luke's Home/St. Luke's Home Nutrition Services/$75,000/$0 CATEGORY SUBTOTAL: $675,500/$332,000 Housing and Utility Support Service Category Agency/Program/Amount Requested/Recommendation Catholic Community Services of Southern Arizona, Inc./Emergency Assistance - Housing & Utilities/$75,000/$29,000 Community Home Repair Projects of Arizona/Emergency Home Repair/$75,000/$29,000 Green Valley Assistance Services, Inc., d.b.a. Valley Assistance Services/MAP-A-Plan Program For Basic needs (Shelter/housing, utilities, emergency food boxes)/$40,000/$25,000 Interfaith Community Services/Emergency Financial Assistance (EFA)/$75,000/$57,000 Jewish Family and Children's Services of Southern Arizona/Financial Wellness and Emergency Financial Assistance/$34,691/$25,000 Our Family Services/Common Unity Program (CUP)/$75,000/$25,000 Our Family Services/Family Shelter/$75,000/$31,000 International Rescue Committee, Inc./Housing/Utilities - Outside Agency Program Job Readiness Training and Medical Case Management/$75,000/$0 Pima County Community Land Trust/Emergency Mortgage and Rental Assistance/$75,000/$0 CATEGORY SUBTOTAL: $599,691/$221,000 Transportation Service Category Agency/Program/Amount Requested/Recommendation Green Valley Assistance Services, Inc., d.b.a Valley Assistance Services/Transforming Health through Transportation/$35,000/$25,000 CATEGORY SUBTOTAL: $35,000/$25,000 Legal Services Service Category Agency/Program/Amount Requested/Recommendation Step Up To Justice/Emergency Legal Services: Housing and Consumer Protection/$47,000/$29,000 International Rescue Committee, Inc./Legal Services - Outside Agency Program Job Readiness Training and Medical Case Management/$75,000/$0 CATEGORY SUBTOTAL: $47,000/$29,000 Medical Expenses and Related Needs Service Category Agency/Program/Amount Requested/Recommendation International Rescue Committee, Inc./Medical Expenses - Outside Agency Program Job Readiness Training and Medical Case Management /$75,000/$0 CATEGORY SUBTOTAL: $75,000/$0 Multiple Service Categories Agency/Program/Amount Requested/Recommendation Arivaca Coordinating Council/Human Resource Group/Food & Clothing and Senior Support/$35,000/$28,390 Catholic Community Services of Southern Arizona/Refugee Emergency Assistance for Families/$75,000/$34,000 Catholic Community Services of Southern Arizona, Inc./Casa De Respiro/$65,000/$29,000 Pima Council on Aging/PCOA Rights and Benefits/$50,000/$29,000 Salvation Army/Short-Term Crisis & Emergency Program/$75,000/$25,000 The Primavera Foundation/Homelessness Intervention and Prevention (HIP)/$75,000/$30,000 Tucson Center for Women and Children, d.b.a. Emerge Center Against Domestic Abuse/Flexible Financial Assistance for Domestic Violence Survivors/$75,000/$31,000 Youth on Their Own (YOTO)/YOTO Program (Stipends)/$40,000/$25,000 Catholic Community Services of Southern Arizona, Inc./Pio Decimo Childcare Program/$50,000/$0 Child & Family Resources, Inc./Home Visitation Programs in Pima County/$75,000/$0 Chicanos Por La Causa/Healthy Aging: Supporting with Food, Housing, Utilities, Transportation, Referrals/$75,000/$0 CATEGORY SUBTOTAL: $690,000/$231,390 STCER GRANT PROGRAM SERVICE CATEGORIES TOTAL: $2,122,191/$838,390"
+  }
+ ],
+ "turns": [
+  {
+   "start_s": 23243.9,
+   "end_s": 23261.5,
+   "speaker": "0:t0",
+   "role": "chair",
+   "name": "Scott",
+   "text": "mostly here to see what the board determines on agenda. Item number six. This is binding. Memorandum of agreement Howton data center project administrator Lesher. Any introductory comments from you or anybody on your team? Okay, I will move the item.",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23263.7,
+   "end_s": 23306.8,
+   "speaker": "0:t1",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "Second moved and seconded by Supervisor Christy. Discussion supervisor Kino. Thank you, Chair Scott, I do want to just preview that my comments in relation to this binding memorandum of agreement are a bit extensive, but I'll do my best to make it quick. I want to acknowledge the two groups who joined us today. To our union members. I see you and I respect you. We need more good paying jobs in this region and my door will always be open, especially to apprentices and training programs, because I know that we can grow opportunity the right way. We will disagree on Project Blue,",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23309.3,
+   "end_s": 23328.7,
+   "speaker": "0:t2",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "but I will be here for you and the trades for many more chapters in our shared work. I look forward to many of our union brothers and sisters staying closer to home and providing for their children and families. After this landfill closes, and to the community leaders in Red, the No Desert Data Center Coalition.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23330.2,
+   "end_s": 23346.7,
+   "speaker": "0:t3",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "Thank you for your leadership and for your organizing. For the last six months, you have made our community proud, learning about the impacts of Big Tech and communities across our nation. You have brought those lessons learned here to our own backyard, and you've made lifelong friends as organizers. Thank you.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23348.6,
+   "end_s": 23365.4,
+   "speaker": "0:t4",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "Throughout the United States, communities are warning us what happens when governments approve massive data center deals without enforceable guardrails, harm to public health, strain on water and energy, and residents losing their right to say yes or no.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23367.9,
+   "end_s": 23412.7,
+   "speaker": "0:t5",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "We cannot rush deals like this for short term gains because the costs do not stay short term. They linger in our bodies and our neighborhoods and in our public trust. This weekend, I attended the unveiling of a community mural on Tucson's south side. It carried the names of neighbors and loved ones who are no longer with us, people we lost after decades of exposure to contaminants in our aquifers, contamination tied to decisions made by powerful institutions, our government, the Air Force, the Air National Guard and private defense contractors that remain a major part of our economy today. This mural took me back to where my public service began as a teenager in the Sunnyside High",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23414.5,
+   "end_s": 23459.5,
+   "speaker": "0:t6",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "School auditorium, sitting through an air quality permit hearing led by Pima County fighting for beryllium monitoring. Because a plant next to our schools was poisoning the air and remembering that my grandmother worked there, was exposed there, and ultimately lost her life to the very harm we were begging government to mitigate. Our community has lived the price of trust us. We have lived the consequences of secrecy. We have lived the damage done when public health is treated as an afterthought, when residents are asked to carry the risk while someone else collects the reward. That is why I cannot support Project Blue in its original or current form. Let's",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23461.2,
+   "end_s": 23477.7,
+   "speaker": "0:t7",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "tell the truth about how we got here. Pima County was never the lead negotiator in this deal. We were the landowner, and when the city unanimously stepped away from the deal, instead of starting over, we were told to sprint. Beal handed us their contract and told us to sign it.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23479.6,
+   "end_s": 23504.7,
+   "speaker": "0:t8",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "They waived their own contractual conditions, then used that legal right to corner the County. That's not partnership. Now we're being asked to approve one of the largest land sales in our county's history, on the southeastern edge of town, where our growth will continue for decades to come. We are landlocked as a County, so this is not just one campus. It's what gets built around it.",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23506.2,
+   "end_s": 23535.4,
+   "speaker": "0:t9",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "Industrial build out, infrastructure demands and long term impacts. And the most basic question remains unanswered. Who is this for? We as a board were never given a direct, transparent briefing at the dais about the end user. When Amazon was reported as out, this board was not told clearly and directly. We have since learned that meta is out. So I will ask again who is this for?",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23537.2,
+   "end_s": 23581.0,
+   "speaker": "0:t10",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "If you cannot tell the public who this land sale is for, you cannot ask the public to accept the costs. Let's talk about what the public was promised. When Tucson was part of the plan, the community was told there would be more than $100 million in public benefit tied to reclaimed water infrastructure benefits that Tucson residents could point to touch and rely on. And after the city denied annexation and ended negotiations, that promise evaporated. What we're being asked to do today is accept a fraction of what that promise of that promise that we were presented in JUNE, a $5 million down payment and maybe $10 million later with language that allows commitments to be",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23583.8,
+   "end_s": 23627.9,
+   "speaker": "0:t11",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "clawed back. This, colleagues, is not a binding community benefit. This is a press release with an exit door. And when our Board of Health asked for us to evaluate public health impacts, when the community asked us to slow down and do basic due diligence, this board said, no, that choice will follow us. Public trust is not built by moving fast. Public trust is built by being honest, being transparent and being willing to start over when the deal in front of you is not protective of the public interest. On top of that, our County administration should have done a better job bringing us a contract that protects the county's interests. They did not. Our attorneys were not brought into these",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23629.1,
+   "end_s": 23660.3,
+   "speaker": "0:t12",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "conversations early enough. They were not positioned to protect the public early enough. And that was a failure. And when this board could have shown a little bit of courage, after weeks and months of residents coming here pleading with us to do the right thing, we looked the other way. So today I am disheartened and disappointed. We owe our residents an economic development strategy that invests in the businesses already here. We owe our residents real urgency on public health and public safety.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23662.0,
+   "end_s": 23705.0,
+   "speaker": "0:t13",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "We owe our residents infrastructure upgrades, higher wages and a stronger quality of life without sacrificing the neighborhoods that have already sacrificed enough. District 5 will never entertain an economic development deal of this nature again. Do not come back to this board with an economic development proposal that divides us. The way that Project Blue divided our community. Do not come back to this board with an economic development proposal that shortchanges this county's historic commitment to protecting our Sonoran Desert and do not come back to this board with a proposal that ignores the legacy of contamination and environmental exposure in our County, where neighbors names are etched into our murals on the South side.",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23707.1,
+   "end_s": 23723.6,
+   "speaker": "0:t14",
+   "role": "supervisor",
+   "name": "Cano",
+   "text": "Because powerful institutions treated our community as disposable. I get it. Some consider our communities to be expendable in the interest of economic development. From the District 5 perspective, it is my duty to never let them be. Thank you. Thank you,",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23728.3,
+   "end_s": 23728.3,
+   "speaker": "0:t15",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Supervisor Cano. Any other",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 23732.3,
+   "end_s": 23732.3,
+   "speaker": "0:t16",
+   "role": "chair",
+   "name": "Scott",
+   "text": "comments from board members?",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23736.5,
+   "end_s": 23743.0,
+   "speaker": "0:t17",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "Supervisor Alan. Thank you. Supervisor Connor, that was beautiful and powerful and spot",
+   "source": "captions",
+   "role_confidence": 0.75
+  },
+  {
+   "start_s": 23754.5,
+   "end_s": 23760.4,
+   "speaker": "0:t18",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "on. I similarly. I. Also come from a family that has been impacted by air quality issues,",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23764.4,
+   "end_s": 23769.7,
+   "speaker": "0:t19",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "have lost many men in my family from silica, from air quality issues, from the impacts of",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23774.4,
+   "end_s": 23780.5,
+   "speaker": "0:t20",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "mining, the the impacts, the impacts of our decisions are so real and so meaningful and impactful in people's daily",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23785.2,
+   "end_s": 23807.1,
+   "speaker": "0:t21",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "lives. Right? I am I am very I'm thankful, right, that the unions were so involved and were able to secure a project labor agreement that matters, right? Unions brought economic stability to my family, ensuring that we had retirements. We were able to buy a home. Those things matter.",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23809.6,
+   "end_s": 23830.5,
+   "speaker": "0:t22",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "And also the value of keeping skilled trades labor here. So many of our residents are driving to Pinal in Maricopa and other places to work on jobs. I get that and that we do need jobs here. I am glad that we've got organized labor that can flex the muscle and build some power of organized labor.",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23834.1,
+   "end_s": 23877.3,
+   "speaker": "0:t23",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "I am also so glad that we have community members who are committed to air quality, to clean energy, and to standing up and being strong and being loud and being clear and packing the room here, packing it out outside to the No Desert Data Coalition or no no desert, no data centers in the Desert Coalition. Thank you. Because what you have done is you brought an issue that no one really knew about in our community, for better or for worse. And you blew it up into an issue that I hear about now from every corner of the County, people know about data centers and the impact that it has on",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23879.2,
+   "end_s": 23919.0,
+   "speaker": "0:t24",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "our water, the impact that it has with tep and the acc. Those are all now household names, as they should have been for a very long time and are increasingly holding accountable decision makers in ways that decision makers for too long enjoyed being operating kind of below the radar. You did that and thank you. You took the issue and your resistance. You brought it out and blew it up in our community and people all over the country, all over the world saw it. You were part of building a movement, and that is powerful. And it continues, and it will continue to have ripple effects on and on and on.",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23923.7,
+   "end_s": 23938.1,
+   "speaker": "0:t25",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "So thank you. I appreciate that the administration and the County Attorney's office dug in, feel did not want to do a legally binding document. They didn't have to. It was inconvenient. And you pushed them and you got them to to",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 23943.9,
+   "end_s": 23987.9,
+   "speaker": "0:t26",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "agree to legally binding terms. I continue to stand really clear and consistent, and that the economic benefits that have been presented to us for Project Blue do not outweigh the the cost, the short and the long term costs in our community, as evidenced by the fact that our vote, our vote opened up the floodgates. And now we're going to all have to deal with the consequences. The floodgates of not just what is happening on the 290 acres of ours, but looking at what's happening in Marana, what could be happening in Sahuarita, what could be happening on Davis-Monthan. Right. Data centers now saw an opening, and",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 23990.0,
+   "end_s": 24022.7,
+   "speaker": "0:t27",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "they have jumped in and are wedging that opening into something larger. And we are still not prepared for the impacts and the consequences of that. Tep does not have the energy. These are coal fired power plant data centers. We can say that it's renewable energy and that credits are going to be bought. But the reality is that they're extending the life on coal fired power plants. And what that does is that has killed people. Coal fired power plants result in deaths of those who",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24027.2,
+   "end_s": 24027.2,
+   "speaker": "0:t28",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "live around them. Decisions",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24033.1,
+   "end_s": 24047.2,
+   "speaker": "0:t29",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "have consequences. We know that. There is still so much more within our 290 acres that we do not even know yet, which is still confounds me. We don't even know what what phase two and three looks like. We don't even know how many data centers.",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24048.3,
+   "end_s": 24053.0,
+   "speaker": "0:t30",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "We don't know how much energy they're going to use. We don't know any of that. And yet we're",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24059.8,
+   "end_s": 24059.8,
+   "speaker": "0:t31",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "moving forward. I'm still it",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24063.8,
+   "end_s": 24106.3,
+   "speaker": "0:t32",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "does still just confound me. I I'm not going to support this agreement as I have not supported previous votes. The thing that gives me some solace is the things that we did around reforming non-disclosure agreements, calling for an end to the tax breaks that data centers enjoy on the backs of state and local governments, on initiating the process to change our zoning so that we do not end up in a situation like this. Again, that is my solace in that. We laid some groundwork so that hopefully when this comes to us again, as it will, we have laid out the bricks in which we can say no, as we should have said from the",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24111.2,
+   "end_s": 24122.5,
+   "speaker": "0:t33",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "get go, we should have said no. And I do not want this to be, but I am afraid it is that this decision, this project, is the legacy of this board. And that",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24126.8,
+   "end_s": 24126.8,
+   "speaker": "0:t34",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "pains me. And my hope is that",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24130.8,
+   "end_s": 24152.3,
+   "speaker": "0:t35",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "in the new Year, we can again, we can get on a page where we think, as Supervisor Connell said, about economic development in a meaningful way that supports our community based on the strengths of what we have and who we are, and looking for the long term stability and prosperity of our community. And I think we can do that, and it's just going to take some good decision making.",
+   "source": "captions",
+   "role_confidence": 0.9
+  },
+  {
+   "start_s": 24153.8,
+   "end_s": 24157.0,
+   "speaker": "0:t36",
+   "role": "supervisor",
+   "name": "Allen",
+   "text": "So I'll stop pounding on the table. Thank you. Thank you,",
+   "source": "captions",
+   "role_confidence": 0.85
+  },
+  {
+   "start_s": 24163.2,
+   "end_s": 24164.6,
+   "speaker": "0:t37",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Supervisor Allen, supervisor Supervisors Christy or Haynes,",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24168.9,
+   "end_s": 24213.2,
+   "speaker": "0:t38",
+   "role": "chair",
+   "name": "Scott",
+   "text": "any comments? Okay. In that case, I'm going to share my own statement. And I too want to recognize and thank the County administrator and her team, as well as the County attorney and her team, for negotiating this binding memorandum of agreement with the Beal Infrastructure team. Back when this project was being structured, it was planned and envisioned as the work of two jurisdictions. Some of what is outlined in this enforceable document was expected to be included in the development agreement between Beal and the City of Tucson, after the decision to deny annexation was made, Pima County was obliged to move forward in a way that sought to assure the public that the",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24215.7,
+   "end_s": 24258.6,
+   "speaker": "0:t39",
+   "role": "chair",
+   "name": "Scott",
+   "text": "plans and assurances from the developer would come to pass. As promised, when we approved the land sale and rezoning in JUNE, the original conception of the project made far greater use of both potable and reclaimed water than what we now see before us, because the project at the time was aligned with the conservation and infrastructure plans of the city's water utility, the Memorandum of agreement commits the project to use a closed loop system that operates by recirculating minimal quantities of water. Any water usage on the site of the development will be approved by our state's Department of Water",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24261.1,
+   "end_s": 24304.6,
+   "speaker": "1:t40",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Resources, and must meet the requirements of the county's preliminary Integrated Water Management Plan. Beal and Tucson Electric Electric Power given the significant amount of power that will be used on site, we're required to submit an energy supply agreement for consideration by the Arizona Corporation Commission. The terms of that agreement were being discussed by Beal and tep, even before the City of Tucson made its decision not to annex the property. It is important to recognize that the energy supply agreement governs only the first of the three phases of this project, and that will there will need to be a new energy supply agreement submitted for each of the next",
+   "source": "captions",
+   "role_confidence": 0.75
+  },
+  {
+   "start_s": 24307.4,
+   "end_s": 24350.3,
+   "speaker": "1:t41",
+   "role": "chair",
+   "name": "Scott",
+   "text": "two phases. As this Memorandum of agreement states, tep will also provide power to the project using resources that are existing or under development. There are also safeguards for other ratepayers and financial commitments that Beal must abide by that further protect the utility and its other users. All this was already in place, but what this memorandum of agreement provides is a path forward for ensuring that Beal's commitment to match 100% of its energy consumption with renewable energy is met every year. An independent and qualified third party verifier, approved by",
+   "source": "captions",
+   "role_confidence": 0.75
+  },
+  {
+   "start_s": 24352.5,
+   "end_s": 24387.1,
+   "speaker": "1:t42",
+   "role": "chair",
+   "name": "Scott",
+   "text": "both Beal and Pima County, will confirm that the project has achieved the renewable energy commitment. This is a laudable and significant accomplishment, and the people of Pima County deserve to know that their representatives pushed hard for this independent verification of Beal's commitments to renewable energy. In our discussions with them from the beginning, one of the most compelling features of this project has been the economic benefits to the County and our constituents. They are also a prominent part of this document.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 24388.6,
+   "end_s": 24408.7,
+   "speaker": "1:t43",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Beal will pay the County close to $21 million for this acreage, and the County administrator must engage the board in a wide ranging discussion as to the best uses of those proceeds. The people we represent must see that we are using this money in ways that enhance our ability to deliver the services and supports they count on from",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 24413.7,
+   "end_s": 24447.6,
+   "speaker": "1:t44",
+   "role": "chair",
+   "name": "Scott",
+   "text": "us. The 3.6 billion capital, $3.6 billion capital investment in this project is the largest of its kind in the history of our County, and will have a positive, profound effect on our local economy, just like the proceeds from the land sale, the increased County tax revenues $58.8 million over ten years will be used in ways that benefit the public. There will also be greater tax revenues for local school districts and state government that will benefit their constituents.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 24451.2,
+   "end_s": 24493.7,
+   "speaker": "1:t45",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Only 1% of the existing employers in Pima County provide more than the 180 full time jobs and permanent jobs that will be part of this project. Moreover, the more than 3000 construction jobs that will result are not temporary, as some have labeled them. Rather, they will be filled by our friends and neighbors in the building and construction trades who have devoted their careers to these professions, many of whom were here this morning and in previous meetings. As we have heard, many of those Pima County workers currently travel many miles each day to other parts of the state to do their work. There has been passionate and thoughtful opposition to",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 24496.6,
+   "end_s": 24540.9,
+   "speaker": "1:t46",
+   "role": "chair",
+   "name": "Scott",
+   "text": "this project, often based in legitimate concerns about how we make use of and govern the technologies that play larger roles in our lives. However, there has also been unduly alarmist and defeatist rhetoric deployed by some project opponents, calling into question our abilities as a community to balance economic development with environmental stewardship. Pima County has historically struck that balance, and this agreement will help us to build on that proud record. We should approve it and hold both ourselves and the Beal team accountable for seeing that its terms are fully implemented. I thank my colleagues. Any further comment",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24542.6,
+   "end_s": 24545.8,
+   "speaker": "1:t47",
+   "role": "chair",
+   "name": "Scott",
+   "text": "or discussions from board members. All right. Let's go to a roll call. Vote MISS",
+   "source": "captions",
+   "role_confidence": 0.95
+  },
+  {
+   "start_s": 24551.6,
+   "end_s": 24560.9,
+   "speaker": "1:t48",
+   "role": "staff",
+   "name": "Manriquez",
+   "text": "Manriquez. This is to approve addendum item number six. Supervisor Allen. No. Supervisor. Connell. No. Supervisor. Christy. Yes.",
+   "source": "captions",
+   "role_confidence": 0.8
+  },
+  {
+   "start_s": 24566.8,
+   "end_s": 24581.1,
+   "speaker": "1:t49",
+   "role": "chair",
+   "name": "Scott",
+   "text": "Supervisor. Hines. Yes. He said yes. Chair. Scott. Yes. Item passes 3 to 2 with Supervisors Kino and Allen in opposition. All right, let's move back on the addendum to another one",
+   "source": "captions",
+   "role_confidence": 0.85
+  }
+ ]
+}

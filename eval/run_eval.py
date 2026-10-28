@@ -10,7 +10,8 @@ a numbered address, checked against the Census geocoder, and the result is cache
 in eval/resolved.json so later runs hit the same address.
 
 Scoring is per dimension (grid, bill, protection, strip, signatures, hearing) from
-`expect` in eval/addresses.json. Hearing is informational. A row passes when every
+`expect` in eval/addresses.json. Hearing is scored where a hook is expected and the county
+is indexed (step 4), informational elsewhere. A row passes when every
 other dimension passes. The report is written to <out>/report.md and
 <out>/summary.json; raw briefs to <out>/briefs/<id>.json.
 """
@@ -198,6 +199,8 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
     facs = facilities(b)
     live = [f for f in facs if f["status"] == "live"]
     ann = [f for f in facs if f["status"] in ("announced", "under_construction")]
+    # Measured construction counts as coming when it adjoins a listed data center.
+    cons = [c for c in (b["sections"]["coming"].get("construction") or []) if c.get("in_database") or c.get("near_cluster")]
 
     # grid: bucket, live split, operators named
     notes = []
@@ -212,9 +215,9 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
         if len(live) < llo or (lhi is not None and len(live) > lhi):
             ok = False
             notes.append(f"{len(live)} live, expected {llo}..{lhi}")
-    if exp.get("announced_min", 0) > len(ann):
+    if exp.get("announced_min", 0) > len(ann) + len(cons):
         ok = False
-        notes.append(f"{len(ann)} announced/under construction, expected ≥{exp['announced_min']}")
+        notes.append(f"{len(ann)} announced/under construction + {len(cons)} measured roofs, expected ≥{exp['announced_min']}")
     named = " ".join(f"{f.get('operator', '')} {f.get('name', '')}" for f in facs)
     hits = [o for o in exp.get("operators", []) if rx(re.escape(o), named)]
     if len(hits) < exp.get("operators_min", 0):
@@ -311,14 +314,17 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
         notes.append(f"missing any of {exp['require_text_any']}")
     dims["signatures"] = {"pass": not notes, "note": "; ".join(notes) or "clean"}
 
-    # hearing: informational
-    hr = b["sections"]["hearing"].get("hearing") or {}
+    # hearing: scored where a hook is expected and the county is indexed (step 4);
+    # informational elsewhere, since no transcript exists to measure against.
+    hs = b["sections"]["hearing"]
+    hr = hs.get("hearing") or {}
     has = bool(hr.get("next_date") or hr.get("body") or hr.get("last_meeting_said"))
     want = exp.get("hearing", "none_ok")
+    unindexed = "not indexed yet" in (hs.get("gap") or "")
     dims["hearing"] = {
         "pass": has or want == "none_ok",
-        "note": ("hook found: " + str(hr.get("body") or hr.get("subject"))[:60]) if has else ("none (hook expected)" if want == "expected" else "none"),
-        "informational": True,
+        "note": (("measured: " if hs.get("status") == "measured" else "hook found: ") + str(hr.get("body") or hr.get("subject"))[:60]) if has else ("none (hook expected)" if want == "expected" else "none"),
+        "informational": want != "expected" or unindexed,
     }
 
     # verification state

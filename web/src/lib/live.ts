@@ -14,6 +14,7 @@ export interface Live {
   verified: number
   claims: number
   startedAt: number
+  endedAt?: number
   error?: string
 }
 

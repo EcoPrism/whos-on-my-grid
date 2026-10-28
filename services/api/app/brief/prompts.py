@@ -158,6 +158,35 @@ def ground_block(truth: GroundTruth | None, geo: GeocodeResult) -> str:
             f"({t.status.replace('_', ' ')}{', docket ' + t.docket if t.docket else ''}): "
             f"{t.summary} Source: {t.url}"
         )
+    if truth.imagery:
+        img = truth.imagery
+        then, now = img.vintages
+        counted = img.counted
+        lines.append(
+            f"- Aerial imagery, SAM 3.1 on USDA NAIP {then} vs {now}: {len(counted)} new or "
+            f"expanded large roof{'s' if len(counted) != 1 else ''} beside listed data centers "
+            "within five "
+            f"miles, about {img.new_acres:.0f} acres"
+            + (
+                f" (nearest {counted[0].label}, {counted[0].distance_km * KM_TO_MI:.1f} mi)."
+                if counted
+                else "."
+            )
+            + " The Coming section already carries these; do not repeat or re-measure them."
+        )
+    for d in truth.decisions:
+        lines.append(
+            f"- On the public record: {d.project}"
+            + (f" ({d.codename})" if d.codename and d.codename != d.project else "")
+            + f" was {d.status} by the {d.body} on {d.date}. Already listed in Coming; do not add "
+            "it again, and never present it as coming."
+        )
+    if truth.hearing:
+        h = truth.hearing
+        lines.append(
+            f"- Last indexed hearing: {h.body}, {h.date}, {h.subject}. The Hearing section is "
+            "written from the transcript of the recording."
+        )
     if truth.notes:
         lines.append("- Provider notes: " + " ".join(truth.notes))
     return "\n".join(lines) + "\n\n"
@@ -201,6 +230,13 @@ def section_prompt(section_id: str, geo: GeocodeResult, truth: GroundTruth | Non
     if grounded and section_id in ("on_your_grid", "coming") and truth.facilities is None:  # type: ignore[union-attr]
         grounded = False
     title, question = (GROUNDED_QUESTIONS if grounded else SECTION_QUESTIONS)[section_id]
+    if section_id == "coming" and truth is not None and truth.imagery is not None:
+        question = question.replace(
+            "Leave `construction` empty: aerial imagery is not available in this mode; say so in "
+            "`gap`.",
+            "Leave `construction` empty: the engine fills it from the imagery measurement in "
+            "the facts block.",
+        )
     county = f"{geo.county} County" if geo.county else "county not known"
     utility = (
         f"Serving utility: {truth.utility.name} (from the HIFLD service-territory map).\n"

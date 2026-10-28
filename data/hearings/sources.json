@@ -1,0 +1,274 @@
+{
+  "_about": "Hand-curated like data/tariffs.json. Bodies whose official meeting archive is indexed for the Hearing section, the meetings and windows that have been (or are to be) transcribed, the decisions on the public record about named campuses, and listed upcoming hearings. Recordings come from the official archive only, never from video platforms. Windows are seconds into the recording, taken from the archive's own agenda index points.",
+  "bodies": [
+    {
+      "id": "pwc-bocs",
+      "name": "Prince William County Board of County Supervisors",
+      "state": "VA",
+      "counties": [
+        "Prince William",
+        "Manassas",
+        "Manassas Park"
+      ],
+      "archive": {
+        "kind": "granicus",
+        "site": "pwcgov",
+        "view_id": 23
+      },
+      "meetings": [
+        {
+          "id": "pwc-2023-12-12",
+          "date": "2023-12-12",
+          "clip_id": 3410,
+          "page_url": "https://pwcgov.granicus.com/player/clip/3410?view_id=23",
+          "subject": "Prince William Digital Gateway rezonings (REZ2022-00032, -00033, -00036)",
+          "projects": [
+            "Digital Gateway",
+            "Prince William Digital Gateway",
+            "Compass Datacenters",
+            "QTS"
+          ],
+          "keywords": [
+            "Digital Gateway",
+            "Pageland Lane",
+            "Gainesville",
+            "Compass",
+            "QTS",
+            "Dominion",
+            "substation",
+            "transmission line",
+            "Manassas National Battlefield",
+            "proffers",
+            "Supervisor Weir",
+            "Supervisor Angry",
+            "Supervisor Boddye",
+            "Supervisor Bailey",
+            "Supervisor Vega",
+            "Supervisor Franklin",
+            "Supervisor Gordy",
+            "Chair Wheeler"
+          ],
+          "windows": [
+            {
+              "item": "3-A to 3-C, opening and staff presentation",
+              "start_s": 875,
+              "end_s": 2075
+            },
+            {
+              "item": "3-A to 3-C, motions, board statements and vote",
+              "start_s": 92400,
+              "end_s": 96400
+            }
+          ]
+        },
+        {
+          "id": "pwc-2026-04-14",
+          "date": "2026-04-14",
+          "clip_id": 3817,
+          "page_url": "https://pwcgov.granicus.com/player/clip/3817?view_id=23",
+          "subject": "Resolution not to appeal the court rulings voiding the Digital Gateway rezonings",
+          "projects": [
+            "Digital Gateway",
+            "Prince William Digital Gateway"
+          ],
+          "keywords": [
+            "Digital Gateway",
+            "writ of appeal",
+            "Supreme Court of Virginia",
+            "Court of Appeals",
+            "rezoning",
+            "data center",
+            "Pageland Lane",
+            "Supervisor Weir",
+            "Supervisor Bailey",
+            "Supervisor Boddye",
+            "Supervisor Angry",
+            "Supervisor Vega",
+            "Chair Jefferson"
+          ],
+          "windows": [
+            {
+              "item": "Public comment time",
+              "start_s": 52,
+              "end_s": 1064
+            },
+            {
+              "item": "Resolution not to file a petition for a writ of appeal (Digital Gateway)",
+              "start_s": 1700,
+              "end_s": 1960
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "project": "Prince William Digital Gateway",
+          "codename": "Digital Gateway",
+          "operator": "QTS and Compass Datacenters",
+          "status": "rejected",
+          "date": "2026-04-14",
+          "text": "On 2026-04-14 the Prince William Board of County Supervisors approved a resolution directing the County Attorney and outside legal counsel not to file a petition for a writ of appeal regarding the Digital Gateway rezoning lawsuits, leaving in place the court ruling that voided the rezonings.",
+          "source_url": "https://pwcgov.granicus.com/player/clip/3817?view_id=23",
+          "source_title": "Prince William County Board of County Supervisors meeting archive, 2026-04-14",
+          "quote": "Not to File a Petition for a Writ of Appeal Regarding Digital Gateway Rezoning",
+          "lat": 38.82,
+          "lon": -77.6,
+          "estimated_mw": null,
+          "history": "Rezonings REZ2022-00032/-00033/-00036 approved 4-3 on 2023-12-13 (clip 3410); voided by the Circuit Court in 2025; Court of Appeals affirmed 2026-03-31."
+        }
+      ],
+      "upcoming": []
+    },
+    {
+      "id": "loudoun-bos",
+      "name": "Loudoun County Board of Supervisors",
+      "state": "VA",
+      "counties": [
+        "Loudoun"
+      ],
+      "archive": {
+        "kind": "granicus",
+        "site": "loudoun",
+        "view_id": 90
+      },
+      "meetings": [
+        {
+          "id": "loudoun-2025-03-18",
+          "date": "2025-03-18",
+          "clip_id": 7909,
+          "page_url": "https://loudoun.granicus.com/player/clip/7909?view_id=90",
+          "subject": "CPAM-2024-0001 and ZOAM-2024-0001, Data Center Standards and Locations, Phase 1",
+          "projects": [
+            "Data Center Standards and Locations",
+            "ZOAM-2024-0001",
+            "grandfathering"
+          ],
+          "keywords": [
+            "data center",
+            "grandfathering",
+            "special exception",
+            "by-right",
+            "500 feet",
+            "substation",
+            "transmission line",
+            "Dominion",
+            "Chair Randall",
+            "Vice Chair Turner",
+            "Supervisor Briskman",
+            "Supervisor Letourneau",
+            "Supervisor TeKrony",
+            "Supervisor Saines",
+            "Supervisor Kershner",
+            "Supervisor Glass",
+            "Supervisor Umstattd",
+            "Ashburn"
+          ],
+          "windows": [
+            {
+              "item": "Public Input Session II",
+              "start_s": 7215,
+              "end_s": 8900
+            },
+            {
+              "item": "Item 7, Data Center Standards and Locations Phase 1",
+              "start_s": 16319,
+              "end_s": 20519
+            },
+            {
+              "item": "Item 7, motions and vote",
+              "start_s": 24000,
+              "end_s": 24894
+            }
+          ]
+        }
+      ],
+      "decisions": [],
+      "upcoming": []
+    },
+    {
+      "id": "pima-bos",
+      "name": "Pima County Board of Supervisors",
+      "state": "AZ",
+      "counties": [
+        "Pima"
+      ],
+      "archive": {
+        "kind": "granicus",
+        "site": "pima",
+        "view_id": 3
+      },
+      "meetings": [
+        {
+          "id": "pima-2025-12-16",
+          "date": "2025-12-16",
+          "clip_id": 1873,
+          "page_url": "https://pima.granicus.com/player/clip/1873?view_id=3",
+          "subject": "Binding Memorandum of Agreement, Houghton Data Center Project (Project Blue)",
+          "projects": [
+            "Project Blue",
+            "Houghton Data Center",
+            "Beale"
+          ],
+          "keywords": [
+            "Project Blue",
+            "Beale Infrastructure",
+            "Houghton",
+            "data center",
+            "water",
+            "reclaimed water",
+            "Tucson Electric Power",
+            "TEP",
+            "Tucson Water",
+            "Chair Scott",
+            "Supervisor Christy",
+            "Supervisor Heinz",
+            "Supervisor Grijalva",
+            "Supervisor Allen",
+            "Supervisor Lee"
+          ],
+          "windows": [
+            {
+              "item": "Item 6, Binding Memorandum of Agreement, Houghton Data Center Project",
+              "start_s": 23241,
+              "end_s": 24583
+            }
+          ]
+        }
+      ],
+      "decisions": [],
+      "upcoming": []
+    },
+    {
+      "id": "tucson-council",
+      "name": "Tucson Mayor and Council",
+      "state": "AZ",
+      "counties": [
+        "Pima"
+      ],
+      "archive": {
+        "kind": "onbase",
+        "site": "tucsonaz.hylandcloud.com",
+        "view_id": 0,
+        "note": "No official video archive; the written Legal Action Report is the record."
+      },
+      "meetings": [],
+      "decisions": [
+        {
+          "project": "Project Blue",
+          "codename": "Project Blue",
+          "operator": "Beale Infrastructure",
+          "status": "rejected",
+          "date": "2025-08-06",
+          "text": "On 2025-08-06 the Tucson Mayor and Council voted unanimously not to proceed with the Project Blue data-center development agreement and annexation.",
+          "source_url": "https://tucsonaz.hylandcloud.com/221agendaonline/Meetings/ViewMeetingAgenda?meetingId=1866&type=2",
+          "source_title": "Tucson Mayor and Council, Legal Action Report, 6 August 2025",
+          "quote": "Project Blue",
+          "lat": 32.11,
+          "lon": -110.77,
+          "estimated_mw": null
+        }
+      ],
+      "upcoming": []
+    }
+  ]
+}

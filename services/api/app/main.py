@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.brief.cache import BriefCache
-from app.brief.fetch import HttpFetcher
+from app.brief.fetch import Fetcher, HttpFetcher, TranscriptFetcher
 from app.brief.pipeline import BriefService
 from app.config import Settings, get_settings
 from app.geocode import CensusGeocoder
@@ -19,14 +19,19 @@ from app.telemetry import log_event, uptime_ms
 
 
 def default_service(settings: Settings) -> BriefService:
+    ground = get_ground(settings) if settings.brief_source == "full" else None
+    fetcher: Fetcher = HttpFetcher()
+    if ground is not None and ground.hearings is not None:
+        # Hearing claims cite the archive page; the verifier reads the transcript.
+        fetcher = TranscriptFetcher(fetcher, ground.hearings)
     return BriefService(
         settings=settings,
         geocoder=CensusGeocoder(),
         draft_provider=get_draft_provider(),
         verify_provider=get_verify_provider(),
-        fetcher=HttpFetcher(),
+        fetcher=fetcher,
         cache=BriefCache(settings.data_path),
-        ground=get_ground(settings) if settings.brief_source == "full" else None,
+        ground=ground,
     )
 
 

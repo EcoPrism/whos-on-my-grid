@@ -9,9 +9,15 @@ dist/
 .DS_Store
 
 # Brief cache and downloaded datasets (services/api). Keyed by address hash; never commit it.
-# The hand-curated tariff table is source, not cache.
+# The hand-curated tariff table and the step-4 indexes (what SAM 3.1 measured per area, what
+# Voice Transcribe heard per meeting) are source, not cache. Imagery tiles and recordings are not.
 data/*
 !data/tariffs.json
+!data/perception/
+data/perception/*
+!data/perception/*.json
+!data/hearings/
+data/hearings/audio/
 # Eval runs: briefs for real addresses and their scores.
 eval/runs/
 # Browser-tool scratch

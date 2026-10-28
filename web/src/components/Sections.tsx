@@ -17,22 +17,35 @@ const STATUS_WORD: Record<Status, string> = {
   unavailable: 'Not known',
 }
 
+// While a brief streams, a section is one of: not drafted yet, a model's
+// draft whose claims are unchecked, engine text from the data whose claims
+// are unchecked, or final. Only a final section shows a confidence.
+export type Readiness = 'pending' | 'draft' | 'engine' | 'final'
+
 // Every section is a document block with a status rail on the left. The rail
 // color is the status; a dashed rail means the section could not be filled.
-export function SectionBlock({ id, section }: { id: SectionId; section: Section }) {
+export function SectionBlock({ id, section, readiness = 'final' }: { id: SectionId; section: Section; readiness?: Readiness }) {
+  const draft = readiness === 'draft' || readiness === 'pending'
   return (
     <section id={id} className={`rail-${section.status} border-l-4 pl-5 sm:pl-7`}>
       <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <h2 className="text-3xl font-bold leading-none">{SECTION_TITLES[id]}</h2>
-        <p className={`tag-${section.status} text-sm font-semibold`}>
-          {STATUS_WORD[section.status]}
-          {section.status !== 'unavailable' && (
+        <p className={`${draft ? 'text-[var(--ink-soft)]' : `tag-${section.status}`} text-sm font-semibold`}>
+          {readiness === 'pending' ? 'Drafting' : readiness === 'draft' ? 'Draft' : STATUS_WORD[section.status]}
+          {readiness === 'final' && section.status !== 'unavailable' && (
             <span className="num font-normal text-[var(--ink-soft)]"> · confidence {Math.round(section.confidence * 100)}%</span>
           )}
+          {(readiness === 'draft' || readiness === 'engine') && <span className="font-normal text-[var(--ink-soft)]"> · not yet checked</span>}
         </p>
       </header>
+      {readiness === 'draft' && (
+        <p className="mt-2 max-w-[64ch] text-sm text-[var(--ink-soft)]">
+          Muse Spark's draft. Every claim in it is being checked against its source; the status and confidence appear when that finishes.
+        </p>
+      )}
 
-      <p className={`mt-4 max-w-[64ch] text-lg leading-snug ${section.status === 'unavailable' ? 'text-[var(--ink-soft)]' : ''}`}>
+      <p className={`mt-4 max-w-[64ch] text-lg leading-snug ${section.status === 'unavailable' || draft ? 'text-[var(--ink-soft)]' : ''}`}>
+        {readiness === 'draft' && <span className="chip-draft">Draft</span>}
         {section.summary}
       </p>
 
@@ -129,7 +142,7 @@ function Construction({ section }: { section: Section }) {
           <div>
             <span className="font-semibold">{c.label}</span>
             <span className="block text-sm text-[var(--ink-soft)]">
-              {(c.distance_km * 0.621).toFixed(1)} mi · {c.in_database ? 'listed in a facility database' : 'in no facility database'}
+              {(c.distance_km * 0.621).toFixed(1)} mi · {c.kind === 'expansion' ? 'expansion of a listed data center' : c.in_database ? 'listed in a facility database' : c.near_cluster ? 'in no facility database, adjoins a listed data center' : 'in no facility database; what it is cannot be told from the air'}
             </span>
           </div>
           <p className="num text-right">

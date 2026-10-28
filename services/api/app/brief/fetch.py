@@ -216,6 +216,29 @@ async def _read(r: httpx.Response) -> FetchResult:
     return FetchResult(True, text=text, status=r.status_code)
 
 
+class TranscriptSource(Protocol):
+    def transcript_text(self, url: str) -> str | None: ...
+
+
+class TranscriptFetcher:
+    """A hearing claim cites the archive page of the recording, which carries
+    video, not text. For exactly those URLs the verifier is handed the
+    transcript the engine quoted from, so Spark Open can check the quote
+    against what was said; every other URL goes to the real fetcher."""
+
+    NOTE = "transcript of the official recording"
+
+    def __init__(self, inner: Fetcher, transcripts: TranscriptSource) -> None:
+        self.inner = inner
+        self.transcripts = transcripts
+
+    async def fetch(self, url: str) -> FetchResult:
+        text = self.transcripts.transcript_text(url)
+        if text:
+            return FetchResult(True, text=text, note=self.NOTE, status=200)
+        return await self.inner.fetch(url)
+
+
 class FakeFetcher:
     """Scripted pages by URL; anything else fails with the given note."""
 

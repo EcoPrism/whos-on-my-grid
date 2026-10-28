@@ -90,6 +90,10 @@ class BriefService:
         truth = await gather_ground(geo, self.ground) if self.ground is not None else None
 
         drafts: dict[str, DraftResult | SectionFailure] = {}
+        # With an indexed transcript the Hearing section is the engine's: no draft.
+        engine_sections = {"hearing"} if truth is not None and truth.hearing else set()
+        for sid in engine_sections:
+            drafts[sid] = SectionFailure(sid, "Written by the engine from the transcript.")
 
         def partial(stage: str) -> None:
             """Assemble what is known so far and hand it to the caller. Undrafted
@@ -134,14 +138,15 @@ class BriefService:
         # full mode its lines anchor to the facts block instead, and it runs in
         # parallel: that is a fifth of the wait.
         house: list[dict] | None = None
+        to_draft = [sid for sid in SECTION_IDS if sid not in engine_sections]
         if truth is not None:
             _, house = await asyncio.gather(
-                asyncio.gather(*(one_section(sid) for sid in SECTION_IDS)),
+                asyncio.gather(*(one_section(sid) for sid in to_draft)),
                 draft_house_lines(self.draft_provider, geo, now_iso, {}, truth),
             )
         else:
-            await asyncio.gather(*(one_section(sid) for sid in SECTION_IDS))
-        if all(isinstance(d, SectionFailure) for d in drafts.values()):
+            await asyncio.gather(*(one_section(sid) for sid in to_draft))
+        if all(isinstance(drafts.get(sid), SectionFailure) for sid in to_draft):
             raise DraftingUnavailable()
         if house is None:
             summaries = {sid: d.summary for sid, d in drafts.items() if isinstance(d, DraftResult)}

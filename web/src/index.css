@@ -95,6 +95,13 @@ a:hover { text-decoration-color: var(--ink); }
   * { animation: none !important; transition: none !important; }
 }
 
+/* A sentence a model wrote that no second model has checked yet. */
+.chip-draft {
+  display: inline-block; margin-right: 0.5rem; padding: 0 0.35rem; vertical-align: middle;
+  border: 1px dashed var(--ink-soft); color: var(--ink-soft);
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+
 /* Something still being made: a slow breath, not a spinner. */
 .breathe { animation: breathe 1.6s ease-in-out infinite; }
 @keyframes breathe { 50% { opacity: 0.45; } }

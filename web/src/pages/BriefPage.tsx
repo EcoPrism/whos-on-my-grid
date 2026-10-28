@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import Claims from '../components/Claims'
 import HouseStrip from '../components/HouseStrip'
 import MapView from '../components/MapView'
-import { SECTION_TITLES, SectionBlock } from '../components/Sections'
+import { SECTION_TITLES, SectionBlock, type Readiness } from '../components/Sections'
 import ShareCard from '../components/ShareCard'
 import { ApiError, getBrief } from '../lib/api'
 import { useLive } from '../lib/live'
@@ -77,6 +77,10 @@ export default function BriefPage() {
 function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; open: SectionId | null; setOpen: (id: SectionId | null) => void }) {
   const a = brief.address
   const h = brief.headline
+  // While the stream runs, facts are final but every sentence a model wrote
+  // is a draft until the second model has checked its claims.
+  const inProgress = live !== undefined && live.stage !== 'done'
+  const nothingDrafted = inProgress && (brief.partial?.drafted ?? 0) === 0
   const supported = brief.claims.filter((c) => c.verdict === 'supported').length
   const bill = brief.sections.your_bill
   const facilities = [...(brief.sections.on_your_grid.facilities ?? []), ...(brief.sections.coming.facilities ?? [])].filter((f) => f.status !== 'rejected')
@@ -93,6 +97,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
       </nav>
 
       {live && live.stage !== 'done' && <Progress live={live} />}
+      {live && live.stage === 'done' && <DoneLine live={live} brief={brief} />}
 
       {/* Hero: the map, with the headline card on top of it. */}
       <div className="relative mx-auto mt-3 max-w-6xl sm:px-4">
@@ -111,7 +116,14 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
             <p className="text-sm text-[var(--ink-soft)]">{a.county ? `${a.county} County, ` : ''}{a.state}{a.utility ? ` · served by ${a.utility}` : ''}</p>
             <h1 className="sign mt-1 text-[clamp(1.9rem,5vw,3rem)]">{a.display}</h1>
             <div className="mt-3 flex items-end justify-between gap-4">
-              {h.one_liner && <p className="max-w-[34ch] text-[15px] leading-snug">{h.one_liner}</p>}
+              {inProgress && (!h.one_liner || h.one_liner === NO_SUMMARY) ? (
+                <p className="breathe max-w-[34ch] text-[15px] leading-snug text-[var(--ink-soft)]">Muse Spark is writing the summary from the facts…</p>
+              ) : h.one_liner && (
+                <p className={`max-w-[34ch] text-[15px] leading-snug ${inProgress && !nothingDrafted ? 'text-[var(--ink-soft)]' : ''}`}>
+                  {inProgress && !nothingDrafted && <span className="chip-draft">Draft</span>}
+                  {h.one_liner}
+                </p>
+              )}
               {h.ai_rent_usd_per_month !== null && (
                 <p className="num shrink-0 text-right">
                   {/* A modeled number is shown as a range, in the modeled colour, with the
@@ -136,7 +148,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
 
       {/* The plain-language layer. The cards below are for the reporter; this is for everyone. */}
       {brief.at_your_house && brief.at_your_house.length > 0 && (
-        <div className="mt-4"><HouseStrip lines={brief.at_your_house} /></div>
+        <div className="mt-4"><HouseStrip lines={brief.at_your_house} checking={inProgress} /></div>
       )}
 
       {/* Five tiles: the whole brief at a glance. One opens at a time. */}
@@ -145,7 +157,9 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
           {ORDER.map((id) => {
             const s = brief.sections[id]
             const isOpen = open === id
-            const pending = brief.partial?.pending.includes(id) ?? false
+            const r = readiness(brief, id, inProgress)
+            const pending = r === 'pending'
+            const soft = pending || r === 'draft'
             return (
               <button
                 key={id}
@@ -156,8 +170,10 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
                 onClick={() => setOpen(isOpen ? null : id)}
                 className={`tile tile-${s.status} flex min-h-[7.5rem] flex-col items-start p-3 text-left transition-colors ${pending ? 'breathe' : ''} ${isOpen ? 'bg-[var(--ink)] text-[var(--paper)]' : 'bg-white hover:bg-[var(--paper-deep)]'}`}
               >
-                <span className={`text-xs font-semibold ${isOpen ? 'opacity-80' : pending ? 'text-[var(--ink-soft)]' : `tag-${s.status}`}`}>
-                  {pending ? 'Drafting' : STATUS_WORD[s.status]}{!pending && s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
+                <span className={`text-xs font-semibold ${isOpen ? 'opacity-80' : soft ? 'text-[var(--ink-soft)]' : `tag-${s.status}`}`}>
+                  {pending ? 'Drafting' : r === 'draft' ? 'Draft' : STATUS_WORD[s.status]}
+                  {r === 'final' && s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
+                  {(r === 'draft' || r === 'engine') && <span className="font-normal"> · not yet checked</span>}
                 </span>
                 <span className="mt-1 text-lg font-bold leading-tight">{SECTION_TITLES[id]}</span>
                 <span className={`mt-1 line-clamp-3 text-[13px] leading-snug ${isOpen ? 'opacity-85' : 'text-[var(--ink-soft)]'}`}>{pending ? 'Muse Spark is writing this section from the facts above…' : tileLine(id, s)}</span>
@@ -168,17 +184,23 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
 
         {open && (
           <div id={`panel-${open}`} role="tabpanel" className="mt-6 border-t-2 border-[var(--ink)] pt-6">
-            <SectionBlock id={open} section={brief.sections[open]} />
+            <SectionBlock id={open} section={brief.sections[open]} readiness={readiness(brief, open, inProgress)} />
           </div>
         )}
 
         <details className="mt-8 border-t border-[var(--line)] pt-3">
           <summary className="cursor-pointer text-lg font-bold">
-            Every claim, checked <span className="num text-sm font-normal text-[var(--ink-soft)]">· {live && live.stage === 'verifying' ? `checking ${live.verified} of ${live.claims}` : `${brief.claims.length} claims, ${supported} supported`}</span>
+            Every claim, checked <span className="num text-sm font-normal text-[var(--ink-soft)]">· {live && live.stage === 'verifying' ? `checking ${live.verified} of ${live.claims}` : inProgress ? `${brief.claims.length} claims drafted, none checked yet` : `${brief.claims.length} claims, ${supported} supported`}</span>
           </summary>
-          <div className="mt-3"><Claims claims={brief.claims} /></div>
+          <div className="mt-3"><Claims claims={brief.claims} checking={inProgress} /></div>
         </details>
 
+        {/* The card leaves this page, so it waits for the check: nothing unverified gets shared. */}
+        {inProgress ? (
+          <p className="mt-3 border-t border-[var(--line)] pt-3 text-lg font-bold text-[var(--ink-soft)]">
+            Share it <span className="text-sm font-normal">· available once every claim is checked</span>
+          </p>
+        ) : (
         <details className="mt-3 border-t border-[var(--line)] pt-3">
           <summary className="cursor-pointer text-lg font-bold">
             Share it <span className="text-sm font-normal text-[var(--ink-soft)]">· the card carries the sources line</span>
@@ -190,6 +212,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
           )}
           <div className="mt-4 max-w-3xl"><ShareCard brief={brief} /></div>
         </details>
+        )}
 
         <p className="mt-6 text-xs text-[var(--ink-soft)]">
           Brief {brief.brief_id}, generated {new Date(brief.generated_at).toLocaleString('en-US')}, mode {brief.source_mode}. The address is not stored; the id is a hash of it.
@@ -217,12 +240,12 @@ function Progress({ live }: { live: Live }) {
     },
     {
       label: live.stage === 'verifying' ? `Muse Spark Open checking every claim · ${live.verified} of ${live.claims}` : 'Checking every claim against its source',
-      state: live.stage === 'verifying' ? 'active' : live.stage === 'error' ? 'todo' : 'todo',
+      state: live.stage === 'verifying' ? 'active' : 'todo',
     },
   ]
   return (
-    <div className="mx-auto mt-3 max-w-6xl px-4" aria-live="polite">
-      <ol className="flex flex-wrap items-center gap-x-5 gap-y-1 border-2 border-[var(--ink)] bg-white px-3 py-2 text-sm">
+    <div className="sticky top-0 z-[1100] mx-auto mt-3 max-w-6xl px-4" aria-live="polite">
+      <ol className="flex flex-wrap items-center gap-x-5 gap-y-1 border-2 border-[var(--ink)] bg-white px-3 py-2 text-sm shadow-[4px_4px_0_var(--ink)]">
         {steps.map((s) => (
           <li key={s.label} className={`flex items-center gap-2 ${s.state === 'todo' ? 'text-[var(--line)]' : s.state === 'active' ? 'breathe font-semibold' : 'text-[var(--ink-soft)]'}`}>
             <span aria-hidden className={`inline-block h-2.5 w-2.5 border border-[var(--ink)] ${s.state === 'done' ? 'bg-[var(--ink)]' : s.state === 'active' ? 'bg-[var(--modelled)]' : 'bg-transparent'}`} />
@@ -230,10 +253,34 @@ function Progress({ live }: { live: Live }) {
           </li>
         ))}
         <li className="num ml-auto text-[var(--ink-soft)]">{elapsed}s</li>
+        <li className="basis-full text-xs text-[var(--ink-soft)]">The map, facilities, utility and prices are final. Sentences marked Draft are a model's and stay unconfirmed until every claim is checked.</li>
         {live.stage === 'error' && <li className="basis-full text-[var(--reported)]" role="alert">{live.error} The facts above stand; the sentences could not be finished.</li>}
       </ol>
     </div>
   )
+}
+
+// Once the stream ends, one quiet line marks the transition from draft to
+// checked, so a reader who scrolled past the progress strip still sees it.
+function DoneLine({ live, brief }: { live: Live; brief: Brief }) {
+  const supported = brief.claims.filter((c) => c.verdict === 'supported').length
+  const secs = live.endedAt ? Math.max(0, Math.round((live.endedAt - live.startedAt) / 1000)) : null
+  return (
+    <p className="mx-auto mt-3 max-w-6xl px-4 text-sm text-[var(--ink-soft)]" role="status">
+      <span className="font-semibold text-[var(--measured)]">✓ Checked.</span> <span className="num">{brief.claims.length}</span> claims, <span className="num">{supported}</span> supported{secs !== null && <>, in <span className="num">{secs}</span> s</>}. Status and confidence are now final.
+    </p>
+  )
+}
+
+const NO_SUMMARY = 'Not enough public information to summarize this address yet.'
+
+// Facts are final from the first event; a section's sentences are a draft
+// until the check ends, unless the engine wrote every claim from the data.
+function readiness(brief: Brief, id: SectionId, inProgress: boolean): Readiness {
+  if (!inProgress) return 'final'
+  if (brief.partial?.pending.includes(id)) return 'pending'
+  const claims = brief.claims.filter((c) => c.section === id)
+  return claims.length > 0 && claims.every((c) => c.drafted_by === 'engine') ? 'engine' : 'draft'
 }
 
 // Annual utility data is labelled by its years; a series to the present says "vs 2 yrs ago".
