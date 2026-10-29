@@ -10,7 +10,7 @@ hostname is the app's own `*.azurecontainerapps.io` until `whoisonmygrid.com` is
 |---|---|---|
 | Container App `ca-grid`, 0.5 vCPU / 1 GiB, one replica | API + web. One replica by design: the in-process in-flight registry and the cache's temp files assume one writer | $25 to $30 a month |
 | Container Apps environment `cae-grid` (consumption) | Hosts the app, mounts the share | included |
-| Storage account: file share `grid`, tables `users` and `usage` | `/mnt/grid/briefs` is the brief cache (shared links survive restarts), `/mnt/grid/ground` the downloaded datasets; the tables record sign-ins and generated brief ids | under $1 |
+| Storage account: file share `grid`, tables `users` and `usage` | `/mnt/grid/briefs` is the brief cache (shared links survive restarts), `/mnt/grid/scenarios` the what-if cache (same reason), `/mnt/grid/cards` the share-card cache, `/mnt/grid/ground` the downloaded datasets; the tables record sign-ins and generated brief ids | under $1 |
 | Key Vault `kv-grid-*`, RBAC | `gateway-key`, `baseten-key`, `session-secret`; the app reads them through its managed identity | under $1 |
 | Container Registry, Basic | The image | $5 |
 | Log Analytics, capped at 1 GB/day | `EVT` lines from the app; never an address | pennies |

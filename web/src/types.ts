@@ -231,7 +231,13 @@ export interface Scenario {
   baseline: {
     facilities: Facility[]
     facility_count: number | null
-    utility: { name: string; kind: string; customers: number | null; source: Source } | null
+    utility: {
+      name: string
+      kind: string
+      customers: number | null
+      source: Source
+      customers_source?: Source | null
+    } | null
     price: Price | null
     tariff: Tariff | null
   }

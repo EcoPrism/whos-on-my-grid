@@ -224,6 +224,7 @@ class ZctaCentroids:
         years: list[int] | None = None,
         timeout: float = 60.0,
         fcc_timeout: float | None = None,
+        retry_after_s: float = 300.0,
     ) -> None:
         self.path = cache_dir / "gazetteer_zcta.json"
         now = time.gmtime().tm_year
@@ -232,6 +233,11 @@ class ZctaCentroids:
         self.fcc_timeout = fcc_timeout
         self._lock = asyncio.Lock()
         self._points: dict[str, tuple[float, float]] | None = None
+        # A failed download is remembered for a cool-down, so an outage fails
+        # each request at once instead of re-downloading behind the lock.
+        self.retry_after_s = retry_after_s
+        self._failed_at = 0.0
+        self._failure = ""
 
     async def _get_json(self, url: str, params: dict[str, str], timeout: float) -> dict:
         return await _get_json(url, params, timeout)
@@ -276,7 +282,13 @@ class ZctaCentroids:
                         return points
                 except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError):
                     pass
-            year, url, points = await self._download()
+            if time.time() - self._failed_at < self.retry_after_s:
+                raise GeocodeUnavailable(self._failure)
+            try:
+                year, url, points = await self._download()
+            except GeocodeUnavailable as exc:
+                self._failed_at, self._failure = time.time(), str(exc)
+                raise
             self.path.parent.mkdir(parents=True, exist_ok=True)
             tmp = self.path.with_suffix(".tmp")
             with open(tmp, "w", encoding="utf-8") as f:

@@ -240,6 +240,7 @@ def settings(tmp_path: Path, **over: Any) -> Settings:
         "llm_provider": "fake",
         "data_dir": str(tmp_path / "briefs"),
         "cards_dir": str(tmp_path / "cards"),
+        "scenarios_dir": str(tmp_path / "scenarios"),
         # Never serve a local web build from the test app.
         "web_dist": str(tmp_path / "no-dist"),
     }

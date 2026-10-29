@@ -1,5 +1,5 @@
 {
-  "_about": "Constants behind the what-if scenario's lines (services/api/app/scenario/model.py). Read after data/equivalences.json and merged with it by id. Each one names a page the verifier can fetch and quotes it verbatim; the scenario's numbers are the engine's arithmetic over these, and every line built on them is modelled, not measured. Where the value is not printed in the quote as is, the unit says how it follows from the quote (a product, a quotient or the low end of a stated range). A constant that could not be sourced to a fetchable page is left out, and the line that needs it is left out with it. Update value, as_of and quote together, from the page.",
+  "_about": "Constants behind the what-if scenario's lines (services/api/app/scenario/model.py). Read after data/equivalences.json and merged with it by id. Each one names a page the verifier can fetch and quotes it verbatim; `claim` restates only what the quote says, in a sentence the verifier checks against the page, so no derived figure is ever attributed to the page. The scenario's numbers are the engine's arithmetic over these, and every line built on them is modelled, not measured. Where the value is not printed in the quote as is, the unit says how it follows from the quote (a product, a quotient or the low end of a stated range), and that working sits in the line's basis. A constant that could not be sourced to a fetchable page is left out, and the line that needs it is left out with it (dc_tax_usd_per_mw_year is out for that reason). Update value, as_of, quote and claim together, from the page.",
   "constants": [
     {
       "id": "dc_load_factor",
@@ -9,6 +9,7 @@
       "source_title": "Grid Flexibility, Data centers and US grid load growth",
       "source_url": "https://gridflexibility.fyi/data-centers",
       "quote": "DC load factor 80% (Duke planning assumption; Dominion measured 82%, per Grid Strategies 2025).",
+      "claim": "Grid Flexibility lists a data-center load factor of 80% as Duke's planning assumption, with Dominion measuring 82%, per Grid Strategies 2025.",
       "checked": "2026-10-29"
     },
     {
@@ -19,6 +20,7 @@
       "source_title": "M247, How much water do data centers really use? What WUE tells us",
       "source_url": "https://www.m247global.com/blog/how-much-water-do-data-centers-really-use-what-wue-water-usage-efectiveness-tells-us-and-how-data-centers-compare-to-other-industries",
       "quote": "The industry-average WUE for evaporative systems has consistently been cited around 1.8–1.9 L/kWh",
+      "claim": "The industry-average water usage effectiveness (WUE) for evaporative systems has been cited at around 1.8 to 1.9 L/kWh.",
       "checked": "2026-10-29"
     },
     {
@@ -29,6 +31,7 @@
       "source_title": "Microsoft, Sustainable by design: next-generation datacenters consume zero water for cooling",
       "source_url": "https://www.microsoft.com/en-us/microsoft-cloud/blog/2024/12/09/sustainable-by-design-next-generation-datacenters-consume-zero-water-for-cooling/",
       "quote": "Beginning in August 2024, Microsoft launched a new datacenter design that optimizes AI workloads and consumes zero water for cooling.",
+      "claim": "Microsoft says that, beginning in August 2024, it launched a datacenter design that consumes zero water for cooling.",
       "checked": "2026-10-29"
     },
     {
@@ -39,6 +42,7 @@
       "source_title": "EPA WaterSense, How we use water",
       "source_url": "https://www.epa.gov/watersense/how-we-use-water",
       "quote": "The average American family uses more than 300 gallons of water per day at home.",
+      "claim": "EPA WaterSense says the average American family uses more than 300 gallons of water per day at home.",
       "checked": "2026-10-29"
     },
     {
@@ -49,6 +53,7 @@
       "source_title": "Passive Investments, What are data center land requirements?",
       "source_url": "https://passive.investments/data-center-land-requirements/",
       "quote": "Plan on roughly 0.5 to 1.5 acres per MW of IT load for a full campus, about 1 acre per MW as a working rule.",
+      "claim": "Passive Investments says to plan on roughly 0.5 to 1.5 acres per MW of IT load for a full campus, about 1 acre per MW as a working rule.",
       "checked": "2026-10-29"
     },
     {
@@ -59,6 +64,7 @@
       "source_title": "Electrical Contractor, How long does it take to power a data center?",
       "source_url": "https://www.ecmag.com/magazine/articles/article-detail/how-long-does-it-take-to-power-a-data-center",
       "quote": "Building the shell of a data center takes 18–24 months in most U.S. markets",
+      "claim": "Electrical Contractor says building the shell of a data center takes 18 to 24 months in most U.S. markets.",
       "checked": "2026-10-29"
     },
     {
@@ -69,6 +75,7 @@
       "source_title": "Electrical Contractor, How long does it take to power a data center?",
       "source_url": "https://www.ecmag.com/magazine/articles/article-detail/how-long-does-it-take-to-power-a-data-center",
       "quote": "Building the shell of a data center takes 18–24 months in most U.S. markets",
+      "claim": "Electrical Contractor says building the shell of a data center takes 18 to 24 months in most U.S. markets.",
       "checked": "2026-10-29"
     },
     {
@@ -79,16 +86,7 @@
       "source_title": "Governing, The reality of data center jobs",
       "source_url": "https://www.governing.com/workforce/the-reality-of-data-center-jobs",
       "quote": "typically 20 to 30 permanent staff per 100 megawatts",
-      "checked": "2026-10-29"
-    },
-    {
-      "id": "dc_tax_usd_per_mw_year",
-      "value": 44333,
-      "unit": "USD of county property tax per MW per year: $13.3 million ÷ 300 MW, for a 1.0% effective rate after a 50% exemption (an illustrative example, not a measured county figure)",
-      "as_of": "2026",
-      "source_title": "Abundance Institute, Which localities can capture the benefits of the data center infrastructure boom?",
-      "source_url": "https://abundance.institute/our-work/which-localities-can-capture-the-benefits-of-the-data-center-infrastructure-boom/",
-      "quote": "A 300-megawatt data center located in a county with a 1.0 percent effective property tax rate—similar to Reagan County, Texas—could generate roughly $13.3 million in annual county property tax revenue, even if the county granted a 50 percent property tax exemption.",
+      "claim": "Governing says colocation data centers typically have 20 to 30 permanent staff per 100 megawatts.",
       "checked": "2026-10-29"
     },
     {
@@ -99,6 +97,7 @@
       "source_title": "Power Engineering, PJM capacity auction hits price cap again as region falls short of reliability target",
       "source_url": "https://www.power-eng.com/business/pjm-capacity-auction-hits-price-cap-again-as-region-falls-short-of-reliability-target/",
       "quote": "The clearing price landed at the Federal Energy Regulatory Commission-approved cap of $333.44 per megawatt-day across the entire PJM footprint",
+      "claim": "PJM's capacity auction cleared at the FERC-approved cap of $333.44 per megawatt-day across the entire PJM footprint.",
       "checked": "2026-10-29"
     },
     {
@@ -109,6 +108,7 @@
       "source_title": "EIA, Electricity explained: use of electricity",
       "source_url": "https://www.eia.gov/energyexplained/electricity/use-of-electricity.php",
       "quote": "residential1.51 trillion kWh37.3%",
+      "claim": "EIA reports residential retail sales of 1.51 trillion kWh, 37.3% of the US total.",
       "checked": "2026-10-29"
     },
     {
@@ -119,6 +119,7 @@
       "source_title": "Maryland Office of People's Counsel, complaint to FERC on PJM transmission cost allocation",
       "source_url": "https://content.govdelivery.com/accounts/MDOPC/bulletins/415c9b6",
       "quote": "approximately $1.6 billion in added transmission costs to their electric bills over the next decade to support the energy demands of data centers, including: $823 million to residential customers",
+      "claim": "Maryland's Office of People's Counsel says data centers will add approximately $1.6 billion in transmission costs to electric bills over the next decade, including $823 million to residential customers.",
       "checked": "2026-10-29"
     }
   ]

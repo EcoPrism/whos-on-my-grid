@@ -84,7 +84,11 @@
                 "name": {"type": "string"},
                 "kind": {"type": "string"},
                 "customers": {"type": ["integer", "null"]},
-                "source": {"$ref": "brief.schema.json#/$defs/source"}
+                "source": {"$ref": "brief.schema.json#/$defs/source"},
+                "customers_source": {
+                  "description": "Where the customer count comes from: EIA-861 when its directory answered, else the territory page. Null when the count is unknown.",
+                  "anyOf": [{"$ref": "brief.schema.json#/$defs/source"}, {"type": "null"}]
+                }
               }
             },
             {"type": "null"}

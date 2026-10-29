@@ -2,8 +2,10 @@
 ground truth and the cited constants. The baseline is the engine's measured
 data, as in a brief; every strip line is `modelled`, shows its working, and
 cites the constants it rests on plus the ground source it leans on. Each
-constant also becomes one engine claim the verifier checks against its page,
-so the arithmetic is checkable without a model drafting anything."""
+constant also becomes one engine claim the verifier checks against its page:
+the claim restates only what the page's quote says, and the engine's working
+on top of it stays in the line's basis, so no derived figure is attributed to
+a page. The ZIP stays inside the scenario: the card names the county."""
 
 from typing import Any
 from urllib.parse import urlparse
@@ -11,6 +13,7 @@ from urllib.parse import urlparse
 from app.brief.assemble import ENGINE_CLAIM_FACILITIES, _engine_claim, _facility, _facility_claim
 from app.card.spec import fmt_range, scenario_disclosure_line
 from app.geocode import GeocodeResult
+from app.ground.prices import EIA861_PAGE, EIA861_TITLE
 from app.ground.census import Households
 from app.ground.facilities import haversine_km
 from app.ground.types import GroundTruth
@@ -62,10 +65,13 @@ def _line(
 
 
 def _constant_claim_text(c: Constant) -> str:
-    """Only what the cited page shows: the figure and its unit. The arithmetic
-    on top of it is the engine's and lives in the line's basis."""
-    when = f" ({c.as_of})" if c.as_of else ""
-    return f"{c.source_title} gives {model.fmt(c.value)} {c.unit}{when}."
+    """Only what the cited page shows, never the engine's value or unit: a
+    value can be derived (×365, ÷300 MW, a share of a total) and the page does
+    not print it. The curated `claim` restates the quote; without one, the
+    quote itself is the claim. The derivation lives in the line's basis."""
+    if c.claim:
+        return c.claim
+    return f'{c.source_title} states: "{c.quote.strip().rstrip(".")}".'
 
 
 def _f(r: model.Result) -> float:
@@ -146,6 +152,36 @@ def assemble_scenario(
                 now_iso,
             )
         )
+    # The customer count and the balancing authority come from EIA-861 when
+    # its directory answered (the utility price or a BA code shows it did);
+    # otherwise the count is HIFLD's CUSTOMERS field on the territory page.
+    eia_source: dict[str, Any] | None = None
+    if u is not None and (u.customers or u.ba_code) and (truth.utility_price or u.ba_code):
+        up = truth.utility_price
+        quote = f"Sales_Ult_Cust_{up.latest[0]}" if up else "Sales_Ult_Cust"
+        eia_source = {
+            "title": EIA861_TITLE,
+            "url": up.source_url if up else EIA861_PAGE,
+            "retrieved_at": now_iso,
+            "quote": quote,
+        }
+        facts = []
+        if u.customers:
+            facts.append(f"{u.customers:,} residential customers")
+        if u.ba_code:
+            facts.append(f"balancing authority {u.ba_code}")
+        claims.append(
+            _engine_claim(
+                SECTION,
+                f"EIA-861 reports {' and '.join(facts)} for {u.raw_name} in {geo.state}.",
+                eia_source["url"],
+                EIA861_TITLE,
+                quote,
+                0,
+                now_iso,
+            )
+        )
+    customers_source = eia_source or utility_source
     p = truth.best_price
     price: dict[str, Any] | None = None
     if p is not None:
@@ -164,6 +200,9 @@ def assemble_scenario(
     tariff_source = (
         {"title": t.title, "url": t.url, "retrieved_at": now_iso} if t is not None else None
     )
+    # No engine claim for the tariff page: tariffs.json holds no verbatim quote
+    # from it (several entries cite a commission's front page), and every
+    # scenario claim carries one. The brief checks the same summary.
     hh_source = (
         {
             "title": households.source_title,
@@ -174,7 +213,15 @@ def assemble_scenario(
         if households is not None
         else None
     )
-    place_words = f"ZIP {inputs.zip}"
+    place_words = f"ZIP {inputs.zip}"  # lines only; the card never carries the ZIP
+    # "Loudoun County, VA": the display without its "ZIP 20147" part.
+    county_words = (
+        ", ".join(b for b in geo.display.split(", ") if b and not b.startswith("ZIP "))
+        or "this ZIP"
+    )
+    # With no pin, the campus is at the ZIP centre and "within five miles" means
+    # of it; with a pin, say which point the ring is around.
+    ring = f" of the centre of {place_words}" if inputs.pin else ""
 
     # --- impact: the engine's arithmetic ---------------------------------------
     gwh = model.annual_gwh(mw, c)
@@ -242,17 +289,17 @@ def assemble_scenario(
         if share and _f(share) >= 1:
             text += f", more than all {u.customers:,} of {u.name}'s customers."
         else:
-            text += f", or {_f(share) * 100:.0f}% of {u.name}'s customers." if share else "."
-        ground = [utility_source] if share and utility_source else []
+            text += f", or {model.pct(_f(share))} of {u.name}'s customers." if share else "."
+        ground = [g for g in (utility_source, customers_source) if g] if share else []
         if households is not None:
             text += f" {place_words} has {households.count:,} households."
             ground.append(hh_source)
         if count is not None:
             text += (
                 f" {_count_words(count)} {'is' if count == 1 else 'are'} already listed "
-                "within five miles."
+                f"within five miles{ring}."
                 if count
-                else " No data center is listed within five miles today."
+                else f" No data center is listed within five miles{ring} today."
             )
             if engine:
                 ground.append(
@@ -276,9 +323,11 @@ def assemble_scenario(
         )
 
     if bill.kind == "shielded":
+        assert t is not None
         bill_text = (
-            f"Your bill: {t.name or 'a large-load tariff'} is in force for this utility, and its "
-            "stated purpose is to keep the cost of serving a campus like this off household bills."
+            f"Your bill: {t.name or 'a large-load tariff'} is in force for this utility for loads "
+            f"{t.floor_words}, and its stated purpose is to keep the cost of serving them off "
+            "household bills."
         )
     elif bill.range_usd_per_month:
         lo, hi = bill.range_usd_per_month
@@ -301,7 +350,7 @@ def assemble_scenario(
             use(bill),
             now_iso,
             [bill.basis.rstrip(".")],
-            [tariff_source] if tariff_source else [],
+            [g for g in (tariff_source, eia_source if bill.kind != "shielded" else None) if g],
         )
     )
 
@@ -330,7 +379,7 @@ def assemble_scenario(
         text += f", roughly {_f(fields):,.0f} football fields." if fields else "."
         if months:
             a, b = _pair(months)
-            text += f" Building it would take about {a:,.0f} to {b:,.0f} months."
+            text += f" Building the shell would take about {a:,.0f} to {b:,.0f} months."
         lines.append(
             _line(
                 text,
@@ -347,7 +396,8 @@ def assemble_scenario(
         f"Dropped at the pin, the campus would sit {miles:.1f} miles from the centre of "
         f"{place_words}."
         if inputs.pin
-        else f"Dropped at the centre of {place_words}, the campus would sit among its homes."
+        else f"With no pin set, the campus sits at the centre of {place_words}, "
+        f"{miles:.1f} miles from it."
     )
     lines.append(
         _line(
@@ -413,7 +463,10 @@ def assemble_scenario(
             + (f", {_f(fields):,.0f} football fields" if fields else "")
         )
     if count is not None:
-        card_lines.append(f"{_count_words(count)} already within 5 miles")
+        card_lines.append(
+            f"{_count_words(count)} already within 5 miles"
+            + (" of the ZIP centre" if inputs.pin else "")
+        )
     hosts: list[str] = []
     for cl in claims:
         h = urlparse(cl["source"]["url"]).netloc.lower().removeprefix("www.")
@@ -446,6 +499,7 @@ def assemble_scenario(
                 "kind": u.kind,
                 "customers": u.customers,
                 "source": utility_source,
+                "customers_source": customers_source if u.customers else None,
             }
             if u is not None
             else None,
@@ -464,7 +518,7 @@ def assemble_scenario(
         "interpretation": None,
         "claims": claims,
         "card": {
-            "title": f"Who's on my grid: what if {mw:,} MW came to {geo.display}",
+            "title": f"Who's on my grid: what if {mw:,} MW came to {county_words}",
             "lines": [line[:80] for line in card_lines[:CARD_LINES]],
             "footer": f"Sources: {', '.join(hosts[:4]) if hosts else 'none cited'}. "
             "Modelled by the engine from cited figures; no model wrote these numbers.",

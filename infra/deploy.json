@@ -8,5 +8,5 @@
   "verifyModel": "meta-models/muse-spark-open-1026",
   "quotaPerUserDay": 5,
   "quotaGlobalDay": 40,
-  "publicBaseUrl": ""
+  "publicBaseUrl": "https://whoisonmygrid.com"
 }

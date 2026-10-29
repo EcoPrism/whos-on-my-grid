@@ -77,8 +77,9 @@ class Settings(BaseSettings):
     # model call makes one, so they are ungated; the soft cap below is the belt.
     scenarios_dir: str = "data/scenarios"
     scenario_global_day: int = 2000
-    # Census ACS (households per ZCTA for the what-if). Optional: the API answers
-    # keyless at low volume.
+    # Census ACS (households per ZCTA for the what-if). Optional: api.census.gov needs
+    # a key, and without one (or when that call fails) app/ground/census.py reads the
+    # same table from data.census.gov's keyless table API.
     census_api_key: str = ""
     # Rendered share cards (app/card), one PNG per brief and engine. A cache: on Azure
     # it sits on the /mnt/grid share beside the briefs.

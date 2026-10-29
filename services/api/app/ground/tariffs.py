@@ -24,6 +24,23 @@ class TariffEntry:
     summary: str
     url: str
     title: str
+    min_mw: float | None = None  # the rule's size floor; None: no floor in the table
+    min_mw_inclusive: bool = True  # "100 MW and above" (True) or "above 25 MW" (False)
+
+    def covers(self, mw: float) -> bool:
+        """Whether a load of `mw` is above the rule's size floor."""
+        if self.min_mw is None:
+            return True
+        return mw >= self.min_mw if self.min_mw_inclusive else mw > self.min_mw
+
+    @property
+    def floor_words(self) -> str:
+        """The floor as the rule words it: "of 100 MW and more", "above 25 MW"."""
+        if self.min_mw is None:
+            return "it covers"
+        if self.min_mw_inclusive:
+            return f"of {self.min_mw:g} MW and more"
+        return f"above {self.min_mw:g} MW"
 
     @property
     def lead(self) -> str:

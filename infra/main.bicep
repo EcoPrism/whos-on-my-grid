@@ -256,6 +256,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
             { name: 'GRID_DATA_DIR', value: '/mnt/grid/briefs' }
             { name: 'GRID_GROUND_DIR', value: '/mnt/grid/ground' }
             { name: 'GRID_CARDS_DIR', value: '/mnt/grid/cards' }
+            { name: 'GRID_SCENARIOS_DIR', value: '/mnt/grid/scenarios' }
             // Fixed, never the request's Host: briefs and cached cards print it.
             { name: 'GRID_PUBLIC_BASE_URL', value: empty(publicBaseUrl) ? 'https://ca-grid.${env.properties.defaultDomain}' : publicBaseUrl }
             { name: 'GRID_CORS_ORIGINS', value: '' }

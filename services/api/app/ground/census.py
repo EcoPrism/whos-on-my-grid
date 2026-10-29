@@ -33,6 +33,7 @@ DATA_CENSUS_API_URL = "https://data.census.gov/api/access/data/table"
 ALL_ZCTAS = "010XX00US$8600000"
 ZCTA_PREFIX = "860Z200US"
 MAX_AGE_S = 30 * 86_400
+RETRY_AFTER_S = 900.0  # after a failed cold fetch, how long to answer None at once
 _ZIP5 = re.compile(r"^\d{5}$")
 
 
@@ -118,6 +119,7 @@ class AcsHouseholds:
         years: list[int] | None = None,
         timeout: float = 120.0,
         max_age_s: float = MAX_AGE_S,
+        retry_after_s: float = RETRY_AFTER_S,
     ) -> None:
         self.path = cache_dir / "acs" / "b11001_zcta.json"
         self.api_key = api_key
@@ -129,6 +131,10 @@ class AcsHouseholds:
         self._year: int | None = None
         self._counts: dict[str, int] | None = None
         self._loaded_at = 0.0
+        # When neither API answered and nothing is cached: skip refetching until
+        # the cool-down passes, so an outage does not hold every request.
+        self.retry_after_s = retry_after_s
+        self._failed_at = 0.0
 
     async def _get_json(self, url: str, params: dict[str, str]) -> Any:
         async with httpx.AsyncClient(
@@ -191,6 +197,8 @@ class AcsHouseholds:
             fresh = time.time() - self._loaded_at < self.max_age_s
             if self._counts is not None and self._year is not None and fresh:
                 return self._year, self._counts
+            if self._counts is None and time.time() - self._failed_at < self.retry_after_s:
+                return None
             cached = self._read_cache()
             if cached and time.time() - cached[2] < self.max_age_s:
                 self._year, self._counts, self._loaded_at = cached[0], cached[1], time.time()
@@ -212,6 +220,7 @@ class AcsHouseholds:
                 self._year, self._counts, self._loaded_at = cached[0], cached[1], time.time()
                 return self._year, self._counts
             log_event("ground_unavailable", provider="acs")
+            self._failed_at = time.time()
             return None
 
     async def for_zcta(self, zip5: str) -> Households | None:

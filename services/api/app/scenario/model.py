@@ -46,14 +46,22 @@ class BillOutcome:
 
 
 def fmt(v: float) -> str:
-    """A constant as the page would print it: 10,791 or 0.8 or 1.32."""
+    """A constant as the page would print it: 10,791 or 0.8 or 1.32 or 121,705.6.
+    Fixed point from 1 up, so a large value never prints as 1.217e+05."""
     if float(v).is_integer():
         return f"{int(v):,}"
-    return f"{v:,.4g}" if abs(v) >= 1 else f"{v:.3g}"
+    if abs(v) >= 1:
+        return f"{v:,.4f}".rstrip("0").rstrip(".")
+    return f"{v:.3g}"
 
 
-def _pct(v: float) -> str:
-    return f"{v * 100:.0f}%"
+def pct(v: float) -> str:
+    """A share as a percentage: whole points from 1%, one decimal below that,
+    and "under 0.1%" for a share too small to print, so nothing reads as 0%."""
+    p = v * 100
+    if 0 < p < 0.1:
+        return "under 0.1%"
+    return f"{p:.1f}%" if p < 1 else f"{p:.0f}%"
 
 
 def annual_gwh(mw: int, c: Constants) -> Result | None:
@@ -89,7 +97,7 @@ def share_of_utility_homes(homes: float, utility: Utility | None) -> Result | No
     share = homes / utility.customers
     return Result(
         round(share, 4),
-        f"{homes:,.0f} homes ÷ {utility.customers:,} {utility.name} customers = {_pct(share)}",
+        f"{homes:,.0f} homes ÷ {utility.customers:,} {utility.name} customers = {pct(share)}",
         (),
         0.4,
     )
@@ -156,19 +164,28 @@ def bill_outcome(
     tariff: TariffEntry | None, utility: Utility | None, mw: int, c: Constants
 ) -> BillOutcome:
     """Shielded when the tariff table says a rule in force keeps large-load costs
-    off households. Otherwise, only for a utility whose EIA-861 balancing
+    off households and the campus is above the rule's size floor. Otherwise, only for a utility whose EIA-861 balancing
     authority is PJM: PJM's capacity price for a campus this size, times the
     residential share at both ends of the cited range, spread over the
     utility's customers. The capacity price is PJM's alone, so anywhere else
     there is no range."""
-    lead = tariff.lead if tariff is not None else None
+    covered = tariff is not None and tariff.covers(mw)
+    lead = tariff.lead if tariff is not None and covered else None
+    # A rule with a size floor the campus is under does not apply to it.
+    below = (
+        f"{tariff.name or 'The large-load rule'} applies only to loads {tariff.floor_words}; "
+        f"a {mw:,} MW campus is below that. "
+        if tariff is not None and not covered
+        else ""
+    )
     if lead == "Yes, in part.":
         assert tariff is not None
         return BillOutcome(
             "shielded",
             None,
-            f"{tariff.name or 'A large-load tariff'} is in force for this utility; its stated "
-            "purpose is to keep the cost of serving large loads off other customers.",
+            f"{tariff.name or 'A large-load tariff'} is in force for this utility for loads "
+            f"{tariff.floor_words}; its stated purpose is to keep the cost of serving them off "
+            "other customers.",
             0.8,
         )
     kind: Literal["partial", "exposed"] = "partial" if lead == "Partly." else "exposed"
@@ -177,7 +194,7 @@ def bill_outcome(
     customers = utility.customers if utility is not None else None
     if not customers:
         return BillOutcome(
-            "unknown", None, "The utility's customer count is not known, so no range.", 0.2
+            "unknown", None, below + "The utility's customer count is not known, so no range.", 0.2
         )
     ba = utility.ba_code if utility is not None else None
     if ba != PJM:
@@ -185,13 +202,16 @@ def bill_outcome(
         return BillOutcome(
             "unknown",
             None,
-            f"The only capacity price the engine has is PJM's, and this utility {where}, "
+            below + f"The only capacity price the engine has is PJM's, and this utility {where}, "
             "so no range.",
             0.2,
         )
     if cost is None or lo is None or hi is None:
         return BillOutcome(
-            "unknown", None, "The capacity-price figures have no cited page yet, so no range.", 0.2
+            "unknown",
+            None,
+            below + "The capacity-price figures have no cited page yet, so no range.",
+            0.2,
         )
 
     def monthly(alloc: float) -> float:
@@ -201,15 +221,16 @@ def bill_outcome(
     why = (
         "No large-load tariff for this utility is in the engine's table. "
         if tariff is None
-        else f"{tariff.name or 'The large-load rule'} ({tariff.status.replace('_', ' ')}) "
+        else below
+        or f"{tariff.name or 'The large-load rule'} ({tariff.status.replace('_', ' ')}) "
         "does not say it keeps these costs off households. "
     )
     return BillOutcome(
         kind,
         (a, b),
         why + f"{mw:,} MW × ${fmt(cost.value)} PJM capacity price per MW-year × "
-        f"{_pct(lo.value)} to "
-        f"{_pct(hi.value)} residential share ÷ {customers:,} customers ÷ 12 months "
+        f"{pct(lo.value)} to "
+        f"{pct(hi.value)} residential share ÷ {customers:,} customers ÷ 12 months "
         f"= ${a:,.2f} to ${b:,.2f} a month",
         0.3,
         (cost, lo, hi),
@@ -249,7 +270,12 @@ def construction_months(c: Constants) -> Result | None:
     if lo is None or hi is None:
         return None
     a, b = sorted((lo.value, hi.value))
-    return Result((a, b), f"{fmt(a)} to {fmt(b)} months from permit to power", (lo, hi), 0.3)
+    return Result(
+        (a, b),
+        f"{fmt(a)} to {fmt(b)} months to build the shell; connecting power can take longer",
+        (lo, hi),
+        0.3,
+    )
 
 
 def noise_at(distance_km: float, where: str = "your house") -> Result:

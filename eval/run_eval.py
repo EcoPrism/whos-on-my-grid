@@ -454,12 +454,12 @@ def score_scenario(row: dict[str, Any], result: dict[str, Any]) -> dict[str, Any
     found = f"{n} facilities, {util}, tariff {tariff}" + (f", {hh:,} households" if hh else "")
     dims["baseline"] = {"pass": ok, "note": "; ".join(notes) or found}
 
-    # bill: the kind, and a range only when exposed
+    # bill: the kind, and a range only when partial or exposed
     bill = s["impact"]["bill"]
     notes = []
     if bill["kind"] not in exp["bill"]:
         notes.append(f"bill {bill['kind']}, expected one of {exp['bill']}")
-    if (bill.get("range_usd_per_month") is not None) != (bill["kind"] == "exposed"):
+    if (bill.get("range_usd_per_month") is not None) != (bill["kind"] in ("partial", "exposed")):
         notes.append(f"range {bill.get('range_usd_per_month')} with kind {bill['kind']}")
     rng = bill.get("range_usd_per_month")
     dims["bill"] = {"pass": not notes, "note": "; ".join(notes) or bill["kind"] + (f" ${rng[0]:.2f}..${rng[1]:.2f}/mo" if rng else "")}

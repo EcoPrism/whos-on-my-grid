@@ -30,6 +30,7 @@ class Constant:
     source_url: str
     quote: str
     checked: str | None = None  # YYYY-MM-DD the quote was last read on the page
+    claim: str = ""  # one sentence restating only what the quote says; "" when not curated
 
     def source(self, now_iso: str) -> dict[str, Any]:
         """The schema's `source` def. retrieved_at is when the quote was last
@@ -64,6 +65,7 @@ def _row(raw: Any) -> Constant | None:
         source_url=str(raw["source_url"]),
         quote=str(raw["quote"]),
         checked=str(raw["checked"]) if raw.get("checked") else None,
+        claim=str(raw.get("claim") or ""),
     )
 
 

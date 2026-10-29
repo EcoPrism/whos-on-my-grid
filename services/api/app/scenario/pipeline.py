@@ -5,6 +5,7 @@ sign-in. The optional interpretation paragraph is a later step behind the gate.
 
 A ZIP is treated like an address: it is never logged; the scenario id is."""
 
+import asyncio
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -77,6 +78,7 @@ class ScenarioService:
         self.verify_provider = verify_provider
         self.constants = constants
         self.inflight = Inflight()
+        self._background: set[asyncio.Task] = set()
 
     async def resolve(self, inputs: ScenarioInputs) -> ResolvedScenario:
         """The centroid and the id; no ground data yet. Raises ZipNotFound."""
@@ -97,8 +99,18 @@ class ScenarioService:
         return await self.inflight.run(resolved.scenario_id, lambda: self._compute(resolved))
 
     async def _households(self, zip5: str) -> Households | None:
+        """Optional, so bounded: a cold ACS download that outlasts the ground
+        timeout keeps running for later requests, and this one goes without."""
+        task = asyncio.ensure_future(self.households.for_zcta(zip5))
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
         try:
-            return await self.households.for_zcta(zip5)
+            return await asyncio.wait_for(
+                asyncio.shield(task), timeout=self.settings.ground_timeout_seconds
+            )
+        except TimeoutError:
+            log_event("ground_failed", provider="acs", reason="timeout")
+            return None
         except Exception as exc:  # noqa: BLE001 - a data provider, never fatal
             log_event("ground_failed", provider="acs", reason=str(exc)[:160])
             return None
