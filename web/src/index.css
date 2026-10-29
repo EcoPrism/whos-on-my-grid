@@ -57,8 +57,11 @@ body {
   background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--paper-deep) 6px 8px);
 }
 
-a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
-a:hover { text-decoration-color: var(--ink); }
+/* In @layer base so utilities such as no-underline win over it. */
+@layer base {
+  a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+  a:hover { text-decoration-color: var(--ink); }
+}
 :focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
 
 .leaflet-container { font-family: var(--font); background: var(--paper-deep); }

@@ -16,7 +16,7 @@ export default function Shell() {
     <>
       <Outlet />
       <footer className="mt-24 border-t-4 border-[var(--signal)] bg-[var(--ink)] text-[var(--paper)]">
-        <div className="mx-auto grid max-w-6xl gap-x-12 gap-y-10 px-4 py-12 md:grid-cols-[1.1fr_1.3fr_auto]">
+        <div className="mx-auto grid max-w-5xl gap-x-12 gap-y-10 px-4 py-12 md:grid-cols-[1.1fr_1.3fr_auto]">
           <div>
             <a href="https://www.ecoprism.com" rel="noopener" className="inline-flex items-center gap-3 no-underline">
               <span className="inline-flex h-10 items-center bg-[var(--paper)] px-3">
