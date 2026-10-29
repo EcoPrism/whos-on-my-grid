@@ -1,0 +1,25 @@
+{
+  "_about": "Constants behind the home page's 'in house terms' lines (services/api/app/pulse.py). Each one names the page it comes from and quotes that page verbatim; the sentences on the page are the engine's arithmetic over these. Update value, as_of and quote together, from the page.",
+  "constants": [
+    {
+      "id": "us_home_kwh_per_year",
+      "value": 10791,
+      "unit": "kWh per residential customer per year",
+      "as_of": "2022",
+      "source_title": "EIA, How much electricity does an American home use?",
+      "source_url": "https://www.eia.gov/tools/faqs/faq.php?id=97&t=3",
+      "quote": "In 2022, the average annual amount of electricity sold to (purchased by) a U.S. residential electric-utility customer was 10,791 kilowatthours (kWh), an average of about 899 kWh per month.",
+      "checked": "2026-10-28"
+    },
+    {
+      "id": "football_field_sq_ft",
+      "value": 57600,
+      "unit": "square feet, 360 ft by 160 ft including the end zones",
+      "as_of": "2026",
+      "source_title": "Wikipedia, American football field",
+      "source_url": "https://en.wikipedia.org/wiki/American_football_field",
+      "quote": "The entire field is a rectangle 360 feet (110 m) long by 160 feet (49 m) wide, covering a total of 1.32 acres.",
+      "checked": "2026-10-28"
+    }
+  ]
+}
