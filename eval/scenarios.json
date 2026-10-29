@@ -1,0 +1,83 @@
+{
+  "_about": "What-if test set, prepared 2026-10-29 by running ScenarioService.compute against the real ground layer (ZCTA gazetteer centroid, PeeringDB and OpenStreetMap facilities, HIFLD and EIA-861 utility, data/tariffs.json). Each row is one hypothetical campus at the ZIP's centroid. `expect` is the oracle in ranges, widened around what the 2026-10-29 run found (noted in `observed`) so that facility databases drifting by a few rows do not fail a row. The scorer also checks the rules every scenario must keep: the disclosure, every line modelled, every claim quoted, at most 7 lines, and a bill range only when the bill is exposed.",
+  "_fields": {
+    "facilities": "[lo, hi] for baseline.facility_count, the data centers already listed within five miles of the centroid; hi null = no ceiling",
+    "utility": "regex the baseline utility's name must match",
+    "tariff": "allowed values of baseline.tariff.large_load_tariff; null in the list means no entry in the tariff table",
+    "bill": "allowed impact.bill.kind values",
+    "households": "true when the ACS household count must be present",
+    "lines_require": "line topics that must be present"
+  },
+  "scenarios": [
+    {
+      "id": "ashburn",
+      "inputs": {"zip": "20147", "mw": 100, "cooling": "evaporative"},
+      "tests": "densest ring in the country; PJM utility with a large-load tariff in force",
+      "observed": "60 facilities; Dominion Energy Virginia, 2,662,831 customers; GS-5 in force; shielded; 25,178 households",
+      "expect": {
+        "facilities": [30, null],
+        "utility": "Dominion",
+        "tariff": ["in_force"],
+        "bill": ["shielded"],
+        "households": true,
+        "lines_require": ["grid", "bill", "water", "land", "noise"]
+      }
+    },
+    {
+      "id": "new_albany",
+      "inputs": {"zip": "43054", "mw": 300, "cooling": "evaporative"},
+      "tests": "fast-growing hyperscale cluster; AEP Ohio's data-center tariff",
+      "observed": "13 facilities; AEP Ohio, 810,877 customers; data-center tariff in force; shielded; 10,918 households",
+      "expect": {
+        "facilities": [6, 30],
+        "utility": "AEP|Ohio Power",
+        "tariff": ["in_force"],
+        "bill": ["shielded"],
+        "households": true,
+        "lines_require": ["grid", "bill", "water", "land", "noise"]
+      }
+    },
+    {
+      "id": "tucson",
+      "inputs": {"zip": "85711", "mw": 1000, "cooling": "closed_loop"},
+      "tests": "water-scarce place, closed loop; non-PJM utility with no tariff entry, so the bill is unknown rather than a borrowed range",
+      "observed": "1 facility; Tucson Electric Power, 416,268 customers; no tariff entry; unknown; 18,507 households",
+      "expect": {
+        "facilities": [0, 5],
+        "utility": "Tucson Electric Power|TEP",
+        "tariff": [null, "none_found", "proposed", "unknown"],
+        "bill": ["unknown"],
+        "households": true,
+        "lines_require": ["grid", "bill", "land", "noise"]
+      }
+    },
+    {
+      "id": "council_bluffs",
+      "inputs": {"zip": "51501", "mw": 300, "cooling": "evaporative"},
+      "tests": "MISO utility: the PJM capacity price must not be applied",
+      "observed": "7 facilities; MidAmerican Energy, 639,558 customers; no tariff entry; unknown; 14,271 households",
+      "expect": {
+        "facilities": [3, 15],
+        "utility": "MidAmerican",
+        "tariff": [null, "none_found", "proposed", "unknown"],
+        "bill": ["unknown"],
+        "households": true,
+        "lines_require": ["grid", "bill", "water", "land", "noise"]
+      }
+    },
+    {
+      "id": "bellevue_ne",
+      "inputs": {"zip": "68005", "mw": 50, "cooling": "evaporative"},
+      "tests": "public power district (SPP), small campus",
+      "observed": "3 facilities; Omaha Public Power District (OPPD), 390,321 customers; no tariff entry; unknown; 8,965 households",
+      "expect": {
+        "facilities": [1, 8],
+        "utility": "Omaha Public Power|OPPD",
+        "tariff": [null, "none_found", "proposed", "unknown"],
+        "bill": ["unknown"],
+        "households": true,
+        "lines_require": ["grid", "bill", "water", "land", "noise"]
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from app.brief.draft import DraftResult, SectionFailure
 from app.geocode import GeocodeResult
 from app.ground.types import GroundTruth
+from app.scenario.model import noise_at
 from app.schema import SECTION_IDS
 
 Drafts = dict[str, DraftResult | SectionFailure]
@@ -191,29 +192,16 @@ def noise_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
             "sources": [],
         }
     miles = nearest.distance_km * KM_TO_MI
+    heard = noise_at(nearest.distance_km)
     text = (
         f"The nearest data-center building, {nearest.name}, is {miles:.1f} miles from your house."
+        f" {heard.basis}"
     )
-    if miles < 0.5:
-        text += (
-            " At that distance cooling fans and backup-generator tests can be heard outdoors, "
-            "especially at night. No sound measurement is public."
-        )
-        confidence = 0.4
-    elif miles < 1.5:
-        text += (
-            " At that distance its equipment is unlikely to carry over ordinary neighborhood "
-            "sound. No sound measurement is public."
-        )
-        confidence = 0.4
-    else:
-        text += " That is too far for its equipment to be heard from your house."
-        confidence = 0.5
     return {
         "text": text,
         "topic": "noise",
         "status": "modelled",
-        "confidence": confidence,
+        "confidence": heard.confidence,
         "sources": [
             {
                 "title": nearest.source_title,
@@ -267,6 +255,29 @@ def land_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
     }
 
 
+def disclosure_line(
+    brief_id: str,
+    generated_at: str,
+    public_base_url: str = "",
+    *,
+    verified: bool = True,
+    grounded: bool = True,
+) -> str:
+    """What made the brief, in words that survive a screenshot: the footer band
+    of the share card, in the DOM and in the PNG alike. Worded like the card's
+    footer: a brief made without the verifier or without ground truth claims
+    neither. The card renders it anew from the id, the date and the base, so a
+    stored line with no host never reaches the pixels."""
+    base = public_base_url.rstrip("/")
+    drafted = (
+        "Facts measured from public data; sentences drafted by Muse Spark"
+        if grounded
+        else "Sentences drafted by Muse Spark without ground-truth data"
+    )
+    checked = "checked by Muse Spark Open" if verified else "not yet checked"
+    return f"AI-assisted brief. {drafted} and {checked}. {base}/b/{brief_id} · {generated_at[:10]}"
+
+
 def derive_card(
     card_lines: list[str],
     geo: GeocodeResult,
@@ -274,6 +285,9 @@ def derive_card(
     *,
     verified: bool = True,
     grounded: bool = False,
+    brief_id: str = "",
+    generated_at: str = "",
+    public_base_url: str = "",
 ) -> dict[str, Any]:
     parts = [p.strip() for p in geo.display.split(",")]
     city = parts[-2] if len(parts) >= 2 else parts[0]
@@ -296,6 +310,9 @@ def derive_card(
         "title": f"Who's on my grid: {city}, {geo.state}",
         "lines": lines,
         "footer": f"Sources: {sources}. {drafted}, {checked}.{tail}",
+        "disclosure": disclosure_line(
+            brief_id, generated_at, public_base_url, verified=verified, grounded=grounded
+        ),
     }
 
 

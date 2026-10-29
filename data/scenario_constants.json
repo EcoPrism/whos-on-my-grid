@@ -1,0 +1,125 @@
+{
+  "_about": "Constants behind the what-if scenario's lines (services/api/app/scenario/model.py). Read after data/equivalences.json and merged with it by id. Each one names a page the verifier can fetch and quotes it verbatim; the scenario's numbers are the engine's arithmetic over these, and every line built on them is modelled, not measured. Where the value is not printed in the quote as is, the unit says how it follows from the quote (a product, a quotient or the low end of a stated range). A constant that could not be sourced to a fetchable page is left out, and the line that needs it is left out with it. Update value, as_of and quote together, from the page.",
+  "constants": [
+    {
+      "id": "dc_load_factor",
+      "value": 0.8,
+      "unit": "fraction: average draw over a year as a share of the campus's rated MW (the 80% planning load factor the page states)",
+      "as_of": "2025",
+      "source_title": "Grid Flexibility, Data centers and US grid load growth",
+      "source_url": "https://gridflexibility.fyi/data-centers",
+      "quote": "DC load factor 80% (Duke planning assumption; Dominion measured 82%, per Grid Strategies 2025).",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "water_evaporative_l_per_kwh",
+      "value": 1.8,
+      "unit": "litres of water per kWh of IT energy (WUE), low end of the 1.8 to 1.9 the page cites for evaporative systems",
+      "as_of": "2026",
+      "source_title": "M247, How much water do data centers really use? What WUE tells us",
+      "source_url": "https://www.m247global.com/blog/how-much-water-do-data-centers-really-use-what-wue-water-usage-efectiveness-tells-us-and-how-data-centers-compare-to-other-industries",
+      "quote": "The industry-average WUE for evaporative systems has consistently been cited around 1.8–1.9 L/kWh",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "water_closed_loop_l_per_kwh",
+      "value": 0,
+      "unit": "litres of water evaporated for cooling per kWh in a closed-loop, chip-level design (water for restrooms and kitchens not counted)",
+      "as_of": "2024",
+      "source_title": "Microsoft, Sustainable by design: next-generation datacenters consume zero water for cooling",
+      "source_url": "https://www.microsoft.com/en-us/microsoft-cloud/blog/2024/12/09/sustainable-by-design-next-generation-datacenters-consume-zero-water-for-cooling/",
+      "quote": "Beginning in August 2024, Microsoft launched a new datacenter design that optimizes AI workloads and consumes zero water for cooling.",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "us_home_water_gal_per_day",
+      "value": 300,
+      "unit": "gallons per household per day at home (the page says more than 300)",
+      "as_of": "2026",
+      "source_title": "EPA WaterSense, How we use water",
+      "source_url": "https://www.epa.gov/watersense/how-we-use-water",
+      "quote": "The average American family uses more than 300 gallons of water per day at home.",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "dc_acres_per_mw",
+      "value": 1,
+      "unit": "acres of campus per MW of IT load (the page's working rule; its range is 0.5 to 1.5)",
+      "as_of": "2026",
+      "source_title": "Passive Investments, What are data center land requirements?",
+      "source_url": "https://passive.investments/data-center-land-requirements/",
+      "quote": "Plan on roughly 0.5 to 1.5 acres per MW of IT load for a full campus, about 1 acre per MW as a working rule.",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "dc_construction_months_lo",
+      "value": 18,
+      "unit": "months to build the shell, low end of the page's range (power hookup can take longer)",
+      "as_of": "2026",
+      "source_title": "Electrical Contractor, How long does it take to power a data center?",
+      "source_url": "https://www.ecmag.com/magazine/articles/article-detail/how-long-does-it-take-to-power-a-data-center",
+      "quote": "Building the shell of a data center takes 18–24 months in most U.S. markets",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "dc_construction_months_hi",
+      "value": 24,
+      "unit": "months to build the shell, high end of the page's range (power hookup can take longer)",
+      "as_of": "2026",
+      "source_title": "Electrical Contractor, How long does it take to power a data center?",
+      "source_url": "https://www.ecmag.com/magazine/articles/article-detail/how-long-does-it-take-to-power-a-data-center",
+      "quote": "Building the shell of a data center takes 18–24 months in most U.S. markets",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "dc_permanent_jobs_per_100mw",
+      "value": 20,
+      "unit": "permanent staff per 100 MW, low end of the 20 to 30 the page gives for colocation centers; the page warns promised job counts often fall short",
+      "as_of": "2026",
+      "source_title": "Governing, The reality of data center jobs",
+      "source_url": "https://www.governing.com/workforce/the-reality-of-data-center-jobs",
+      "quote": "typically 20 to 30 permanent staff per 100 megawatts",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "dc_tax_usd_per_mw_year",
+      "value": 44333,
+      "unit": "USD of county property tax per MW per year: $13.3 million ÷ 300 MW, for a 1.0% effective rate after a 50% exemption (an illustrative example, not a measured county figure)",
+      "as_of": "2026",
+      "source_title": "Abundance Institute, Which localities can capture the benefits of the data center infrastructure boom?",
+      "source_url": "https://abundance.institute/our-work/which-localities-can-capture-the-benefits-of-the-data-center-infrastructure-boom/",
+      "quote": "A 300-megawatt data center located in a county with a 1.0 percent effective property tax rate—similar to Reagan County, Texas—could generate roughly $13.3 million in annual county property tax revenue, even if the county granted a 50 percent property tax exemption.",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "pjm_capacity_usd_per_mw_year",
+      "value": 121706,
+      "unit": "USD per MW-year: PJM's 2027/2028 capacity clearing price ($333.44/MW-day × 365), the price PJM loads pay for capacity; not a transmission cost. Used only for a utility whose EIA-861 balancing authority is PJM",
+      "as_of": "2027/2028 delivery year",
+      "source_title": "Power Engineering, PJM capacity auction hits price cap again as region falls short of reliability target",
+      "source_url": "https://www.power-eng.com/business/pjm-capacity-auction-hits-price-cap-again-as-region-falls-short-of-reliability-target/",
+      "quote": "The clearing price landed at the Federal Energy Regulatory Commission-approved cap of $333.44 per megawatt-day across the entire PJM footprint",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "residential_allocation_lo",
+      "value": 0.373,
+      "unit": "fraction of a cost borne by residential customers when it is spread by energy sold: the residential share of US retail electricity sales in 2025",
+      "as_of": "2025",
+      "source_title": "EIA, Electricity explained: use of electricity",
+      "source_url": "https://www.eia.gov/energyexplained/electricity/use-of-electricity.php",
+      "quote": "residential1.51 trillion kWh37.3%",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "residential_allocation_hi",
+      "value": 0.51,
+      "unit": "fraction of data-center-driven transmission cost assigned to residential customers in Maryland: $823 million ÷ about $1.6 billion, per the state's ratepayer advocate",
+      "as_of": "2026",
+      "source_title": "Maryland Office of People's Counsel, complaint to FERC on PJM transmission cost allocation",
+      "source_url": "https://content.govdelivery.com/accounts/MDOPC/bulletins/415c9b6",
+      "quote": "approximately $1.6 billion in added transmission costs to their electric bills over the next decade to support the energy demands of data centers, including: $823 million to residential customers",
+      "checked": "2026-10-29"
+    }
+  ]
+}

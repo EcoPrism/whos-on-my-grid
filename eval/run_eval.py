@@ -3,6 +3,7 @@
     python eval/run_eval.py --api http://localhost:8010 --out eval/runs/baseline
     python eval/run_eval.py --out eval/runs/baseline --score-only
     python eval/run_eval.py --api ... --out ... --only bellevue,quincy
+    python eval/run_eval.py --api ... --out eval/runs/whatif --scenarios
 
 Resolution: the test set gives street-level pins without house numbers, which the
 Census geocoder rejects. Each pin is reverse-geocoded once (Nominatim, 1 req/s) to
@@ -14,6 +15,12 @@ Scoring is per dimension (grid, bill, protection, strip, signatures, hearing) fr
 is indexed (step 4), informational elsewhere. A row passes when every
 other dimension passes. The report is written to <out>/report.md and
 <out>/summary.json; raw briefs to <out>/briefs/<id>.json.
+
+--scenarios runs the what-if set in eval/scenarios.json instead: one POST /api/scenario
+per row (no sign-in, no model tokens), scored on the baseline (facility count, utility,
+tariff, bill kind, households) and on the rules every scenario keeps (disclosure, every
+line modelled, every claim quoted). Written to <out>/scenarios.md and
+<out>/scenarios_summary.json; raw scenarios to <out>/scenarios/<id>.json.
 """
 
 from __future__ import annotations
@@ -31,6 +38,8 @@ import httpx
 
 HERE = Path(__file__).resolve().parent
 ADDRESSES = HERE / "addresses.json"
+SCENARIOS = HERE / "scenarios.json"
+DISCLOSURE = "Hypothetical. Modelled, not measured."
 RESOLVED = HERE / "resolved.json"
 CENSUS = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
 NOMINATIM = "https://nominatim.openstreetmap.org/reverse"
@@ -387,6 +396,161 @@ def render(summary: dict[str, Any], rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# --- scenarios ---------------------------------------------------------------
+
+
+async def run_scenarios(api: str, rows: list[dict[str, Any]], out: Path, concurrency: int) -> None:
+    (out / "scenarios").mkdir(parents=True, exist_ok=True)
+    sem = asyncio.Semaphore(concurrency)
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=30)) as client:
+
+        async def one(row: dict[str, Any]) -> None:
+            rid = row["id"]
+            async with sem:
+                started = time.monotonic()
+                try:
+                    r = await client.post(f"{api}/api/scenario", json=row["inputs"])
+                    ms = int((time.monotonic() - started) * 1000)
+                    body: Any = r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text
+                    result = {"status": r.status_code, "ms": ms, "scenario": body}
+                    print(f"  {rid}: HTTP {r.status_code} in {ms / 1000:.1f}s")
+                except Exception as exc:  # noqa: BLE001
+                    ms = int((time.monotonic() - started) * 1000)
+                    result = {"status": 0, "ms": ms, "error": repr(exc)}
+                    print(f"  {rid}: ERROR {exc!r}")
+                (out / "scenarios" / f"{rid}.json").write_text(json.dumps(result, indent=1), "utf-8")
+
+        await asyncio.gather(*(one(r) for r in rows))
+
+
+def score_scenario(row: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+    exp = row["expect"]
+    dims: dict[str, dict[str, Any]] = {}
+    if result.get("status") != 200 or not isinstance(result.get("scenario"), dict):
+        why = result.get("error") or f"HTTP {result.get('status')}: {str(result.get('scenario'))[:120]}"
+        return {"id": row["id"], "pass": False, "dims": {"request": {"pass": False, "note": why}}}
+    s = result["scenario"]
+    base = s["baseline"]
+
+    # baseline: facilities in the ring, serving utility, tariff, households
+    notes, ok = [], True
+    n = base.get("facility_count")
+    lo, hi = exp["facilities"]
+    if n is None or n < lo or (hi is not None and n > hi):
+        ok = False
+        notes.append(f"{n} facilities, expected {lo}..{hi if hi is not None else '∞'}")
+    util = (base.get("utility") or {}).get("name") or ""
+    if not rx(exp["utility"], util):
+        ok = False
+        notes.append(f"utility {util or 'none'}; expected /{exp['utility']}/")
+    tariff = (base.get("tariff") or {}).get("large_load_tariff")
+    if tariff not in exp["tariff"]:
+        ok = False
+        notes.append(f"tariff {tariff}, expected one of {exp['tariff']}")
+    hh = (s["place"].get("households") or {}).get("count")
+    if exp.get("households") and not hh:
+        ok = False
+        notes.append("no household count")
+    found = f"{n} facilities, {util}, tariff {tariff}" + (f", {hh:,} households" if hh else "")
+    dims["baseline"] = {"pass": ok, "note": "; ".join(notes) or found}
+
+    # bill: the kind, and a range only when exposed
+    bill = s["impact"]["bill"]
+    notes = []
+    if bill["kind"] not in exp["bill"]:
+        notes.append(f"bill {bill['kind']}, expected one of {exp['bill']}")
+    if (bill.get("range_usd_per_month") is not None) != (bill["kind"] == "exposed"):
+        notes.append(f"range {bill.get('range_usd_per_month')} with kind {bill['kind']}")
+    rng = bill.get("range_usd_per_month")
+    dims["bill"] = {"pass": not notes, "note": "; ".join(notes) or bill["kind"] + (f" ${rng[0]:.2f}..${rng[1]:.2f}/mo" if rng else "")}
+
+    # rules: disclosure, lines modelled and present, claims quoted
+    notes = []
+    if s.get("disclosure") != DISCLOSURE:
+        notes.append("disclosure changed")
+    lines = s.get("lines") or []
+    if len(lines) > 7:
+        notes.append(f"{len(lines)} lines")
+    bad = [ln["topic"] for ln in lines if ln["status"] != "modelled"]
+    if bad:
+        notes.append(f"not modelled: {bad}")
+    topics = [ln["topic"] for ln in lines]
+    missing = [t for t in exp.get("lines_require", []) if t not in topics]
+    if missing:
+        notes.append(f"no {missing} line")
+    unquoted = [c["id"] for c in s.get("claims", []) if not (c.get("source") or {}).get("quote")]
+    if unquoted:
+        notes.append(f"claims without a quote: {unquoted}")
+    dims["rules"] = {"pass": not notes, "note": "; ".join(notes) or f"topics {topics}"}
+
+    p = s["impact"].get("power") or {}
+    w = s["impact"].get("water") or {}
+    dims["impact"] = {
+        "pass": True,
+        "informational": True,
+        "note": f"{p.get('homes_equivalent', '—'):,} homes, {w.get('gal_per_day', '—'):,} gal/day"
+        if p and w
+        else f"power {bool(p)}, water {bool(w)}",
+    }
+    verdicts: dict[str, int] = {}
+    for c in s.get("claims", []):
+        verdicts[c["verdict"]] = verdicts.get(c["verdict"], 0) + 1
+    dims["claims"] = {"pass": True, "note": ", ".join(f"{k} {v}" for k, v in sorted(verdicts.items())) or "none", "informational": True}
+
+    overall = all(d["pass"] for d in dims.values() if not d.get("informational"))
+    return {"id": row["id"], "pass": overall, "dims": dims, "ms": result.get("ms"), "scenario_id": s.get("scenario_id")}
+
+
+def score_scenarios(rows: list[dict[str, Any]], out: Path) -> dict[str, Any]:
+    scored = []
+    for row in rows:
+        p = out / "scenarios" / f"{row['id']}.json"
+        if not p.exists():
+            scored.append({"id": row["id"], "pass": False, "dims": {"request": {"pass": False, "note": "not run"}}})
+            continue
+        scored.append(score_scenario(row, json.loads(p.read_text("utf-8"))))
+    passed = sum(1 for s in scored if s["pass"])
+    dim_names = ["baseline", "bill", "rules"]
+    per_dim = {d: sum(1 for s in scored if s["dims"].get(d, {}).get("pass")) for d in dim_names}
+    summary = {"run": out.name, "scenarios": len(scored), "passed": passed, "per_dimension": per_dim, "rows": scored}
+    (out / "scenarios_summary.json").write_text(json.dumps(summary, indent=1, ensure_ascii=False), "utf-8")
+    (out / "scenarios.md").write_text(render_scenarios(summary, rows), "utf-8")
+    return summary
+
+
+def render_scenarios(summary: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    by_id = {r["id"]: r for r in rows}
+    lines = [
+        f"# What-if eval run `{summary['run']}`",
+        "",
+        f"**{summary['passed']} / {summary['scenarios']} scenarios pass.** "
+        + ", ".join(f"{k} {v}/{summary['scenarios']}" for k, v in summary["per_dimension"].items()),
+        "",
+        "| # | Inputs | Result | Baseline | Bill | Rules | Impact | Claims |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+
+    def cell(d: dict[str, Any] | None) -> str:
+        if d is None:
+            return "—"
+        mark = "✅" if d["pass"] else "❌"
+        return f"{mark} {d['note']}".replace("|", "/")
+
+    for i, s in enumerate(summary["rows"], 1):
+        inp = by_id[s["id"]]["inputs"]
+        label = f"{s['id']}: {inp['zip']}, {inp['mw']} MW, {inp['cooling']}"
+        dims = s["dims"]
+        if "request" in dims:
+            lines.append(f"| {i} | {label} | ❌ | {cell(dims['request'])} | | | | |")
+            continue
+        lines.append(
+            f"| {i} | {label} | {'PASS' if s['pass'] else 'FAIL'} | {cell(dims.get('baseline'))} | "
+            f"{cell(dims.get('bill'))} | {cell(dims.get('rules'))} | {dims['impact']['note']} | "
+            f"{dims.get('claims', {}).get('note', '')} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 # --- main ------------------------------------------------------------------
 
 
@@ -398,7 +562,22 @@ async def main() -> int:
     ap.add_argument("--concurrency", type=int, default=3)
     ap.add_argument("--score-only", action="store_true")
     ap.add_argument("--resolve-only", action="store_true")
+    ap.add_argument("--scenarios", action="store_true", help="run the what-if set instead")
     args = ap.parse_args()
+
+    if args.scenarios:
+        srows = json.loads(SCENARIOS.read_text("utf-8"))["scenarios"]
+        if args.only:
+            keep = set(args.only.split(","))
+            srows = [r for r in srows if r["id"] in keep]
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        if not args.score_only:
+            print(f"Running {len(srows)} scenarios against {args.api}…")
+            await run_scenarios(args.api, srows, out, args.concurrency)
+        summary = score_scenarios(srows, out)
+        print(f"\n{summary['passed']} / {summary['scenarios']} pass. Report: {out / 'scenarios.md'}")
+        return 0
 
     data = json.loads(ADDRESSES.read_text("utf-8"))
     rows = data["addresses"]

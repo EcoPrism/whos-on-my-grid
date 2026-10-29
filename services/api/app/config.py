@@ -73,6 +73,25 @@ class Settings(BaseSettings):
     transcribe_model: str = "muse-voice-transcribe-1.0"
 
     data_dir: str = "data/briefs"
+    # What-if scenarios (app/scenario): one JSON per scenario id, like the briefs. No
+    # model call makes one, so they are ungated; the soft cap below is the belt.
+    scenarios_dir: str = "data/scenarios"
+    scenario_global_day: int = 2000
+    # Census ACS (households per ZCTA for the what-if). Optional: the API answers
+    # keyless at low volume.
+    census_api_key: str = ""
+    # Rendered share cards (app/card), one PNG per brief and engine. A cache: on Azure
+    # it sits on the /mnt/grid share beside the briefs.
+    cards_dir: str = "data/cards"
+    # Where the site is served, for absolute links in Open Graph tags, the share text
+    # and the card's disclosure line. Empty = the request's own origin (local runs).
+    public_base_url: str = ""
+    # C2PA content credentials on the card: a PEM certificate chain on disk and its
+    # private key (PEM, from Key Vault via the user-run secrets phase). Both empty = off;
+    # the card still carries XMP and the disclosure band.
+    c2pa_cert_path: str = ""
+    c2pa_private_key: str = ""
+    c2pa_timestamp_url: str = "http://timestamp.digicert.com"
     cors_origins: str = "http://localhost:5173,http://localhost:5180"
     # Country gate for brief routes. Empty = off. Only meaningful behind an edge that
     # sets the header from the client IP (Cloudflare: cf-ipcountry, Front Door: x-azure-
@@ -102,6 +121,16 @@ class Settings(BaseSettings):
     @property
     def data_path(self) -> Path:
         p = Path(self.data_dir)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def scenarios_path(self) -> Path:
+        p = Path(self.scenarios_dir)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def cards_path(self) -> Path:
+        p = Path(self.cards_dir)
         return p if p.is_absolute() else REPO_ROOT / p
 
     @property

@@ -8,6 +8,7 @@ export const SECTION_TITLES: Record<ClaimSection, string> = {
   protection: 'Protection',
   hearing: 'Hearing',
   at_your_house: 'At your house',
+  scenario: 'What-if',
 }
 
 const STATUS_WORD: Record<Status, string> = {

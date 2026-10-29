@@ -5,6 +5,7 @@ import HouseStrip from '../components/HouseStrip'
 import MapView from '../components/MapView'
 import { SECTION_TITLES, SectionBlock, type Readiness } from '../components/Sections'
 import ShareCard from '../components/ShareCard'
+import ShareMenu from '../components/ShareMenu'
 import { ApiError, getBrief } from '../lib/api'
 import { useLive } from '../lib/live'
 import type { Brief, Section, SectionId, Status } from '../types'
@@ -196,23 +197,25 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
         </details>
 
         {/* The card leaves this page, so it waits for the check: nothing unverified gets shared. */}
-        {inProgress ? (
-          <p className="mt-3 border-t border-[var(--line)] pt-3 text-lg font-bold text-[var(--ink-soft)]">
-            Share it <span className="text-sm font-normal">· available once every claim is checked</span>
-          </p>
-        ) : (
-        <details className="mt-3 border-t border-[var(--line)] pt-3">
-          <summary className="cursor-pointer text-lg font-bold">
-            Share it <span className="text-sm font-normal text-[var(--ink-soft)]">· the card carries the sources line</span>
-          </summary>
-          {h.percentile !== null && h.ai_rent_usd_per_month !== null && (
-            <p className="mt-3 max-w-[64ch] text-[15px] text-[var(--ink-soft)]">
-              About {fmtMoney(h.ai_rent_usd_per_month)} a month puts this address above {h.percentile}% of US households, weighted by state population. Modeled from the state's average price and a typical home's usage.
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className={`text-lg font-bold ${inProgress ? 'text-[var(--ink-soft)]' : ''}`}>
+              Share it <span className="text-sm font-normal text-[var(--ink-soft)]">· {inProgress ? 'available once every claim is checked' : 'the card carries the sources line and says it is AI-assisted'}</span>
             </p>
+            <ShareMenu kind="brief" id={brief.brief_id} disabled={inProgress} />
+          </div>
+          {!inProgress && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm text-[var(--ink-soft)]">Preview the card</summary>
+            {h.percentile !== null && h.ai_rent_usd_per_month !== null && (
+              <p className="mt-3 max-w-[64ch] text-[15px] text-[var(--ink-soft)]">
+                About {fmtMoney(h.ai_rent_usd_per_month)} a month puts this address above {h.percentile}% of US households, weighted by state population. Modeled from the state's average price and a typical home's usage.
+              </p>
+            )}
+            <div className="mt-4 max-w-3xl"><ShareCard brief={brief} /></div>
+          </details>
           )}
-          <div className="mt-4 max-w-3xl"><ShareCard brief={brief} /></div>
-        </details>
-        )}
+        </div>
 
         <p className="mt-6 text-xs text-[var(--ink-soft)]">
           Brief {brief.brief_id}, generated {new Date(brief.generated_at).toLocaleString('en-US')}, mode {brief.source_mode}. The address is not stored; the id is a hash of it.

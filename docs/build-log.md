@@ -163,3 +163,20 @@ from anything pre-existing.
   year; a football field's 57,600 sq ft), a footer with the EcoPrism wordmark (placeholder SVG at
   `web/public/ecoprism.svg`) and an About page that says what is stored. The cache's temp file
   name is now unique per write.
+- 2026-10-29, share images and Open Graph (`docs/design-next.md` A). A brief now has a
+  1200x630 share card drawn in-process with Pillow (`app/card/render.py`, the Archivo variable
+  font, no browser in the image) from a `CardSpec` (`app/card/spec.py`) that reads the same fields
+  `ShareCard.tsx` reads, so the DOM preview, the PNG and the share text agree. The card says it is
+  AI-assisted three ways, because platforms strip metadata: a disclosure band in the pixels, an XMP
+  packet with the IPTC "composite with trained algorithmic media" source type, and a signed C2PA
+  manifest only when a cert is configured and the optional `provenance` group is installed.
+  The disclosure is worded like the footer, so a brief made without the verifier or without
+  ground truth does not claim either, and it is rebuilt at render time from the id, the date and
+  the base, so a brief stored without `GRID_PUBLIC_BASE_URL` still prints a link with a host.
+  `GET /api/card/{id}.png` (cached on disk per id, brief version, engine and base, so one Host
+  never fixes the link for everyone) and `GET /api/card/{id}.json` (the share menu's CardInfo).
+  `app/static.py` writes Open Graph and Twitter tags into `index.html` for `/b/{id}`, since
+  crawlers run no JavaScript. The page's Share menu opens each platform's own compose intent with
+  text that says the brief is AI-assisted; nothing is posted for the user. The spec's scenario
+  half (hypothetical band, `spec_from_scenario`) is in; its routes wait for the scenario engine.
+  Infra sets `GRID_PUBLIC_BASE_URL` (the app FQDN until a domain is bound) and `GRID_CARDS_DIR`.

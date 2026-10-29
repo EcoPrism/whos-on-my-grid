@@ -1,16 +1,36 @@
 import type { Brief } from '../types'
 import { fmtMoney, fmtRange } from '../lib/format'
 
-// 1200x630, the X/OG card size, scaled to fit. Rendered in the DOM for now;
-// an image endpoint will rasterise the same markup later.
-export default function ShareCard({ brief }: { brief: Brief }) {
+// The line app/brief/headline.py::disclosure_line makes, which the PNG prints
+// (app/card/spec.py builds it anew from the id, the date and the base). Used
+// when the stored line has no host (no public_base_url when the brief was
+// made) or predates the field. What was checked is read from the footer, as
+// the API reads it; the base is this page's origin, as the API's fallback is.
+function disclosure(brief: Brief): string {
+  const stored = brief.card.disclosure
+  if (stored?.includes('://')) return stored
+  const footer = brief.card.footer ?? ''
+  const drafted = footer.includes('Not verified against ground-truth data')
+    ? 'Sentences drafted by Muse Spark without ground-truth data'
+    : 'Facts measured from public data; sentences drafted by Muse Spark'
+  const checked = footer.includes('claims not yet checked') ? 'not yet checked' : 'checked by Muse Spark Open'
+  return `AI-assisted brief. ${drafted} and ${checked}. ${window.location.origin}/b/${brief.brief_id} · ${brief.generated_at.slice(0, 10)}`
+}
+
+// 1200x630, the X/OG card size, scaled to fit. The API rasterises the same
+// layout (app/card/render.py); keep the two in step. The disclosure band sits
+// in the pixels because platforms strip metadata; a scenario card adds the
+// hypothetical band on top.
+export default function ShareCard({ brief, hypothetical = false }: { brief: Brief; hypothetical?: boolean }) {
   const h = brief.headline
   return (
-    <div className="w-full overflow-hidden" style={{ aspectRatio: '1200 / 630' }}>
-      <div
-        className="relative flex h-full w-full flex-col justify-between bg-[var(--ink)] p-[4.5%] text-[var(--paper)]"
-        style={{ containerType: 'inline-size' }}
-      >
+    <div className="flex w-full flex-col overflow-hidden" style={{ aspectRatio: '1200 / 630', containerType: 'inline-size' }}>
+      {hypothetical && (
+        <p className="wide shrink-0 bg-[var(--signal)] px-[4.5%] py-[0.6cqw] text-[1.8cqw] font-bold tracking-wide text-[var(--ink)]">
+          HYPOTHETICAL · modelled, not measured
+        </p>
+      )}
+      <div className="relative flex min-h-0 w-full flex-1 flex-col justify-between bg-[var(--ink)] p-[4.5%] text-[var(--paper)]">
         <div className="flex items-start justify-between gap-6">
           <p className="sign text-[9cqw] text-[var(--paper)]">{brief.card.title.replace('Who\'s on my grid: ', '')}</p>
           <p className="wide shrink-0 text-[2.6cqw] font-semibold">Who's on my grid</p>
@@ -34,6 +54,9 @@ export default function ShareCard({ brief }: { brief: Brief }) {
           <p className="absolute bottom-[2%] left-[4.5%] text-[1.8cqw] opacity-60">{brief.card.footer}</p>
         )}
       </div>
+      <p className="shrink-0 bg-[var(--paper)] px-[4.5%] py-[0.6cqw] text-[1.8cqw] leading-tight text-[var(--ink)]">
+        {disclosure(brief)}
+      </p>
     </div>
   )
 }

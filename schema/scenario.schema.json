@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EcoPrism/whos-on-my-grid/schema/scenario.schema.json",
+  "title": "Scenario",
+  "description": "A what-if: one hypothetical data-center campus added to a ZIP's ground truth. Nothing is measured except the baseline; every strip line is the engine's arithmetic over cited constants and says so. Reuses the brief's $defs.",
+  "type": "object",
+  "required": [
+    "scenario_id",
+    "generated_at",
+    "engine",
+    "kind",
+    "disclosure",
+    "inputs",
+    "place",
+    "baseline",
+    "impact",
+    "lines",
+    "claims",
+    "card"
+  ],
+  "properties": {
+    "scenario_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "engine": {"type": "string", "description": "Engine fingerprint, written by the cache."},
+    "kind": {"const": "scenario"},
+    "disclosure": {"const": "Hypothetical. Modelled, not measured."},
+    "inputs": {
+      "type": "object",
+      "required": ["zip", "mw", "cooling", "pin"],
+      "properties": {
+        "zip": {"type": "string", "pattern": "^\\d{5}$"},
+        "mw": {"type": "integer", "minimum": 10, "maximum": 2000},
+        "cooling": {"enum": ["evaporative", "closed_loop"]},
+        "pin": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["lat", "lon"],
+              "properties": {"lat": {"type": "number"}, "lon": {"type": "number"}}
+            },
+            {"type": "null"}
+          ],
+          "description": "Where the campus is dropped, rounded to 3 decimals (about 100 m). Null: the ZIP centroid."
+        }
+      }
+    },
+    "place": {
+      "type": "object",
+      "required": ["display", "state", "zip", "lat", "lon", "households"],
+      "properties": {
+        "display": {"type": "string"},
+        "state": {"type": "string"},
+        "county": {"type": ["string", "null"]},
+        "zip": {"type": "string"},
+        "lat": {"type": "number"},
+        "lon": {"type": "number"},
+        "households": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["count", "source"],
+              "properties": {
+                "count": {"type": "integer", "minimum": 0},
+                "source": {"$ref": "brief.schema.json#/$defs/source"}
+              }
+            },
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "required": ["facilities", "facility_count", "utility", "price", "tariff"],
+      "properties": {
+        "facilities": {"type": "array", "items": {"$ref": "brief.schema.json#/$defs/facility"}},
+        "facility_count": {"type": ["integer", "null"], "description": "Null: no facility database answered."},
+        "utility": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["name", "kind", "customers", "source"],
+              "properties": {
+                "name": {"type": "string"},
+                "kind": {"type": "string"},
+                "customers": {"type": ["integer", "null"]},
+                "source": {"$ref": "brief.schema.json#/$defs/source"}
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "price": {"anyOf": [{"$ref": "brief.schema.json#/$defs/price"}, {"type": "null"}]},
+        "tariff": {"anyOf": [{"$ref": "brief.schema.json#/$defs/tariff"}, {"type": "null"}]}
+      }
+    },
+    "impact": {
+      "type": "object",
+      "description": "The engine's arithmetic. A block is null when a constant it needs has no cited page. Each block also carries `basis`, the working, for the page's tap-to-see popover.",
+      "required": ["power", "water", "land", "bill", "taxes", "jobs", "noise", "timeline"],
+      "properties": {
+        "power": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["gwh_per_year", "homes_equivalent", "share_of_utility_homes"],
+              "properties": {
+                "gwh_per_year": {"type": "number"},
+                "homes_equivalent": {"type": ["number", "null"]},
+                "share_of_utility_homes": {"type": ["number", "null"]}
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "water": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["gal_per_day", "homes_equivalent"],
+              "properties": {
+                "gal_per_day": {"type": "number"},
+                "homes_equivalent": {"type": ["number", "null"]}
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "land": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["acres", "football_fields"],
+              "properties": {
+                "acres": {"type": "number"},
+                "football_fields": {"type": ["number", "null"]}
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "bill": {
+          "type": "object",
+          "required": ["kind", "range_usd_per_month"],
+          "properties": {
+            "kind": {"enum": ["shielded", "partial", "exposed", "unknown"]},
+            "range_usd_per_month": {
+              "anyOf": [
+                {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+                {"type": "null"}
+              ]
+            }
+          }
+        },
+        "taxes": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["range_usd_per_year"],
+              "properties": {
+                "range_usd_per_year": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}
+              }
+            },
+            {"type": "null"}
+          ]
+        },
+        "jobs": {
+          "anyOf": [
+            {"type": "object", "required": ["permanent"], "properties": {"permanent": {"type": "number"}}},
+            {"type": "null"}
+          ]
+        },
+        "noise": {
+          "type": "object",
+          "required": ["distance_km", "db_at_pin"],
+          "properties": {
+            "distance_km": {"type": "number", "description": "From the campus to the ZIP centroid."},
+            "db_at_pin": {"type": ["number", "null"]}
+          }
+        },
+        "timeline": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["construction_months"],
+              "properties": {
+                "construction_months": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}
+              }
+            },
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "maxItems": 7,
+      "items": {
+        "allOf": [
+          {"$ref": "brief.schema.json#/$defs/house_line"},
+          {
+            "required": ["basis"],
+            "properties": {
+              "status": {"const": "modelled"},
+              "basis": {"type": "string", "description": "The working: each step of the arithmetic and the figures it uses."}
+            }
+          }
+        ]
+      }
+    },
+    "interpretation": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["status", "text", "model", "confidence", "draft"],
+          "properties": {
+            "status": {"const": "reported"},
+            "text": {"type": "string"},
+            "model": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "draft": {"type": "boolean"}
+          }
+        },
+        {"type": "null"}
+      ]
+    },
+    "claims": {"type": "array", "items": {"$ref": "brief.schema.json#/$defs/claim"}},
+    "card": {
+      "type": "object",
+      "required": ["title", "lines", "footer", "disclosure"],
+      "properties": {
+        "title": {"type": "string"},
+        "lines": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+        "footer": {"type": "string"},
+        "disclosure": {"type": "string"}
+      }
+    }
+  }
+}

@@ -23,10 +23,13 @@ _ID = re.compile(r"^[0-9a-f]{16}$")
 _ENGINE_GLOBS = (
     "services/api/app/**/*.py",
     "schema/brief.schema.json",
+    "schema/scenario.schema.json",
     "data/tariffs.json",
     "data/facilities.json",
     "data/hearings/**/*.json",
     "data/perception/*.json",
+    "data/equivalences.json",
+    "data/scenario_constants.json",
 )
 
 
@@ -45,6 +48,10 @@ def engine_fingerprint() -> str:
 
 
 class BriefCache:
+    # The field that names the file; ScenarioCache uses "scenario_id".
+    id_field = "brief_id"
+    kind = "brief"
+
     def __init__(self, directory: Path) -> None:
         self.dir = directory
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -64,12 +71,14 @@ class BriefCache:
         with open(p, encoding="utf-8") as f:
             brief = json.load(f)
         if current_only and brief.get("engine") != engine_fingerprint():
-            log_event("brief_cache_stale", brief_id=brief_id, engine=brief.get("engine"))
+            log_event(
+                f"{self.kind}_cache_stale", **{self.id_field: brief_id}, engine=brief.get("engine")
+            )
             return None
         return brief
 
     def put(self, brief: dict[str, Any]) -> None:
-        p = self.path(brief["brief_id"])
+        p = self.path(brief[self.id_field])
         if p is None:
             raise ValueError("bad brief id")
         brief["engine"] = engine_fingerprint()

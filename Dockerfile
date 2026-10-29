@@ -27,7 +27,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # The repo subset the API reads, at the same relative paths as in the repo.
 COPY services/api/app ./app
 COPY schema /app/schema
-COPY data/tariffs.json data/facilities.json data/equivalences.json /app/data/
+COPY data/tariffs.json data/facilities.json data/equivalences.json data/scenario_constants.json /app/data/
 COPY data/hearings /app/data/hearings
 COPY data/perception /app/data/perception
 COPY fixtures /app/fixtures

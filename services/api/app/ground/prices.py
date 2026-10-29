@@ -244,6 +244,25 @@ def parse_customers_workbook(path: Path) -> dict[Key, int]:
     return {k: v for k, v in out.items() if v > 0}
 
 
+def parse_ba_workbook(path: Path) -> dict[Key, str]:
+    """(utility number, state) -> the balancing authority code the utility
+    reports (column "BA Code"), from Sales_Ult_Cust or Delivery_Companies."""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        ws = wb["States"] if "States" in wb.sheetnames else wb[wb.sheetnames[0]]
+        out: dict[Key, str] = {}
+        for r in ws.iter_rows(min_row=4, values_only=True):
+            if len(r) < 9 or not isinstance(r[1], int | float) or not r[8]:
+                continue
+            key = (str(int(r[1])), str(r[6] or "").strip().upper())
+            out.setdefault(key, str(r[8]).strip().upper())
+    finally:
+        wb.close()
+    return out
+
+
 def parse_territory_workbook(path: Path) -> tuple[dict[Key, set[str]], dict[Key, str]]:
     """(utility number, state) -> counties the utility reports serving, and the
     utility's name as the form spells it."""
@@ -316,6 +335,7 @@ class Eia861UtilityPrices:
         self._customers: dict[Key, int] | None = None
         self._territory: dict[Key, set[str]] | None = None
         self._names: dict[Key, str] = {}
+        self._ba: dict[Key, str] = {}
 
     async def _workbook(self, year: int, member: str = "Sales_Ult_Cust") -> Path | None:
         path = self.cache_dir / f"eia861_{member.lower()}_{year}.xlsx"
@@ -364,10 +384,14 @@ class Eia861UtilityPrices:
             if sales is None or territory is None:
                 raise RuntimeError("EIA-861: directory sheets missing")
             customers = await asyncio.to_thread(parse_customers_workbook, sales)
+            ba = await asyncio.to_thread(parse_ba_workbook, sales)
             delivery = await self._workbook(years[0], "Delivery_Companies")
             if delivery is not None:
                 for key, n in (await asyncio.to_thread(parse_customers_workbook, delivery)).items():
                     customers[key] = max(customers.get(key, 0), n)
+                for key, code in (await asyncio.to_thread(parse_ba_workbook, delivery)).items():
+                    ba.setdefault(key, code)
+            self._ba = ba
             self._customers = customers
             self._territory, self._names = await asyncio.to_thread(
                 parse_territory_workbook, territory
@@ -378,6 +402,11 @@ class Eia861UtilityPrices:
         async with self._lock:
             customers, _ = await self._directory()
         return customers.get((eia_id, state.upper()))
+
+    async def ba_code(self, eia_id: str, state: str) -> str | None:
+        async with self._lock:
+            await self._directory()
+        return self._ba.get((eia_id, state.upper()))
 
     async def in_county(self, state: str, county: str) -> list[dict[str, object]]:
         """Utilities that report serving this county, as HIFLD-shaped records,
@@ -466,8 +495,10 @@ class FakeUtilityPrices:
         customers: dict[str, int] | None = None,
         counties: dict[str, set[str]] | None = None,
         names: dict[str, str] | None = None,
+        ba_codes: dict[str, str] | None = None,
     ) -> None:
         self._series = series
+        self._ba = ba_codes or {}
         self.fail = fail
         self.calls: list[tuple[str, str]] = []
         self._customers = customers or {}
@@ -476,6 +507,9 @@ class FakeUtilityPrices:
 
     async def customers(self, eia_id: str, state: str) -> int | None:
         return self._customers.get(eia_id)
+
+    async def ba_code(self, eia_id: str, state: str) -> str | None:
+        return self._ba.get(eia_id)
 
     async def serves(self, eia_id: str, state: str, county: str) -> bool | None:
         if self._counties is None or eia_id not in self._counties:

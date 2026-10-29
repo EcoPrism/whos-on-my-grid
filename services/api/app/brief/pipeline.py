@@ -131,6 +131,7 @@ class BriefService:
                 now_iso=now_iso,
                 verified=verified,
                 truth=truth,
+                public_base_url=self.settings.public_base_url,
             )
             brief["partial"] = {
                 "stage": stage,
@@ -179,6 +180,7 @@ class BriefService:
             now_iso=now_iso,
             verified=verified,
             truth=truth,
+            public_base_url=self.settings.public_base_url,
         )
         total = len(brief["claims"])
         done = 0

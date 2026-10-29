@@ -34,6 +34,12 @@ param quotaPerUserDay int = 5
 @description('New briefs per UTC day for everyone together: the gateway budget belt.')
 param quotaGlobalDay int = 40
 
+@description('Scheme and host the share links and cards print, no trailing slash. Empty = the app\'s own FQDN; set it to the custom domain once one is bound.')
+param publicBaseUrl string = ''
+
+@description('Custom domains already on the app (name, bindingType, certificateId). ARM replaces the whole ingress block, so the deploy script passes the current list and a redeploy keeps the domains and their certificates.')
+param customDomains array = []
+
 @description('Fully qualified image. Used only when deployApi is true.')
 param containerImage string = ''
 
@@ -226,6 +232,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
         targetPort: 8000
         transport: 'auto'
         allowInsecure: false
+        customDomains: customDomains
       }
       registries: [{ server: acr.properties.loginServer, identity: appIdentity.id }]
       secrets: [for name in secretNames: {
@@ -248,6 +255,9 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
             { name: 'GRID_VERIFY_MODEL', value: verifyModel }
             { name: 'GRID_DATA_DIR', value: '/mnt/grid/briefs' }
             { name: 'GRID_GROUND_DIR', value: '/mnt/grid/ground' }
+            { name: 'GRID_CARDS_DIR', value: '/mnt/grid/cards' }
+            // Fixed, never the request's Host: briefs and cached cards print it.
+            { name: 'GRID_PUBLIC_BASE_URL', value: empty(publicBaseUrl) ? 'https://ca-grid.${env.properties.defaultDomain}' : publicBaseUrl }
             { name: 'GRID_CORS_ORIGINS', value: '' }
             { name: 'GRID_ALLOWED_COUNTRIES', value: allowedCountries }
             { name: 'GRID_AUTH_PROVIDER', value: empty(googleClientId) ? 'off' : 'google' }

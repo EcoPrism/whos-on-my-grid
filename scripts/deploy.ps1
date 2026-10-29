@@ -91,6 +91,19 @@ function Set-VaultSecret([string] $Vault, [string] $Name, [string] $Value) {
 function Invoke-Deploy([bool] $DeployApi, [string] $Image) {
   $me = Invoke-Az @('ad', 'signed-in-user', 'show', '--query', 'id', '-o', 'tsv')
   if (-not $me) { throw 'Not signed in: run az login' }
+  # A redeploy would drop the custom domains and their certificates (ARM replaces the ingress
+  # block), so carry the ones that are bound today.
+  $domains = @()
+  if ($DeployApi) {
+    $raw = Invoke-Az @('containerapp', 'hostname', 'list', '-n', 'ca-grid', '-g', $rg, '-o', 'json')
+    if ($LASTEXITCODE -eq 0 -and $raw) {
+      foreach ($d in ($raw | Out-String | ConvertFrom-Json)) {
+        $entry = @{ name = $d.name; bindingType = $d.bindingType }
+        if ($d.certificateId) { $entry.certificateId = $d.certificateId }
+        $domains += $entry
+      }
+    }
+  }
   $params = @{
     '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
     contentVersion = '1.0.0.0'
@@ -101,6 +114,8 @@ function Invoke-Deploy([bool] $DeployApi, [string] $Image) {
       verifyModel      = @{ value = [string]$cfg.verifyModel }
       quotaPerUserDay  = @{ value = [int]$cfg.quotaPerUserDay }
       quotaGlobalDay   = @{ value = [int]$cfg.quotaGlobalDay }
+      publicBaseUrl    = @{ value = [string]$cfg.publicBaseUrl }
+      customDomains    = @{ value = @($domains) }
       containerImage   = @{ value = $Image }
       deployApi        = @{ value = $DeployApi }
     }

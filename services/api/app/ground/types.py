@@ -50,6 +50,7 @@ class Utility:
     candidates: int = 1  # polygons that contained the point; >1 means overlap
     eia_id: str | None = None  # EIA utility number, the join key to EIA-861
     website: str | None = None
+    ba_code: str | None = None  # EIA-861 balancing authority (PJM, MISO, TVA, ...)
 
 
 @dataclass(frozen=True)

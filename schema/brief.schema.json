@@ -188,6 +188,10 @@
         "footer": {
           "type": "string",
           "description": "Sources line, always present on the shared image."
+        },
+        "disclosure": {
+          "type": "string",
+          "description": "What made the brief and its link, in words: the footer band of the share card, in the page and in the PNG. Optional so briefs cached before it stay valid."
         }
       }
     }
@@ -251,7 +255,8 @@
             "your_bill",
             "protection",
             "hearing",
-            "at_your_house"
+            "at_your_house",
+            "scenario"
           ]
         },
         "text": {

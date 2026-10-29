@@ -3,7 +3,7 @@ before any model writes a word. Gathered in parallel; a provider that fails
 leaves its field None and a sentence in `notes` for the gap text."""
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -165,6 +165,16 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                     "The service-territory map could not be reached; the serving utility is "
                     "not known."
                 )
+        directory = ground.utility_prices
+        u = truth.utility
+        if u is not None and u.eia_id and u.ba_code is None and hasattr(directory, "ba_code"):
+            try:
+                code = await directory.ba_code(u.eia_id, geo.state)  # type: ignore[union-attr]
+            except Exception as exc:  # noqa: BLE001 - optional, used by the what-if bill line
+                log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
+            else:
+                if code:
+                    truth.utility = replace(u, ba_code=code)
         if ground.tariffs is not None:
             truth.tariff = ground.tariffs.match(
                 geo.state, truth.utility.raw_name if truth.utility else None

@@ -12,11 +12,15 @@ from app.auth.gate import Gate
 from app.brief.cache import BriefCache
 from app.brief.fetch import Fetcher, HttpFetcher, TranscriptFetcher
 from app.brief.pipeline import BriefService
+from app.card import CardCache
 from app.config import Settings, get_settings
-from app.geocode import CensusGeocoder
+from app.geocode import CensusGeocoder, ZctaCentroids
 from app.ground import get_ground
+from app.ground.census import AcsHouseholds
 from app.llm import get_draft_provider, get_verify_provider
-from app.routers import auth, brief
+from app.routers import auth, brief, card, scenario
+from app.scenario.cache import ScenarioCache
+from app.scenario.pipeline import ScenarioService
 from app.static import mount_web
 from app.telemetry import log_event, uptime_ms
 
@@ -38,7 +42,26 @@ def default_service(settings: Settings) -> BriefService:
     )
 
 
-def create_app(service: BriefService | None = None) -> FastAPI:
+def default_scenarios(settings: Settings, brief_service: BriefService) -> ScenarioService:
+    """Beside the brief service and sharing its ground, fetcher and models. In
+    fixtures mode nothing is verified: the page checks would be live fetches."""
+    return ScenarioService(
+        settings=settings,
+        zips=ZctaCentroids(settings.ground_path),
+        ground=brief_service.ground,
+        households=AcsHouseholds(settings.ground_path, api_key=settings.census_api_key),
+        cache=ScenarioCache(settings.scenarios_path),
+        fetcher=brief_service.fetcher,
+        draft_provider=brief_service.draft_provider,
+        verify_provider=None
+        if settings.brief_source == "fixtures"
+        else brief_service.verify_provider,
+    )
+
+
+def create_app(
+    service: BriefService | None = None, scenarios: ScenarioService | None = None
+) -> FastAPI:
     settings = service.settings if service else get_settings()
     if settings.brief_source not in ("fixtures", "agent", "full"):
         raise RuntimeError(
@@ -66,6 +89,10 @@ def create_app(service: BriefService | None = None) -> FastAPI:
     usage = get_usage_store(settings)
 
     logging.basicConfig(level=logging.INFO)
+    # httpx logs every request URL at INFO, and those URLs carry the geocoder's
+    # address and the point being looked up (an address's or a ZIP's centroid).
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -84,9 +111,11 @@ def create_app(service: BriefService | None = None) -> FastAPI:
     app = FastAPI(title="Who's On My Grid API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.service = service or default_service(settings)
+    app.state.scenarios = scenarios or default_scenarios(settings, app.state.service)
     app.state.verifier = verifier
     app.state.sessions = sessions
     app.state.gate = Gate(settings, sessions, usage)
+    app.state.cards = CardCache(settings.cards_path)
 
     origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     if origins:
@@ -130,6 +159,8 @@ def create_app(service: BriefService | None = None) -> FastAPI:
 
     app.include_router(brief.router)
     app.include_router(auth.router)
+    app.include_router(card.router)
+    app.include_router(scenario.router)
     # Last: the SPA catch-all must sit behind every /api route.
     web_mounted = mount_web(app, settings.web_dist_path)
     return app

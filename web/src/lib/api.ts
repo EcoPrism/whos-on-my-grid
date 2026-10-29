@@ -1,4 +1,4 @@
-import type { Brief } from '../types'
+import type { Brief, CardInfo } from '../types'
 
 // The UI is a client of the brief service. In dev, Vite proxies /api to it.
 
@@ -157,4 +157,10 @@ export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => 
 
 export function getBrief(id: string): Promise<Brief> {
   return request<Brief>(`/api/brief/${encodeURIComponent(id)}`)
+}
+
+// The share card's text and absolute URLs, for a brief or a what-if scenario.
+export function getCard(kind: CardInfo['kind'], id: string): Promise<CardInfo> {
+  const base = kind === 'brief' ? '/api/card' : '/api/scenario-card'
+  return request<CardInfo>(`${base}/${encodeURIComponent(id)}.json`)
 }

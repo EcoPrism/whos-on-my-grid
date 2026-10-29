@@ -16,6 +16,8 @@ dependencies = [
     "pyjwt[crypto]>=2.9",
     "azure-data-tables>=12.6",
     "azure-identity>=1.19",
+    # The share card (app/card): 1200x630 PNG rendered in-process, no browser.
+    "pillow>=10.0",
 ]
 
 [dependency-groups]
@@ -24,10 +26,16 @@ dependencies = [
 index = [
     "meta-sam-parser>=0.1.0",
     "numpy>=2.0",
-    "pillow>=10.0",
     "shapely>=2.0",
     "rasterio>=1.4",
     "imageio-ffmpeg>=0.5",
+]
+# C2PA content credentials on the share card (app/card/provenance.py::with_c2pa). Optional:
+# without it, or without a signing cert, the card carries XMP only. The image installs it
+# with `uv sync --group provenance` once a cert exists. The cap: 0.38.1 and later dropped
+# the Windows wheels, and a universal lock must resolve on every platform.
+provenance = [
+    "c2pa-python>=0.37,<0.38.1",
 ]
 dev = [
     "ruff>=0.8",

@@ -11,6 +11,7 @@ from functools import lru_cache
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from referencing import Registry, Resource
 
 from app.config import REPO_ROOT
 
@@ -99,8 +100,39 @@ def load_brief_schema() -> dict[str, Any]:
 
 
 @lru_cache
+def load_scenario_schema() -> dict[str, Any]:
+    with open(REPO_ROOT / "schema" / "scenario.schema.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@lru_cache
+def _registry() -> Registry:
+    """Both contracts under their $id, so the scenario's
+    'brief.schema.json#/$defs/...' references resolve to the brief's own defs."""
+    return Registry().with_resources(
+        (s["$id"], Resource.from_contents(s)) for s in (load_brief_schema(), load_scenario_schema())
+    )
+
+
+@lru_cache
 def _brief_validator() -> Draft202012Validator:
-    return Draft202012Validator(load_brief_schema(), format_checker=FormatChecker())
+    return Draft202012Validator(
+        load_brief_schema(), registry=_registry(), format_checker=FormatChecker()
+    )
+
+
+@lru_cache
+def _scenario_validator() -> Draft202012Validator:
+    return Draft202012Validator(
+        load_scenario_schema(), registry=_registry(), format_checker=FormatChecker()
+    )
+
+
+def _errors(validator: Draft202012Validator, doc: dict[str, Any]) -> list[str]:
+    return [
+        f"{'/'.join(str(p) for p in e.absolute_path)}: {e.message}"
+        for e in validator.iter_errors(doc)
+    ]
 
 
 def validate_brief(brief: dict[str, Any]) -> None:
@@ -109,10 +141,16 @@ def validate_brief(brief: dict[str, Any]) -> None:
 
 
 def brief_errors(brief: dict[str, Any]) -> list[str]:
-    return [
-        f"{'/'.join(str(p) for p in e.absolute_path)}: {e.message}"
-        for e in _brief_validator().iter_errors(brief)
-    ]
+    return _errors(_brief_validator(), brief)
+
+
+def validate_scenario(scenario: dict[str, Any]) -> None:
+    """Raise jsonschema.ValidationError if the scenario breaks its contract."""
+    _scenario_validator().validate(scenario)
+
+
+def scenario_errors(scenario: dict[str, Any]) -> list[str]:
+    return _errors(_scenario_validator(), scenario)
 
 
 # --- draft schemas ----------------------------------------------------------
@@ -296,9 +334,12 @@ __all__ = [
     "draft_schemas",
     "house_schemas",
     "load_brief_schema",
+    "load_scenario_schema",
     "prune_nulls",
+    "scenario_errors",
     "strictify",
     "validate_brief",
     "validate_draft",
     "validate_house_draft",
+    "validate_scenario",
 ]

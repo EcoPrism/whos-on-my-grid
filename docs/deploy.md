@@ -2,7 +2,7 @@
 
 One container on Azure Container Apps serves the API and the built web app. Everything sits in
 one resource group in the EcoPrism - Prod subscription (`infra/deploy.json` names it). The
-hostname is the app's own `*.azurecontainerapps.io` until the domain is wired through Cloudflare.
+hostname is the app's own `*.azurecontainerapps.io` until `whoisonmygrid.com` is wired through Cloudflare.
 
 ## What is in the group
 
@@ -31,8 +31,8 @@ hostname is the app's own `*.azurecontainerapps.io` until the domain is wired th
 2. Create the Google OAuth **Web application** client in Google Cloud project `ecoprism-ecoutil`
    (APIs & Services → Credentials). Consent screen: external, scopes `email` and `profile`.
    Authorized JavaScript origins: `http://localhost:5173` for now; the app's FQDN is added after
-   step 6, and the domains (`https://whoisinmygrid.com`, `https://whoisonthegrid.com`, with and
-   without `www`) when they are live. No redirect URIs are needed (Google Identity Services uses a
+   step 6, and `https://whoisonmygrid.com` plus `https://www.whoisonmygrid.com` when the domain is
+   live. No redirect URIs are needed (Google Identity Services uses a
    popup). Put the client id in `infra/deploy.json`. There is no `gcloud` command for a standard
    web client; it is created in the console (`gcloud iam oauth-clients` is Workforce Identity
    Federation, a different thing).
@@ -57,17 +57,36 @@ brief for a new address needs a Google sign-in and counts against `GRID_QUOTA_PE
 the subject, email and brief id of each run; the `users` table holds email and first/last seen.
 Never an address. The web page shows the remaining count and the rule in one line.
 
-## Domain and Cloudflare, later
+## Domain and Cloudflare
 
-1. In Cloudflare, add `whoisinmygrid.com` (and `whoisonthegrid.com`, the spare), proxied CNAME `@`
-   and `www` to the app FQDN. The spare can redirect to the main domain with a Cloudflare rule
-   instead of being bound to the app.
-2. On the Container App, add the custom domain with a managed certificate
-   (`az containerapp hostname add` / `bind`), or upload a Cloudflare origin certificate.
-3. Set `"allowedCountries": "US"` in `infra/deploy.json` and run `-Phase app`. The app then
-   reads `cf-ipcountry` and fails closed: the raw FQDN stops serving briefs, which is intended.
-4. Add the domains to the Google OAuth client's origins (scheme + host, no path) and to the Maps
-   key's referrers (`https://whoisinmygrid.com/*`, `https://*.whoisinmygrid.com/*`, same for the spare).
+The domain is `whoisonmygrid.com`, on Cloudflare DNS. Azure's free managed certificate cannot be
+issued or renewed behind Cloudflare's proxy (the docs name Cloudflare as a blocking intermediate
+CNAME), so the proxy and a managed certificate are mutually exclusive:
+
+- Proxy off (grey cloud): managed certificate, auto-renewed, no `cf-ipcountry` header, so the
+  country gate stays off.
+- Proxy on (orange cloud): a Cloudflare origin certificate (SSL/TLS, Origin Server, 15 years)
+  uploaded to the environment, Cloudflare SSL mode Full (strict), and the country gate can go on.
+
+1. Cloudflare DNS, proxy off to start: `A @` to the environment's static IP
+   (`az containerapp env show --query properties.staticIp`), `CNAME www` to the app FQDN,
+   `TXT asuid` and `TXT asuid.www` with the verification id
+   (`az containerapp show --query properties.customDomainVerificationId`).
+2. `az containerapp hostname add -n ca-grid -g rg-whoisinmygrid --hostname whoisonmygrid.com`, and
+   again for `www.whoisonmygrid.com`.
+3. Certificate. Managed: `az containerapp hostname bind ... --environment cae-grid
+   --validation-method HTTP` for the apex and `CNAME` for `www`. Origin certificate: convert the
+   PEM pair to PFX, `az containerapp env certificate upload -g rg-whoisinmygrid -n cae-grid
+   --certificate-file grid.pfx`, then `hostname bind ... --certificate <name>` for each hostname,
+   and turn the proxy on.
+4. Set `"publicBaseUrl": "https://whoisonmygrid.com"` in `infra/deploy.json` and, with the proxy
+   on only, `"allowedCountries": "US"`; run `-Phase app`. `publicBaseUrl` becomes
+   `GRID_PUBLIC_BASE_URL`, the host share links, cards and Open Graph tags print; empty means the
+   app FQDN. With the country gate on, the app reads `cf-ipcountry` and fails closed: the raw FQDN
+   stops serving briefs, which is intended.
+5. Add `https://whoisonmygrid.com` and `https://www.whoisonmygrid.com` to the Google OAuth client's
+   origins, and `https://whoisonmygrid.com/*` and `https://*.whoisonmygrid.com/*` to the Maps key's
+   referrers.
 
 ## Operating
 

@@ -76,6 +76,7 @@ def assemble_brief(
     now_iso: str,
     verified: bool = True,
     truth: GroundTruth | None = None,
+    public_base_url: str = "",
 ) -> dict[str, Any]:
     claims: list[dict[str, Any]] = []
     sections: dict[str, Any] = {}
@@ -131,7 +132,16 @@ def assemble_brief(
         "sections": sections,
         "claims": claims,
         "at_your_house": at_your_house[:5],
-        "card": derive_card(card_lines, geo, claims, verified=verified, grounded=truth is not None),
+        "card": derive_card(
+            card_lines,
+            geo,
+            claims,
+            verified=verified,
+            grounded=truth is not None,
+            brief_id=brief_id,
+            generated_at=now_iso,
+            public_base_url=public_base_url,
+        ),
     }
 
 
