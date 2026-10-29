@@ -96,6 +96,20 @@ async def test_quiet_lines_fold_into_one(tmp_path) -> None:
     assert water["confidence"] == 0.6
 
 
+async def test_a_line_with_a_figure_is_never_folded(tmp_path) -> None:
+    d = _quiet_water()
+    d["draft_at_your_house"]["lines"][0]["text"] = (
+        "The data centers near you are permitted 4.2 million gallons a day; how much they "
+        "draw is not public."
+    )
+    svc = fakes.service(tmp_path, brief_source="full", draft_responses=d)
+    svc.ground = ground()
+    brief = await svc.brief_for_address(ASHBURN)
+    topics = [line["topic"] for line in brief["at_your_house"]]
+    assert topics == ["bill", "water", "noise"]
+    assert brief["glance"]["water"]["status"] == "reported"
+
+
 async def test_noise_sentence_only_within_half_a_mile(tmp_path) -> None:
     svc = fakes.service(tmp_path, brief_source="full")
     svc.ground = ground(facilities=_far(1.5))  # 0.9 miles

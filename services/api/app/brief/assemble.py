@@ -1062,8 +1062,11 @@ def _protection_section(
 
 
 def _says_none(line: dict[str, Any]) -> bool:
-    """A model line that only reports a gap: nothing published, nothing nearby."""
-    return bool(_SAYS_NONE.search(line["text"]))
+    """A model line that only reports a gap: nothing published, nothing nearby.
+    A line that carries a figure says something, whatever else it says, and
+    is never folded."""
+    text = line["text"]
+    return bool(_SAYS_NONE.search(text)) and not re.search(r"\d", text)
 
 
 def _ask_words(truth: GroundTruth | None, geo: GeocodeResult, v: Vocab) -> list[str]:

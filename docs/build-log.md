@@ -379,4 +379,5 @@ from anything pre-existing.
   measured, the transcript line as the quote); a model's noise line never stands in for it. The
   house prompt's rule 4 asks for one short line on a gap. The card caption reads "· our
   estimate". The eval scorer counts a noise tile as the noise topic. US golden digests
-  re-recorded in `tests/us_golden.py` for this deliberate change. 732 tests.
+  re-recorded in `tests/us_golden.py` for this deliberate change. A line that carries a
+  figure is never folded, and the hearing match uses noise-specific words only (review). 733 tests.

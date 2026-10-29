@@ -226,7 +226,8 @@ def bill_house_line(sections: Sections, *, locale: Locale = US_LOCALE) -> dict[s
 # distance alone goes on the page (the glance block) and the sentence is left
 # unwritten, unless a hearing transcript shows noise was raised.
 NOISE_SENTENCE_MI = 0.5
-_NOISE_WORDS = re.compile(r"\b(nois\w*|sound|hum|humming|loud|decibel\w*)\b", re.I)
+# Noise-specific words only: "sound" and "loud" match too much ordinary speech.
+_NOISE_WORDS = re.compile(r"\b(nois(?:e|es|y)|decibels?|dBA?)\b|\bhum(?:ming)? (?:from|of)\b", re.I)
 
 
 def noise_raised(truth: GroundTruth) -> HearingQuote | None:
