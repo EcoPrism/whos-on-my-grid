@@ -251,6 +251,28 @@ page when curated; the ids and the kind of page are fixed here:
 | `pjm_capacity_usd_per_mw_year` | USD | PJM's capacity clearing price × 365 (PJM utilities only; not a transmission cost) |
 | `residential_allocation_lo`, `_hi` | fraction | the Harvard Electricity Law Initiative paper or a commission order |
 
+As curated (step 2), several ids use a different kind of page, on purpose. The verifier reads HTML
+and plain text only (`app/brief/fetch.py` reports a PDF as unfetchable), and the LBNL 2024 report,
+the Harvard paper and the Loudoun budget are PDFs, so a quote from them could never be checked.
+The substitutes are HTML pages that state the figure verbatim:
+
+| id | substitute page | why it stands in |
+|---|---|---|
+| `dc_load_factor` | gridflexibility.fyi, citing Duke's 80% planning assumption and Dominion's measured 82% (Grid Strategies 2025) | a utility planning figure, the same quantity the LBNL/EPRI sources model |
+| `water_evaporative_l_per_kwh` | an industry WUE explainer citing 1.8 to 1.9 L/kWh for evaporative systems | the LBNL water intensity is in the PDF; the low end is used |
+| `water_closed_loop_l_per_kwh` | Microsoft's zero-water-for-cooling design | a permitted design's own statement |
+| `dc_acres_per_mw` | a land-requirements guide's 1 acre per MW working rule (range 0.5 to 1.5) | no county staff report with both acreage and MW was found as HTML |
+| `residential_allocation_lo` | EIA: residential share of US retail sales, 37.3% | how a cost lands on households when it is spread by energy sold |
+| `residential_allocation_hi` | Maryland People's Counsel: $823 million of about $1.6 billion of data-center transmission cost to residential customers | an observed allocation of a data-center-driven cost |
+
+The two allocation ends are two allocation methods (by energy sold, and as Maryland's transmission
+cost was actually split), so the range brackets the method, not one measured quantity; the bill
+line says "if PJM's capacity price ... were shared out like other costs" for that reason.
+`dc_tax_usd_per_mw_year` is omitted: the only HTML figure found was an illustrative example (a
+300 MW campus at a 1.0% rate), not a measured county figure, so the taxes block is null and the
+ledger line shows jobs alone. Each row also carries `claim`, a sentence restating only what its
+quote says (no derived value), which is the text of the constant's engine claim.
+
 Each `Constant` exposes `.source(now_iso) -> dict` matching the schema's `source` def
 (`title`, `url`, `retrieved_at` = `checked`, `quote`), so a constant can back a claim directly.
 `_ENGINE_GLOBS` in `app/brief/cache.py` adds `data/scenario_constants.json` and
@@ -368,8 +390,11 @@ def assemble_scenario(
 Builds the Scenario JSON (B.4). Each strip line is a `house_line` with `status: "modelled"`,
 `confidence` from the `Result`, and `sources` = the constants' sources plus the ground source it
 leans on (utility page for the share line, tariff page for the bill line). Each line also yields
-one engine claim per constant: `text` = the basis sentence, `source` = the constant's page with
-its quote, `verdict: "unchecked"`. The verifier then fetches each page and finds the quote exactly
+one engine claim per constant: `text` = the constant's curated `claim` (only what the quote says;
+the quote itself when there is no `claim`), `source` = the constant's page with its quote,
+`verdict: "unchecked"`. The basis sentence, which carries the engine's derivation (×365, ÷100 and
+so on), stays on the line and in `impact.*.basis`, never in a claim attributed to the page; a
+constant used by several lines yields one claim. The verifier then fetches each page and finds the quote exactly
 as it does for briefs, so the arithmetic is checkable without a model drafting anything.
 Baseline facilities reuse `assemble._facility` and `_facility_claim`.
 

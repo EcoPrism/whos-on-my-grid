@@ -6,7 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from app.ground import Ground
 from app.ground.facilities import FakeFacilityDatabase
 from app.main import create_app
-from app.pulse import equivalences
+from app.pulse import equivalences, scale
 from tests import fakes
 
 
@@ -52,6 +52,16 @@ def test_equivalences_are_cited_arithmetic() -> None:
     assert "23 acres" in lines[1]["text"] and "17 football fields" in lines[1]["text"]
 
 
+def test_scale_rows_are_cited_and_ordered() -> None:
+    rows = scale()
+    assert [r["mw"] for r in rows] == sorted(r["mw"] for r in rows)
+    assert {r["kind"] for r in rows} == {"typical", "frontier"}
+    for r in rows:
+        assert r["source_url"].startswith("https://") and r["quote"] and r["checked"]
+        assert r["name"] and r["size"] and r["mw"] > 0
+        assert r["bound"] in {"up_to", "over", "about"} and r["detail"] and r["detail_quote"]
+
+
 async def test_pulse_full_mode_and_fixtures(tmp_path) -> None:
     svc = fakes.service(tmp_path, brief_source="full")
     svc.ground = Ground(facilities=FakeFacilityDatabase([]))
@@ -60,6 +70,12 @@ async def test_pulse_full_mode_and_fixtures(tmp_path) -> None:
         body = (await c.get("/api/pulse")).json()
         assert body["peeringdb"]["total"] == 2 and body["peeringdb"]["added"] == 1
         assert len(body["equivalences"]) == 2
+        # The what-if slider's label constants, each with its cited page and quote.
+        consts = body["constants"]
+        assert consts["us_home_kwh_per_year"]["value"] == 10791
+        assert consts["dc_load_factor"]["value"] == 0.8
+        for row in consts.values():
+            assert row["source_url"].startswith("https://") and row["quote"]
     app = create_app(fakes.service(tmp_path, brief_source="fixtures"))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         assert (await c.get("/api/pulse")).json() == {"peeringdb": None, "equivalences": []}

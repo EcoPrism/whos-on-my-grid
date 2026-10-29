@@ -54,8 +54,8 @@ export default function About() {
       <section className="mt-12 max-w-[64ch] space-y-4">
         <h2 className="text-xl font-semibold">Who made it</h2>
         <p>
-          Who's On My Grid is an <a href="https://www.ecoprism.com" rel="noopener">EcoPrism</a> project,
-          built for the Meta Global AI Developer Hackathon, October 2026. Drafting is Muse Spark,
+          Who's On My Grid is an <a href="https://www.ecoprism.com" rel="noopener">EcoPrism</a> project.
+          Drafting is Muse Spark,
           checking is Muse Spark Open, seeing is SAM 3.1 and hearing is Muse Voice Transcribe. The code
           is on <a href="https://github.com/EcoPrism/whos-on-my-grid" rel="noopener">GitHub</a>.
         </p>

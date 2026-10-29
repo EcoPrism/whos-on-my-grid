@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 24" role="img" aria-label="EcoPrism">
-  <!-- Placeholder wordmark. Replace this file with the real EcoPrism logo; the footer shows it 20px tall. -->
-  <path d="M2 2h20v20H2z" fill="#15202b"/>
-  <path d="M6 12l5 5 7-10" fill="none" stroke="#ffc300" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="28" y="17.5" font-family="Archivo, system-ui, sans-serif" font-size="15" font-weight="700" fill="#15202b">EcoPrism</text>
-</svg>

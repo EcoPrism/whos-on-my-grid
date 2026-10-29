@@ -19,15 +19,21 @@ export default function Shell() {
         <div className="mx-auto grid max-w-5xl gap-x-12 gap-y-10 px-4 py-12 md:grid-cols-[1.1fr_1.3fr_auto]">
           <div>
             <a href="https://www.ecoprism.com" rel="noopener" className="inline-flex items-center gap-3 no-underline">
-              <span className="inline-flex h-10 items-center bg-[var(--paper)] px-3">
-                <img src="/ecoprism.svg" alt="EcoPrism" className="h-5 w-auto" />
+              <span className="inline-flex h-12 items-center rounded-sm bg-[var(--paper)] px-4">
+                <img src="/ecoprism.png" alt="EcoPrism" className="h-7 w-auto" />
               </span>
               <span className="text-lg font-semibold">An EcoPrism project</span>
             </a>
-            <p className="mt-4 max-w-[40ch] text-sm leading-relaxed text-[var(--paper-soft)]">
-              Built for the Meta Global AI Developer Hackathon, October 2026. A US address in, a
-              checked brief out. Every sentence cites a page you can open.
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[var(--signal)]">
+              ESG and sustainability technology
             </p>
+            <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[var(--paper-soft)]">
+              Who's on my grid is built by EcoPrism. An address in, a checked brief out. Every sentence
+              cites a page you can open.
+            </p>
+            <a href="https://www.ecoprism.com" rel="noopener" className="footlink mt-3 inline-block text-sm">
+              ecoprism.com →
+            </a>
           </div>
 
           <dl className="grid gap-y-2 text-sm">

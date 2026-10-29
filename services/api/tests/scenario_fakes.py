@@ -151,6 +151,46 @@ def truth(**over: Any) -> GroundTruth:
 SUPPORTED = {"verdict": {"verdict": "supported", "note": "The page says so."}}
 
 
+def interpretation(**over: Any) -> dict[str, Any]:
+    """A scripted interpretation draft for the 300 MW evaporative scenario:
+    numbers only from the engine's lines, two claims on the scenario's own
+    pages and one on a page the scenario does not cite."""
+    draft: dict[str, Any] = {
+        "summary": "This is a hypothetical, modelled campus, not a real proposal. At 300 MW it "
+        "would use as much electricity as about 194,829 homes and about 2,738,936 gallons of "
+        "water a day. Two data centers are already listed within five miles.",
+        "confidence": 0.7,
+        "claims": [
+            {
+                "text": "A typical home uses an average of 10,791 kilowatthours a year.",
+                "source_title": "Whatever the model calls it",
+                "source_url": url("us_home_kwh_per_year"),
+                "quote": "average of 10,791 kilowatthours",
+                "page": None,
+                "confidence": 0.8,
+            },
+            {
+                "text": "Campuses run at 80 percent of capacity.",
+                "source_title": "Load factor",
+                "source_url": url("dc_load_factor"),
+                "quote": "campuses run at 80 percent of capacity",
+                "page": None,
+                "confidence": 0.8,
+            },
+            {
+                "text": "Data centers use a lot of water.",
+                "source_title": "A page the scenario never cited",
+                "source_url": "https://example.net/elsewhere",
+                "quote": "data centers use a lot of water every day",
+                "page": None,
+                "confidence": 0.5,
+            },
+        ],
+    }
+    draft.update(over)
+    return {"draft_scenario": draft}
+
+
 def service(
     tmp_path: Path,
     *,
@@ -158,6 +198,7 @@ def service(
     table: Constants | None = None,
     verify: bool = True,
     tariff_entry: TariffEntry | None = None,
+    draft: dict[str, Any] | None = None,
     **over: Any,
 ) -> ScenarioService:
     s = fakes.settings(tmp_path, scenarios_dir=str(tmp_path / "scenarios"), **over)
@@ -173,7 +214,7 @@ def service(
         households=FakeHouseholds(25_000),
         cache=ScenarioCache(s.scenarios_path),
         fetcher=FakeFetcher(PAGES),
-        draft_provider=None,
+        draft_provider=KeyedFakeProvider(draft) if draft is not None else None,
         verify_provider=KeyedFakeProvider(SUPPORTED) if verify else None,
         constants=constants() if table is None else table,
     )

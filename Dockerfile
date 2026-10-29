@@ -20,9 +20,11 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 
 # Dependencies first, so a code change does not reinstall them. The `index`
 # dependency group (imagery, audio) is for the offline indexers, not the API.
+# `provenance` (c2pa-python, a manylinux wheel) signs the share card's C2PA
+# manifest; it stays idle until a certificate and key arrive from Key Vault.
 WORKDIR /app/services/api
 COPY services/api/pyproject.toml services/api/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --group provenance --no-install-project
 
 # The repo subset the API reads, at the same relative paths as in the repo.
 COPY services/api/app ./app

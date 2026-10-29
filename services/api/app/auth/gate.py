@@ -2,7 +2,9 @@
 served to anyone. A new brief is made for: a signed-in user with quota left
 today, or anyone for an address in the test set (eval/addresses.json), so
 the demo dropdown works without an account. Both count toward the global
-daily cap, which is the gateway budget's belt."""
+daily cap, which is the gateway budget's belt. A what-if's interpretation
+(`admit_scenario`) needs a signed-in user with quota left; it is charged as
+`scenario:{id}`, so a usage row never holds the ZIP."""
 
 import json
 from dataclasses import dataclass
@@ -89,6 +91,23 @@ class Gate:
             raise GateDenied(401, "sign_in_required")
         if await self.remaining(user) <= 0:
             log_event("gate_denied", reason="user_quota")
+            raise GateDenied(429, "quota_exceeded_user")
+        return user
+
+    async def admit_scenario(self, user: User | None) -> User | None:
+        """Who pays for a what-if's interpretation: a signed-in user with quota
+        left, within the global cap. No allow-list: the test set covers
+        addresses, not scenarios. None when the gate is off. Raises GateDenied."""
+        if not self.on:
+            return None
+        if await self.usage.count_global_today() >= self.settings.quota_global_day:
+            log_event("gate_denied", reason="global_quota", kind="scenario")
+            raise GateDenied(429, "quota_exceeded_today")
+        if user is None:
+            log_event("gate_denied", reason="sign_in", kind="scenario")
+            raise GateDenied(401, "sign_in_required")
+        if await self.remaining(user) <= 0:
+            log_event("gate_denied", reason="user_quota", kind="scenario")
             raise GateDenied(429, "quota_exceeded_user")
         return user
 

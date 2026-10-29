@@ -13,6 +13,7 @@ from app.brief.cache import BriefCache
 from app.brief.fetch import Fetcher, HttpFetcher, TranscriptFetcher
 from app.brief.pipeline import BriefService
 from app.card import CardCache
+from app.card.provenance import signing_stamp
 from app.config import Settings, get_settings
 from app.geocode import CensusGeocoder, ZctaCentroids
 from app.ground import get_ground
@@ -115,7 +116,7 @@ def create_app(
     app.state.verifier = verifier
     app.state.sessions = sessions
     app.state.gate = Gate(settings, sessions, usage)
-    app.state.cards = CardCache(settings.cards_path)
+    app.state.cards = CardCache(settings.cards_path, signing_stamp(settings))
 
     origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     if origins:

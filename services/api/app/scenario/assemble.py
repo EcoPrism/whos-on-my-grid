@@ -13,9 +13,9 @@ from urllib.parse import urlparse
 from app.brief.assemble import ENGINE_CLAIM_FACILITIES, _engine_claim, _facility, _facility_claim
 from app.card.spec import fmt_range, scenario_disclosure_line
 from app.geocode import GeocodeResult
-from app.ground.prices import EIA861_PAGE, EIA861_TITLE
 from app.ground.census import Households
 from app.ground.facilities import haversine_km
+from app.ground.prices import EIA861_PAGE, EIA861_TITLE
 from app.ground.types import GroundTruth
 from app.scenario import model
 from app.scenario.constants import Constant, Constants

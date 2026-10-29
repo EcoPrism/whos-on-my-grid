@@ -11,6 +11,7 @@ from typing import Any
 
 from app.config import REPO_ROOT
 from app.ground import Ground
+from app.scenario import constants as scenario_constants
 
 EQUIVALENCES = REPO_ROOT / "data" / "equivalences.json"
 CACHE_S = 3600
@@ -22,6 +23,18 @@ def constants() -> dict[str, dict[str, Any]]:
         return {}
     with open(EQUIVALENCES, encoding="utf-8") as f:
         return {row["id"]: row for row in json.load(f)["constants"]}
+
+
+@lru_cache(maxsize=1)
+def scale() -> list[dict[str, Any]]:
+    """What a campus's MW means: the size tiers and the largest AI campuses
+    announced, smallest first. Each row restates only its quote; the figures
+    are reported (company plans as reported), not measured."""
+    if not EQUIVALENCES.exists():
+        return []
+    with open(EQUIVALENCES, encoding="utf-8") as f:
+        rows = json.load(f).get("scale", [])
+    return sorted(rows, key=lambda r: r["mw"])
 
 
 def _round_homes(n: float) -> str:
@@ -77,6 +90,33 @@ def equivalences() -> list[dict[str, Any]]:
     return out
 
 
+# What the what-if slider needs to label its MW live, read from the same
+# table the scenario engine reads (data/equivalences.json, then
+# data/scenario_constants.json), so the label and the scenario's own homes
+# counter agree, and each value travels with its page and verbatim quote.
+SLIDER_CONSTANTS = ("us_home_kwh_per_year", "dc_load_factor")
+
+
+def cited_constants() -> dict[str, dict[str, Any]]:
+    """Each slider constant with its value and the page and sentence it comes
+    from. One without a cited row is left out; the slider then shows no label."""
+    table = scenario_constants.default()
+    out: dict[str, dict[str, Any]] = {}
+    for cid in SLIDER_CONSTANTS:
+        c = table.get(cid)
+        if c is None:
+            continue
+        out[cid] = {
+            "value": c.value,
+            "unit": c.unit,
+            "as_of": c.as_of,
+            "source_url": c.source_url,
+            "source_title": c.source_title,
+            "quote": c.quote,
+        }
+    return out
+
+
 class Pulse:
     def __init__(self, ground: Ground | None) -> None:
         self.ground = ground
@@ -89,6 +129,11 @@ class Pulse:
         peeringdb = None
         if self.ground is not None and self.ground.facilities is not None:
             peeringdb = await self.ground.facilities.summary()
-        self._value = {"peeringdb": peeringdb, "equivalences": equivalences()}
+        self._value = {
+            "peeringdb": peeringdb,
+            "equivalences": equivalences(),
+            "constants": cited_constants(),
+            "scale": scale(),
+        }
         self._at = time.monotonic()
         return self._value

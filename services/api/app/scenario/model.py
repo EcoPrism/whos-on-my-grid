@@ -96,7 +96,7 @@ def share_of_utility_homes(homes: float, utility: Utility | None) -> Result | No
         return None
     share = homes / utility.customers
     return Result(
-        round(share, 4),
+        round(share, 6),
         f"{homes:,.0f} homes ÷ {utility.customers:,} {utility.name} customers = {pct(share)}",
         (),
         0.4,
@@ -164,11 +164,11 @@ def bill_outcome(
     tariff: TariffEntry | None, utility: Utility | None, mw: int, c: Constants
 ) -> BillOutcome:
     """Shielded when the tariff table says a rule in force keeps large-load costs
-    off households and the campus is above the rule's size floor. Otherwise, only for a utility whose EIA-861 balancing
-    authority is PJM: PJM's capacity price for a campus this size, times the
-    residential share at both ends of the cited range, spread over the
-    utility's customers. The capacity price is PJM's alone, so anywhere else
-    there is no range."""
+    off households and the campus is above the rule's size floor. Otherwise,
+    only for a utility whose EIA-861 balancing authority is PJM: PJM's capacity
+    price for a campus this size, times the residential share at both ends of
+    the cited range, spread over the utility's customers. The capacity price is
+    PJM's alone, so anywhere else there is no range."""
     covered = tariff is not None and tariff.covers(mw)
     lead = tariff.lead if tariff is not None and covered else None
     # A rule with a size floor the campus is under does not apply to it.

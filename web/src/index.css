@@ -139,3 +139,63 @@ select.chip {
 /* Something still being made: a slow breath, not a spinner. */
 .breathe { animation: breathe 1.6s ease-in-out infinite; }
 @keyframes breathe { 50% { opacity: 0.45; } }
+
+/* --- what-if (step 3) ------------------------------------------------------ */
+
+/* "Hypothetical. Modelled, not measured.": a sticky band in the modelled
+   colour, above the map's panes (z 400-1000) and under open menus (1200). */
+.banner-modelled {
+  background: color-mix(in srgb, var(--modelled) 16%, var(--paper));
+  border-bottom: 2px solid var(--modelled);
+  color: var(--ink);
+}
+/* Ink on the modelled amber: about 4.5:1, AA for the chip's small bold text (white was 3.6:1). */
+.banner-mark { background: var(--modelled); color: var(--ink); }
+
+/* The MW slider and the timeline scrubber: an ink track, a signal-yellow plate. */
+.mw-range, .timeline-range {
+  -webkit-appearance: none; appearance: none;
+  height: 28px; background: transparent; cursor: pointer;
+}
+.mw-range:disabled { cursor: not-allowed; opacity: 0.6; }
+.mw-range::-webkit-slider-runnable-track, .timeline-range::-webkit-slider-runnable-track {
+  height: 6px; background: var(--ink);
+}
+.mw-range::-moz-range-track, .timeline-range::-moz-range-track { height: 6px; background: var(--ink); }
+.mw-range::-webkit-slider-thumb, .timeline-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -8px;
+  background: var(--signal); border: 2px solid var(--ink); border-radius: 0;
+}
+.mw-range::-moz-range-thumb, .timeline-range::-moz-range-thumb {
+  width: 18px; height: 18px; background: var(--signal); border: 2px solid var(--ink); border-radius: 0;
+}
+.timeline-range::-webkit-slider-runnable-track { background: var(--line); }
+.timeline-range::-moz-range-track { background: var(--line); }
+.timeline-range::-moz-range-progress { height: 6px; background: var(--modelled); }
+.mw-preset:hover:not(:disabled) { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Cooling: two radios drawn as one segmented plate. */
+.seg { border: 2px solid var(--ink); background: #fff; }
+.seg-option { cursor: pointer; }
+.seg-option + .seg-option { border-left: 2px solid var(--ink); }
+.seg-option:has(input:checked) { background: var(--ink); color: var(--paper); font-weight: 700; }
+.seg-option:has(input:focus-visible) { outline: 3px solid var(--signal); outline-offset: 2px; }
+.seg-option:has(input:disabled) { cursor: not-allowed; opacity: 0.6; }
+
+/* The what-if's busy state: a small square spinner on the signal button. */
+.spinner {
+  display: inline-block; width: 1em; height: 1em;
+  border: 2px solid var(--ink); border-right-color: transparent; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Timeline bars: they fill in the modelled colour; an unknown one is hatched. */
+.impact-bar { background-color: var(--paper-deep); }
+/* .hatch alone draws paper-deep stripes, invisible on the bar's own paper-deep. */
+.impact-bar.hatch { background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--line) 4px 6px); }
+.impact-bar-fill { background: var(--modelled); }
+
+/* The what-if's plain-words block before it has a paragraph: a neutral rail. */
+.interp-idle { border-left-color: var(--line); }

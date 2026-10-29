@@ -11,6 +11,9 @@
     platform  create the group and everything but the app
     secrets   copy the gateway and Baseten keys from services/api/.env into the
               vault, mint the session secret once, seed the share with data/ground.
+              With -C2paCertChain and -C2paPrivateKey (PEM files), load the share
+              card's C2PA signing certificate; without them, keep what the vault
+              has or write blanks (card unsigned).
               Values are piped to files and az; nothing is printed.
     image     build the image in the registry (az acr build; no local Docker needed)
     app       create or roll the container app, then poll /api/health
@@ -19,6 +22,7 @@
 .EXAMPLE
   ./scripts/deploy.ps1 -Phase platform
   ./scripts/deploy.ps1 -Phase secrets
+  ./scripts/deploy.ps1 -Phase secrets -C2paCertChain ~/c2pa/chain.pem -C2paPrivateKey ~/c2pa/key.pem
   ./scripts/deploy.ps1 -Phase image
   ./scripts/deploy.ps1 -Phase app
 #>
@@ -29,7 +33,11 @@ param(
   [string] $Tag = '',
   # The app phase refuses to ship without a Google client id (the gate would be off for
   # the whole internet). This switch is the explicit, typed way to do it anyway.
-  [switch] $AllowOpenGate
+  [switch] $AllowOpenGate,
+  # C2PA signing for the share card (docs/deploy.md, "C2PA content credentials"): PEM
+  # files, read by the secrets phase. Paths only: the contents never reach the console.
+  [string] $C2paCertChain = '',
+  [string] $C2paPrivateKey = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -167,6 +175,33 @@ foreach ($step in $steps) {
       else { Set-VaultSecret $vault 'session-secret' (New-Secret 48) }
       $gateway = $null; $baseten = $null
 
+      # C2PA: the chain (end-entity first, then intermediates) and its PKCS#8 key. The app
+      # references both secrets, so without files they must still exist: one space = unsigned.
+      if ($C2paCertChain -or $C2paPrivateKey) {
+        if (-not ($C2paCertChain -and $C2paPrivateKey)) { throw 'Pass both -C2paCertChain and -C2paPrivateKey, or neither.' }
+        foreach ($f in @($C2paCertChain, $C2paPrivateKey)) {
+          if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { throw "Not a file: $f" }
+        }
+        $chainPem = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $C2paCertChain).Path)
+        $keyPem = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $C2paPrivateKey).Path)
+        try {
+          if ($chainPem -notmatch '-----BEGIN CERTIFICATE-----') { throw "$C2paCertChain holds no PEM certificate." }
+          if ($keyPem -notmatch '-----BEGIN PRIVATE KEY-----') {
+            throw "$C2paPrivateKey is not an unencrypted PKCS#8 PEM key. Convert it: openssl pkcs8 -topk8 -nocrypt -in <key> -out <key.p8.pem>"
+          }
+          Set-VaultSecret $vault 'c2pa-cert-chain' $chainPem
+          Set-VaultSecret $vault 'c2pa-private-key' $keyPem
+          Write-Host '    C2PA certificate loaded; run -Phase app to roll a revision that reads it'
+        } finally {
+          $chainPem = $null; $keyPem = $null
+        }
+      } else {
+        foreach ($name in @('c2pa-cert-chain', 'c2pa-private-key')) {
+          if (Test-VaultSecret $vault $name) { Write-Host "    $name kept" }
+          else { Set-VaultSecret $vault $name ' '; Write-Host "    ($name is blank: share cards go out unsigned, XMP only)" }
+        }
+      }
+
       $account = Get-FirstName @('storage', 'account', 'list')
       # The key goes to az through the environment, never the command line: az.cmd echoes its
       # whole command line on a cmd-level error, and the process list shows arguments.
@@ -212,6 +247,11 @@ foreach ($step in $steps) {
     'app' {
       if (-not [string]$cfg.googleClientId -and -not $AllowOpenGate) {
         throw 'googleClientId is empty in infra/deploy.json: the sign-in gate would be OFF for everyone. Create the OAuth client (docs/deploy.md, step 2) or pass -AllowOpenGate.'
+      }
+      # The app references every vault secret; a missing one fails the revision, so say why first.
+      $vault = Get-FirstName @('keyvault', 'list')
+      foreach ($name in @('gateway-key', 'baseten-key', 'session-secret', 'c2pa-cert-chain', 'c2pa-private-key')) {
+        if (-not (Test-VaultSecret $vault $name)) { throw "Secret $name is not in vault $vault. Run -Phase secrets first." }
       }
       $acr = Get-FirstName @('acr', 'list')
       $login = Invoke-Az @('acr', 'show', '-n', $acr, '--query', 'loginServer', '-o', 'tsv')

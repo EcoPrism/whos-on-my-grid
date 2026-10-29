@@ -141,3 +141,17 @@ async def test_zip_is_never_logged(tmp_path: Path, caplog: pytest.LogCaptureFixt
     with caplog.at_level("DEBUG"):
         await z.locate("20147")
     assert "20147" not in caplog.text
+
+
+async def test_gazetteer_failure_is_remembered_for_a_cool_down(tmp_path: Path) -> None:
+    z, calls = _centroids(tmp_path, years=(2023,))
+    with pytest.raises(GeocodeUnavailable):
+        await z.locate("20147")
+    first = len(calls)
+    with pytest.raises(GeocodeUnavailable):
+        await z.locate("20147")
+    assert len(calls) == first  # no second download inside the cool-down
+    z._failed_at -= z.retry_after_s + 1
+    with pytest.raises(GeocodeUnavailable):
+        await z.locate("20147")
+    assert len(calls) > first

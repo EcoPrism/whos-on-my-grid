@@ -29,15 +29,21 @@ def brief_version(brief: dict[str, Any]) -> str:
 
 class CardCache:
     """{dir}/{kind}/{id}.{fingerprint}.png, where the fingerprint is the engine's
-    plus the brief version: a code change or a regenerated brief renders anew."""
+    plus the brief version: a code change or a regenerated brief renders anew.
+    A signed card's timestamp makes its bytes differ per render, so a card is made
+    once and served from here. `signing` (provenance.signing_stamp) joins the key, so
+    loading or rotating a certificate re-renders instead of serving unsigned files."""
 
-    def __init__(self, directory: Path) -> None:
+    def __init__(self, directory: Path, signing: str = "") -> None:
         self.dir = directory
+        self.signing = signing if re.fullmatch(r"[0-9a-f]*", signing) else ""
 
     def path(self, kind: str, id: str, version: str = "") -> Path | None:
         if kind not in KINDS or not ID.match(id) or not re.fullmatch(r"[0-9a-f]*", version):
             return None
         stamp = f"{engine_fingerprint()}-{version}" if version else engine_fingerprint()
+        if self.signing:
+            stamp += f"-c{self.signing}"
         return self.dir / kind / f"{id}.{stamp}.png"
 
     def get(self, kind: str, id: str, version: str = "") -> bytes | None:

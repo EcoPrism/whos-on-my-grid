@@ -1,4 +1,4 @@
-import type { Brief, CardInfo } from '../types'
+import type { Brief, CardInfo, Scenario, ScenarioInputs } from '../types'
 
 // The UI is a client of the brief service. In dev, Vite proxies /api to it.
 
@@ -45,9 +45,42 @@ export interface Equivalence {
   quote: string
 }
 
+// One cited constant, as /api/pulse sends it (app/pulse.py cited_constants).
+export interface PulseConstant {
+  value: number
+  unit: string
+  as_of: string
+  source_url: string
+  source_title: string
+  quote: string
+}
+
+// What a campus's MW means: a size tier or one of the largest AI campuses
+// announced (data/equivalences.json "scale"). Reported, not measured.
+export interface ScaleRef {
+  id: string
+  mw: number
+  kind: 'typical' | 'frontier'
+  name: string
+  size: string
+  // How mw reads: at most (a tier's top), more than (a tier's floor), or a campus's own size.
+  bound: 'up_to' | 'over' | 'about'
+  // What that size looks like, in plain words, restating detail_quote from the same page.
+  detail: string
+  detail_quote: string
+  source_title: string
+  source_url: string
+  quote: string
+  checked: string
+}
+
 export interface Pulse {
   peeringdb: PulsePeeringDB | null
   equivalences: Equivalence[]
+  // The scenario engine's cited constants, keyed by id. Absent in fixtures mode.
+  constants?: Record<string, PulseConstant>
+  // Smallest first.
+  scale?: ScaleRef[]
 }
 
 // Every POST carries this header: with SameSite cookies it is the second belt
@@ -64,17 +97,19 @@ export class ApiError extends Error {
   }
 }
 
+async function errorOf(r: Response): Promise<ApiError> {
+  let detail = r.statusText
+  try {
+    detail = (await r.json()).detail ?? detail
+  } catch {
+    /* no JSON body */
+  }
+  return new ApiError(r.status, String(detail))
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, init)
-  if (!r.ok) {
-    let detail = r.statusText
-    try {
-      detail = (await r.json()).detail ?? detail
-    } catch {
-      /* no JSON body */
-    }
-    throw new ApiError(r.status, String(detail))
-  }
+  if (!r.ok) throw await errorOf(r)
   return r.json() as Promise<T>
 }
 
@@ -82,8 +117,15 @@ export function getHealth(): Promise<Health> {
   return request<Health>('/api/health')
 }
 
+// One request per page load, shared by every caller (the home page's pulse
+// strip and the MW slider's homes label). A failure lets a later call retry.
+let pulseOnce: Promise<Pulse> | null = null
 export function getPulse(): Promise<Pulse> {
-  return request<Pulse>('/api/pulse')
+  pulseOnce ??= request<Pulse>('/api/pulse').catch((e: unknown) => {
+    pulseOnce = null
+    throw e
+  })
+  return pulseOnce
 }
 
 export function signInWithGoogle(credential: string): Promise<Me> {
@@ -113,28 +155,13 @@ export type BriefEvent =
   | { stage: 'verifying'; verified: number; claims: number }
   | { stage: 'error'; status: number; detail: string }
 
-// The streaming twin of createBrief: `onEvent` sees the brief take shape, the
-// promise resolves with the finished brief. Errors reported on the stream
-// become ApiErrors like the plain endpoint's.
-export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
-  const r = await fetch('/api/brief/stream', {
-    method: 'POST',
-    headers: POST_HEADERS,
-    body: JSON.stringify({ address }),
-  })
-  if (!r.ok || !r.body) {
-    let detail = r.statusText
-    try {
-      detail = (await r.json()).detail ?? detail
-    } catch {
-      /* no JSON body */
-    }
-    throw new ApiError(r.status, String(detail))
-  }
+// Reads a newline-delimited JSON response, calling `onLine` with each parsed
+// line as it arrives. A non-OK response becomes an ApiError like request()'s.
+export async function readNdjson<T>(r: Response, onLine: (line: T) => void): Promise<void> {
+  if (!r.ok || !r.body) throw await errorOf(r)
   const reader = r.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
-  let final: Brief | null = null
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
@@ -145,12 +172,26 @@ export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => 
       buffer = buffer.slice(nl + 1)
       nl = buffer.indexOf('\n')
       if (!line) continue
-      const ev = JSON.parse(line) as BriefEvent
-      if (ev.stage === 'error') throw new ApiError(ev.status, ev.detail)
-      onEvent(ev)
-      if (ev.stage === 'done') final = ev.brief
+      onLine(JSON.parse(line) as T)
     }
   }
+}
+
+// The streaming twin of createBrief: `onEvent` sees the brief take shape, the
+// promise resolves with the finished brief. Errors reported on the stream
+// become ApiErrors like the plain endpoint's.
+export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
+  const r = await fetch('/api/brief/stream', {
+    method: 'POST',
+    headers: POST_HEADERS,
+    body: JSON.stringify({ address }),
+  })
+  let final = null as Brief | null
+  await readNdjson<BriefEvent>(r, (ev) => {
+    if (ev.stage === 'error') throw new ApiError(ev.status, ev.detail)
+    onEvent(ev)
+    if (ev.stage === 'done') final = ev.brief
+  })
   if (!final) throw new ApiError(0, 'The brief stream ended before the brief was finished.')
   return final
 }
@@ -163,4 +204,57 @@ export function getBrief(id: string): Promise<Brief> {
 export function getCard(kind: CardInfo['kind'], id: string): Promise<CardInfo> {
   const base = kind === 'brief' ? '/api/card' : '/api/scenario-card'
   return request<CardInfo>(`${base}/${encodeURIComponent(id)}.json`)
+}
+
+// A what-if: the engine's arithmetic for a hypothetical campus. No sign-in,
+// no model, so it comes back in about a second once the area is cached.
+export function createScenario(inputs: ScenarioInputs): Promise<Scenario> {
+  return request<Scenario>('/api/scenario', {
+    method: 'POST',
+    headers: POST_HEADERS,
+    body: JSON.stringify(inputs),
+  })
+}
+
+export function getScenario(id: string): Promise<Scenario> {
+  return request<Scenario>(`/api/scenario/${encodeURIComponent(id)}`)
+}
+
+// One event per line from /api/scenario/{id}/interpret while Muse Spark
+// drafts the plain-words paragraph and the verifier checks its claims. A
+// failure partway is a final error line; one before the stream starts is an
+// HTTP error (401 sign-in, 429 quota, 404, 503).
+export type InterpretEvent =
+  | { stage: 'drafting' }
+  | { stage: 'verifying'; verified: number; claims: number }
+  | { stage: 'done'; scenario: Scenario }
+  | { stage: 'error'; status?: number; detail: string }
+
+// Needs a sign-in and spends one of the user's daily model runs, charged once
+// per scenario; an explanation already made comes back as `done` at once.
+// Resolves with the scenario carrying its `interpretation`.
+export async function streamInterpretation(id: string, onEvent: (ev: InterpretEvent) => void): Promise<Scenario> {
+  const r = await fetch(`/api/scenario/${encodeURIComponent(id)}/interpret`, {
+    method: 'POST',
+    headers: POST_HEADERS,
+    credentials: 'same-origin',
+  })
+  let final = null as Scenario | null
+  await readNdjson<InterpretEvent>(r, (ev) => {
+    if (ev.stage === 'error') throw new ApiError(ev.status ?? statusOfDetail(ev.detail), ev.detail)
+    onEvent(ev)
+    if (ev.stage === 'done') final = ev.scenario
+  })
+  if (!final) throw new ApiError(0, 'The explanation stream ended before it was finished.')
+  return final
+}
+
+// An error line may carry only the detail; give it the status the same
+// failure has as an HTTP error, so the page words both alike.
+function statusOfDetail(detail: string): number {
+  if (detail === 'sign_in_required') return 401
+  if (detail.startsWith('quota_exceeded')) return 429
+  if (detail === 'not_found') return 404
+  if (detail === 'interpretation_unavailable') return 503
+  return 502
 }

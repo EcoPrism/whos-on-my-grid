@@ -168,3 +168,15 @@ async def test_fake_households() -> None:
     r = await f.for_zcta("20147")
     assert r is not None and r.count == 1000 and r.quote == "1000" and f.calls == 1
     assert await FakeHouseholds(None).for_zcta("20147") is None
+
+
+async def test_failure_is_remembered_for_a_cool_down(tmp_path: Path) -> None:
+    h, calls = _acs(tmp_path, years=(2025,))
+    assert await h.for_zcta("20147") is None
+    first = len(calls)
+    assert first > 0
+    assert await h.for_zcta("20147") is None
+    assert len(calls) == first  # inside the cool-down: no request at all
+    h._failed_at -= h.retry_after_s + 1
+    assert await h.for_zcta("20147") is None
+    assert len(calls) > first  # after it: tried again

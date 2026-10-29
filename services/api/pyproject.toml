@@ -31,8 +31,9 @@ index = [
     "imageio-ffmpeg>=0.5",
 ]
 # C2PA content credentials on the share card (app/card/provenance.py::with_c2pa). Optional:
-# without it, or without a signing cert, the card carries XMP only. The image installs it
-# with `uv sync --group provenance` once a cert exists. The cap: 0.38.1 and later dropped
+# without it, or without a signing cert, the card carries XMP only. The image always
+# installs it (Dockerfile: --group provenance); locally `uv sync --group provenance` runs
+# tests/test_provenance.py, which skips without it. The cap: 0.38.1 and later dropped
 # the Windows wheels, and a universal lock must resolve on every platform.
 provenance = [
     "c2pa-python>=0.37,<0.38.1",

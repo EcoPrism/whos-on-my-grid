@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import AddressInput from '../components/AddressInput'
 import SignIn from '../components/SignIn'
 import TestAddresses from '../components/TestAddresses'
-import { ApiError, getHealth, getPulse, streamBrief, type Health, type Me, type Pulse } from '../lib/api'
+import WhatIfPanel from '../components/WhatIfPanel'
+import { ApiError, createScenario, getHealth, getPulse, streamBrief, type Health, type Me, type Pulse } from '../lib/api'
 import { fmtMoney } from '../lib/format'
-import { setLive, updateLive } from '../lib/live'
+import { setLive, setLiveScenario, updateLive } from '../lib/live'
+import { scenarioMessage } from '../lib/scenario'
+import type { ScenarioInputs } from '../types'
 
 // The five parts of a brief, in the brief page's own words. The colour on
 // each tile is the kind of evidence that part usually rests on, the same key
@@ -55,6 +58,24 @@ export default function Home() {
 
   const onChange = useCallback((v: string) => { setInput(v); setError(null) }, [])
 
+  // The what-if is the engine's arithmetic: no sign-in, no model, so a spinner
+  // is all the waiting it needs. The page opens from the result, no refetch.
+  const [whatIfBusy, setWhatIfBusy] = useState(false)
+  const [whatIfError, setWhatIfError] = useState<string | null>(null)
+  async function dropIt(inputs: ScenarioInputs) {
+    if (whatIfBusy) return
+    setWhatIfError(null)
+    setWhatIfBusy(true)
+    try {
+      const s = await createScenario(inputs)
+      setLiveScenario(s.scenario_id, s)
+      nav(`/what-if/${s.scenario_id}`)
+    } catch (err) {
+      setWhatIfError(scenarioMessage(err))
+      setWhatIfBusy(false)
+    }
+  }
+
   async function go(e: React.FormEvent) {
     e.preventDefault()
     if (busy || !input.trim()) return
@@ -101,48 +122,72 @@ export default function Home() {
             <path d="M18 4 8 18h7l-1 10 10-14h-7z" fill="var(--signal)" />
           </svg>
           Who's on my grid
+          <span aria-hidden className="mx-1 h-5 w-px bg-[var(--line)]" />
+          <a
+            href="https://www.ecoprism.com"
+            rel="noopener"
+            className="inline-flex items-center gap-1.5 font-normal text-[var(--ink-soft)] no-underline hover:text-[var(--ink)]"
+          >
+            by <img src="/ecoprism.png" alt="EcoPrism" className="h-5 w-auto" />
+          </a>
         </span>
         {health && <SignIn health={health} onUser={onUser} />}
       </header>
 
-      <section className="max-w-3xl pt-12 sm:pt-20">
-        <h1 className="sign text-[clamp(3.4rem,13vw,8.5rem)]">
+      <section className="pt-8 sm:pt-12">
+        <h1 className="sign text-[clamp(3rem,9vw,6.5rem)]">
           Who's on<br />my grid?
         </h1>
-        <p className="mt-8 max-w-[48ch] text-xl leading-snug">
-          Type a US address. Find out which data centers are on your local grid, what is being built
-          near you, what your bill has done, and when the next vote is.
+        <p className="mt-6 max-w-[60ch] text-xl leading-snug">
+          Which data centers are on your local grid, what is being built near you, what your bill has
+          done and when the next vote is. Or drop a hypothetical one on your town and see what it would take.
         </p>
-
-        <form onSubmit={go} className="mt-10">
-          <label htmlFor="address" className="block text-sm text-[var(--ink-soft)]">
-            Street address, city, state
-          </label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <AddressInput value={input} onChange={onChange} disabled={busy} />
-            <button type="submit" disabled={busy} className="btn-signal shrink-0 px-6 py-3 text-lg">
-              {busy ? 'Working…' : 'Check my grid'}
-            </button>
-          </div>
-          {live && <TestAddresses items={health?.test_addresses} onPick={onChange} disabled={busy} />}
-          {gated && !busy && (
-            <p className="mt-3 text-sm text-[var(--ink-soft)]">
-              {signedIn
-                ? 'A new address spends model time, so each person gets a few a day. Test addresses and shared briefs are always free.'
-                : 'Test addresses and shared briefs run without an account. A new address needs a Google sign-in, because each one spends model time.'}
-            </p>
-          )}
-          {busy && live && (
-            <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
-              Spark is drafting five sections, then Spark Open fetches every cited page and checks each
-              claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
-            </p>
-          )}
-          {error && (
-            <p className="mt-3 text-sm" role="alert">{error}</p>
-          )}
-        </form>
       </section>
+
+      {/* Two doors side by side from lg up: a real address (a checked brief), or a ZIP (a modelled what-if). */}
+      <div className="mt-10 grid items-start gap-x-12 gap-y-14 lg:grid-cols-2">
+        <section aria-labelledby="door-address" className="border-t-4 border-[var(--signal)] pt-5">
+          <h2 id="door-address" className="text-2xl font-bold leading-none">Check your address</h2>
+          <p className="mt-3 max-w-[56ch] text-[var(--ink-soft)]">
+            A street address in, a brief out: the data centers on your grid, your bill, your tariff and
+            the last hearing. Every sentence cites a page you can open.
+          </p>
+          <form onSubmit={go} className="mt-6">
+            <label htmlFor="address" className="block text-sm text-[var(--ink-soft)]">
+              Street address, city, state
+            </label>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <AddressInput value={input} onChange={onChange} disabled={busy} />
+              <button type="submit" disabled={busy} className="btn-signal shrink-0 px-6 py-3 text-lg">
+                {busy ? 'Working…' : 'Check my grid'}
+              </button>
+            </div>
+            {live && <TestAddresses items={health?.test_addresses} onPick={onChange} disabled={busy} />}
+            {gated && !busy && (
+              <p className="mt-3 text-sm text-[var(--ink-soft)]">
+                {signedIn
+                  ? 'A new address spends model time, so each person gets a few a day. Test addresses and shared briefs are always free.'
+                  : 'Test addresses and shared briefs run without an account. A new address needs a Google sign-in, because each one spends model time.'}
+              </p>
+            )}
+            {busy && live && (
+              <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
+                Spark is drafting five sections, then Spark Open fetches every cited page and checks each
+                claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
+              </p>
+            )}
+            {error && (
+              <p className="mt-3 text-sm" role="alert">{error}</p>
+            )}
+          </form>
+        </section>
+
+        {mode !== 'offline' && (
+          <section className="border-t-4 border-[var(--modelled)] pt-5">
+            <WhatIfPanel onSubmit={dropIt} busy={whatIfBusy} error={whatIfError} />
+          </section>
+        )}
+      </div>
 
       {mode === 'fixtures' && health && (
         <section className="mt-14 max-w-3xl">

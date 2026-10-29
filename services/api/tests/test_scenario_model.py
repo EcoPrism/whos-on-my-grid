@@ -148,3 +148,36 @@ def test_loader_merges_and_skips(tmp_path) -> None:
         "2026-10-29T12:00:00Z"
     )
     assert load((tmp_path / "absent.json",)) == {}
+
+
+def test_fmt_and_pct_print_plainly() -> None:
+    assert model.fmt(12345.6) == "12,345.6"
+    assert model.fmt(121705.6) == "121,705.6"
+    assert model.fmt(10791) == "10,791"
+    assert model.fmt(1.32) == "1.32" and model.fmt(0.373) == "0.373"
+    assert model.pct(0.0024) == "0.2%"
+    assert model.pct(0.0004) == "under 0.1%"
+    assert model.pct(0.3247) == "32%"
+
+
+def test_shield_respects_the_size_floor() -> None:
+    c = constants()
+    ga = replace(tariff("in_force", True), min_mw=100, min_mw_inclusive=True)
+    below = model.bill_outcome(ga, UTILITY, 50, c)
+    assert below.kind != "shielded"
+    assert "applies only to loads of 100 MW and more; a 50 MW campus is below that" in below.basis
+    assert model.bill_outcome(ga, UTILITY, 100, c).kind == "shielded"
+    assert model.bill_outcome(ga, UTILITY, 150, c).kind == "shielded"
+    va = replace(tariff("in_force", True), min_mw=25, min_mw_inclusive=False)
+    assert model.bill_outcome(va, UTILITY, 25, c).kind != "shielded"
+    assert model.bill_outcome(va, UTILITY, 26, c).kind == "shielded"
+    partly = replace(tariff("in_force", None), min_mw=75)
+    assert model.bill_outcome(partly, UTILITY, 50, c).kind == "exposed"
+    assert model.bill_outcome(partly, UTILITY, 300, c).kind == "partial"
+
+
+def test_construction_is_the_shell_not_power() -> None:
+    months = model.construction_months(constants())
+    assert months is not None
+    assert "to build the shell; connecting power can take longer" in months.basis
+    assert "permit to power" not in months.basis

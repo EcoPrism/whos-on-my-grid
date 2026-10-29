@@ -5,6 +5,7 @@ config. The full list with comments is services/api/.env.example."""
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # services/api/app/config.py -> repo root. The schema and fixtures live there.
@@ -87,11 +88,14 @@ class Settings(BaseSettings):
     # Where the site is served, for absolute links in Open Graph tags, the share text
     # and the card's disclosure line. Empty = the request's own origin (local runs).
     public_base_url: str = ""
-    # C2PA content credentials on the card: a PEM certificate chain on disk and its
-    # private key (PEM, from Key Vault via the user-run secrets phase). Both empty = off;
-    # the card still carries XMP and the disclosure band.
+    # C2PA content credentials on the card: a PEM certificate chain (end-entity first),
+    # given inline (GRID_C2PA_CERT_PEM, how Azure passes it from Key Vault) or as a file
+    # (GRID_C2PA_CERT_PATH), and its PEM private key. Blank = off; the card still carries
+    # XMP and the disclosure band. The key is a SecretStr so no repr or log prints it.
+    # An empty timestamp URL signs without a timestamp (tests, offline runs).
+    c2pa_cert_pem: str = ""
     c2pa_cert_path: str = ""
-    c2pa_private_key: str = ""
+    c2pa_private_key: SecretStr = SecretStr("")
     c2pa_timestamp_url: str = "http://timestamp.digicert.com"
     cors_origins: str = "http://localhost:5173,http://localhost:5180"
     # Country gate for brief routes. Empty = off. Only meaningful behind an edge that

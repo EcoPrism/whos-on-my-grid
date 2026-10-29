@@ -6,6 +6,7 @@ import Shell from './components/Shell'
 import Home from './pages/Home'
 import BriefPage from './pages/BriefPage'
 import About from './pages/About'
+import ScenarioPage from './pages/ScenarioPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <Route element={<Shell />}>
           <Route path="/" element={<Home />} />
           <Route path="/b/:key" element={<BriefPage />} />
+          <Route path="/what-if/:key" element={<ScenarioPage />} />
           <Route path="/about" element={<About />} />
         </Route>
       </Routes>

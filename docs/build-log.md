@@ -180,3 +180,83 @@ from anything pre-existing.
   text that says the brief is AI-assisted; nothing is posted for the user. The spec's scenario
   half (hypothetical band, `spec_from_scenario`) is in; its routes wait for the scenario engine.
   Infra sets `GRID_PUBLIC_BASE_URL` (the app FQDN until a domain is bound) and `GRID_CARDS_DIR`.
+- 2026-10-29, what-if scenarios (`docs/design-next.md` B). "Drop a data center on my town": a
+  ZIP, a size in MW, a cooling type and an optional pin in; a modelled strip out, with no model
+  writing any number. `app/geocode.py::ZctaCentroids` turns a ZIP into the internal point of its
+  Census ZCTA (the national gazetteer, downloaded once) plus state and county from the FCC area
+  API; `app/ground/census.py::AcsHouseholds` gives the ZCTA's household count from ACS table
+  B11001 (api.census.gov with a key, else data.census.gov's keyless table API). The ground layer
+  runs on the centroid as for a brief, so the baseline (facilities within five miles, utility,
+  price, tariff) is the engine's measured data. `app/scenario/model.py` is one pure function per
+  line (power and homes, share of the utility's customers, water, land, bill, jobs, build time,
+  noise band), each returning its value, the sentence that shows the working, and the cited
+  constants it rests on; `assemble.py` makes every line `modelled` and every constant one engine
+  claim. A constant's claim restates only what its quote says (the curated `claim` field), and
+  the derivation (×365, ÷100, a share of a total) stays in the basis, so the verifier is never
+  asked to find a derived figure on a page that does not print it. The bill line is shielded only
+  when the tariff table says a rule protects households and the campus is above the rule's size
+  floor (`min_mw` in `data/tariffs.json`); otherwise a PJM utility gets a range from PJM's
+  capacity price, and anywhere else the line says why there is none. The customer count and the
+  balancing authority cite EIA-861. Routes: `POST /api/scenario` (ungated, no tokens),
+  `GET /api/scenario/{id}`, `GET /api/scenario-card/{id}.png|.json`, and Open Graph tags for
+  `/what-if/{id}`. The ZIP is treated like an address: never logged (httpx and httpcore loggers
+  are now at WARNING, since they printed request URLs carrying the centroid and, for briefs, the
+  address), and kept off the card, whose title names the county. Infra sets
+  `GRID_SCENARIOS_DIR` on the share so what-if links survive restarts. Constants
+  (`data/scenario_constants.json`): every value is quoted verbatim from an HTML page the verifier
+  can fetch. The design's sources for load factor, water, acreage, taxes and the allocation range
+  are PDFs the verifier cannot read, so HTML substitutes stand in and design-next B.1 names each.
+  Omitted for lack of a verbatim, measured source: `dc_tax_usd_per_mw_year` (the only HTML figure
+  was an illustrative example), so the taxes block is null and the ledger line shows jobs alone.
+  A missing constant leaves its line out rather than guessing. The ACS and gazetteer downloads
+  remember a failure for a cool-down, and the household lookup is bounded by the ground timeout,
+  so an outage does not hold every request. Scenario eval (`eval/scenarios.json`,
+  `run_eval.py --scenarios`): 5 of 5 against the live ground layer, verifier off. Not built yet:
+  the optional interpretation paragraph (build order step 4).
+- 2026-10-29, home page and what-if page (`docs/design-next.md` C.1-C.3). The home page gets a
+  second door, "Drop a data center on your town" (`WhatIfPanel`: ZIP, `MwSlider`, cooling), which
+  posts to `/api/scenario` and opens `/what-if/{id}`; no sign-in, no model. The what-if page
+  (`pages/ScenarioPage.tsx`) keeps `HypotheticalBanner` sticky at the top with the scenario's own
+  `disclosure`, so the page, the card and the PNG say the same thing. Under it: `ScenarioMap`, the
+  campus as a dashed square in the modelled amber on a plate that can be dragged, nudged with the
+  arrow keys (about 200 m a press, 1 km with Shift) or placed with a click on the map, so the pin
+  never needs a drag; `ImpactCounters` (homes' worth of electricity, gallons a day, acres, the
+  bill), each tagged Modeled with its working and sources in a disclosure; `Timeline`, announced to
+  energised, with months named only inside construction, where the engine cites a duration; the
+  house strip and the claims. Every number on the page is the engine's: the counters and timeline
+  bars animate between engine answers and never wait on a model, and `lib/motion.ts`
+  (`useAnimatedNumber`, `usePrefersReducedMotion`) shows final values from the first paint under
+  reduced motion. Only the baseline count is tagged Measured. A change to the size, cooling or
+  pin asks the engine again after 300 ms and replaces the URL; until the answer lands the stale
+  blocks are dimmed and `aria-busy`, Share is off, and a failed answer puts the controls back on
+  the scenario shown. The slider's homes label comes from `/api/pulse`'s cited constants (one
+  shared request per page load, `Pulse.constants`) and is rounded by the same `fmtNice` as the
+  counter, so 100 MW reads 64,900 in both places. `readNdjson` is pulled out of `streamBrief` for
+  the interpretation stream (step 4, not built). Neither a ZIP nor a pin is logged. Open: a what-if
+  change takes 21 to 37 seconds on the API side, mostly checking claims, so the "Working it out"
+  state shows for that long.
+- 2026-10-29, scenario interpretation and C2PA signing (`docs/design-next.md` build order step 4).
+  `POST /api/scenario/{id}/interpret` streams NDJSON (`drafting`, `verifying` with counts, `done`
+  with the scenario; failures end in an `error` line with `status` and `detail`).
+  `app/scenario/interpret.py` asks Spark for three sentences and claims. The facts block holds the
+  engine's lines and working and the scenario's own sources with their curated quotes; the ZIP is
+  replaced by "this ZIP" and the page that names it is withheld, so the model never sees it. A
+  summary with a figure the facts do not carry (digits, number words, scale words, $ and % checked
+  as such) fails the attempt; a claim is dropped unless it cites one of the scenario's pages with
+  that page's curated quote, and pages with no curated quote are not offered. Kept claims go through
+  `verify_claims` with section `scenario`; the paragraph is stored as `reported`, with `draft` true
+  when no claim was checked or any was not supported. The gate (`Gate.admit_scenario`: global cap,
+  sign-in, user quota, no allow-list) applies only to a scenario with no paragraph and no run in
+  flight; a repeat or a joining request is free to anyone. The charge (`scenario:{id}`, never the
+  ZIP) is made after the paragraph is stored, by the request that started the run, so a failed
+  draft costs nothing; `Inflight.start` starts the run with no await after the check, so two first
+  requests make one draft and one charge. The web block ("Explain this in plain words",
+  `Interpretation.tsx`) shows the sign-in prompt on 401 and is off while a what-if change is
+  pending. C2PA: the image installs the `provenance` group (c2pa-python 0.38.0, manylinux wheel in
+  the lock). The cert chain and an unencrypted PKCS#8 key are Key Vault secrets `c2pa-cert-chain`
+  and `c2pa-private-key` (env `GRID_C2PA_CERT_PEM`, `GRID_C2PA_PRIVATE_KEY`, now a `SecretStr`),
+  loaded by `deploy.ps1 -Phase secrets -C2paCertChain <pem> -C2paPrivateKey <pem>`; blank means
+  off. An unreachable timestamp server falls back to signing without one. The card cache name
+  carries a hash of the public chain, so loading a cert re-signs cached cards. Tests sign a card
+  with a generated ES256 chain and read the manifest back. Built as one multi-agent workflow:
+  three implementers, three reviewers, adversarial verification, one fixer (11 findings fixed).

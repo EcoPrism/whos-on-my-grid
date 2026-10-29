@@ -21,5 +21,92 @@
       "quote": "The entire field is a rectangle 360 feet (110 m) long by 160 feet (49 m) wide, covering a total of 1.32 acres.",
       "checked": "2026-10-28"
     }
+  ],
+  "_about_scale": "What a campus's MW means, for the what-if slider: the size tiers and the largest AI campuses announced. Each row's size restates only its quote; mw places it on the slider. These are reported figures (company plans as reported), not measured.",
+  "scale": [
+    {
+      "id": "small_dc",
+      "mw": 5,
+      "kind": "typical",
+      "name": "A small data center",
+      "size": "1 to 5 MW",
+      "source_title": "IBM, What is a hyperscale data center?",
+      "source_url": "https://www.ibm.com/think/topics/hyperscale-data-center",
+      "quote": "Small data centers typically require between 5,000–20,000 square feet of space and may host anywhere from 500 to 2,000 servers. Energy draw: 1–5MW.",
+      "checked": "2026-10-29",
+      "bound": "up_to",
+      "detail": "One building of 5,000 to 20,000 square feet holding 500 to 2,000 servers.",
+      "detail_quote": "Small data centers typically require between 5,000–20,000 square feet of space and may host anywhere from 500 to 2,000 servers."
+    },
+    {
+      "id": "hyperscale_dc",
+      "mw": 100,
+      "kind": "typical",
+      "name": "A hyperscale data center",
+      "size": "over 100 MW",
+      "source_title": "IBM, What is a hyperscale data center?",
+      "source_url": "https://www.ibm.com/think/topics/hyperscale-data-center",
+      "quote": "the facility should contain at least 5,000 servers and occupy at least 10,000 square feet of physical space. Energy draw: Over 100MW.",
+      "checked": "2026-10-29",
+      "bound": "over",
+      "detail": "At least 5,000 servers. Google's in The Dalles, Oregon (2006), often called the first, now covers 1.3 million square feet.",
+      "detail_quote": "the first hyperscale data center is often considered to have been launched in 2006 by Google in The Dalles, OR (near Portland). This hyperscale facility currently occupies 1.3 million square feet of space"
+    },
+    {
+      "id": "xai_colossus",
+      "mw": 300,
+      "kind": "frontier",
+      "name": "xAI's Colossus, Memphis",
+      "size": "300 MW with its second substation (2025)",
+      "source_title": "Tom's Hardware, Musk's Colossus is fully operational with 200,000 GPUs (May 2025)",
+      "source_url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/musks-colossus-is-fully-operational-with-200-000-gpus-backed-by-tesla-batteries-phase-2-to-consume-300-mw-enough-to-power-300-000-homes",
+      "quote": "This means that Colossus will have a total capacity of 300 MW",
+      "checked": "2026-10-29",
+      "bound": "about",
+      "detail": "200,000 Nvidia GPUs by February 2025.",
+      "detail_quote": "Colossus initially launched with 100,000 Nvidia H100 units in July 2024, with its GPU count doubling to 200,000 in February 2025."
+    },
+    {
+      "id": "meta_prometheus",
+      "mw": 1000,
+      "kind": "frontier",
+      "name": "Meta's Prometheus, New Albany, Ohio",
+      "size": "1 GW, planned online in 2026",
+      "source_title": "TechCrunch, Mark Zuckerberg says Meta is building a 5GW AI data center (July 2025)",
+      "source_url": "https://techcrunch.com/2025/07/14/mark-zuckerberg-says-meta-is-building-a-5gw-ai-data-center/",
+      "quote": "Zuckerberg also noted that Meta plans to bring a 1 GW super cluster, called Prometheus, online in 2026, making it one of the first tech companies to control an AI data center of this size.",
+      "checked": "2026-10-29",
+      "bound": "about",
+      "detail": "One of the first AI data centers of this size.",
+      "detail_quote": "making it one of the first tech companies to control an AI data center of this size."
+    },
+    {
+      "id": "stargate_abilene",
+      "mw": 1200,
+      "kind": "frontier",
+      "name": "OpenAI's Stargate, Abilene, Texas",
+      "size": "1.2 GW planned",
+      "source_title": "DCD, Crusoe's Abilene data center officially live, serving Oracle and OpenAI's Stargate (Sept 2025)",
+      "source_url": "https://www.datacenterdynamics.com/en/news/crusoes-abilene-data-center-officially-live-serving-oracle-and-openais-stargate/",
+      "quote": "Developer Crusoe said that the first two buildings on the planned 1.2GW site are now operational and being used by Oracle Cloud Infrastructure (OCI) for OpenAI.",
+      "checked": "2026-10-29",
+      "bound": "about",
+      "detail": "About four million square feet of buildings.",
+      "detail_quote": "This expansion plans to add six more buildings, bringing the total to approximately four million square feet, and a total power capacity of 1.2GW."
+    },
+    {
+      "id": "meta_hyperion",
+      "mw": 2000,
+      "kind": "frontier",
+      "name": "Meta's Hyperion, Louisiana",
+      "size": "2 GW by 2030, then up to 5 GW",
+      "source_title": "TechCrunch, Mark Zuckerberg says Meta is building a 5GW AI data center (July 2025)",
+      "source_url": "https://techcrunch.com/2025/07/14/mark-zuckerberg-says-meta-is-building-a-5gw-ai-data-center/",
+      "quote": "Gabriel says Meta plans to bring two gigawatts of data center capacity online by 2030 with Hyperion, but that it would scale to five gigawatts in several years.",
+      "checked": "2026-10-29",
+      "bound": "about",
+      "detail": "A footprint large enough to cover most of Manhattan.",
+      "detail_quote": "Zuckerberg said Hyperion’s footprint will be large enough to cover most of Manhattan."
+    }
   ]
 }

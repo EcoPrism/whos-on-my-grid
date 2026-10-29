@@ -10,8 +10,10 @@ targetScope = 'resourceGroup'
 // secret or an image that is missing.
 //
 // Secret VALUES never pass through this file. The vault holds gateway-key,
-// baseten-key and session-secret, written by the deploy script's `secrets`
-// phase; the app reads them through its identity.
+// baseten-key, session-secret, c2pa-cert-chain and c2pa-private-key, written by
+// the deploy script's `secrets` phase; the app reads them through its identity.
+// The two c2pa secrets hold one space until a signing certificate is loaded
+// (the app treats blank as "no C2PA"), so the app never references a missing one.
 
 @description('Region for every resource.')
 param location string = resourceGroup().location
@@ -214,7 +216,7 @@ resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
 
 // --- the app -----------------------------------------------------------------
 
-var secretNames = ['gateway-key', 'baseten-key', 'session-secret']
+var secretNames = ['gateway-key', 'baseten-key', 'session-secret', 'c2pa-cert-chain', 'c2pa-private-key']
 
 resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
   name: 'ca-grid'
@@ -264,6 +266,9 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
             { name: 'GRID_AUTH_PROVIDER', value: empty(googleClientId) ? 'off' : 'google' }
             { name: 'GRID_GOOGLE_CLIENT_ID', value: googleClientId }
             { name: 'GRID_SESSION_SECRET', secretRef: 'session-secret' }
+            // C2PA on the share card: PEM chain (end-entity first) and its key. Blank = unsigned.
+            { name: 'GRID_C2PA_CERT_PEM', secretRef: 'c2pa-cert-chain' }
+            { name: 'GRID_C2PA_PRIVATE_KEY', secretRef: 'c2pa-private-key' }
             { name: 'GRID_COOKIE_SECURE', value: 'true' }
             { name: 'GRID_USAGE_STORE', value: 'table' }
             { name: 'GRID_STORAGE_ACCOUNT', value: storage.name }

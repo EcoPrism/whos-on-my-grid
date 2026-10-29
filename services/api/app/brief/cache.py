@@ -98,10 +98,19 @@ class Inflight:
     def running(self, key: str) -> bool:
         return key in self._tasks
 
-    async def run(self, key: str, make: Callable[[], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
+    def start(
+        self, key: str, make: Callable[[], Awaitable[dict[str, Any]]]
+    ) -> tuple[asyncio.Task[dict[str, Any]], bool]:
+        """The running task for `key`, or a new one; True when this call
+        started it. Synchronous, so a check just before it cannot race."""
         task = self._tasks.get(key)
-        if task is None:
-            task = asyncio.ensure_future(make())
-            self._tasks[key] = task
-            task.add_done_callback(lambda _t: self._tasks.pop(key, None))
+        if task is not None:
+            return task, False
+        task = asyncio.ensure_future(make())
+        self._tasks[key] = task
+        task.add_done_callback(lambda _t: self._tasks.pop(key, None))
+        return task, True
+
+    async def run(self, key: str, make: Callable[[], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
+        task, _ = self.start(key, make)
         return await asyncio.shield(task)
