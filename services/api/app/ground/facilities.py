@@ -15,6 +15,7 @@ import re
 import time
 from collections import Counter
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -28,8 +29,9 @@ USER_AGENT = "WhosOnMyGrid/0.1 (+https://github.com/EcoPrism/whos-on-my-grid)"
 
 PEERINGDB_URL = (
     "https://www.peeringdb.com/api/fac?country=US&status=ok&limit=5000"
-    "&fields=id,name,org_name,address1,city,state,latitude,longitude"
+    "&fields=id,name,org_name,address1,city,state,latitude,longitude,created"
 )
+PEERINGDB_PAGE = "https://www.peeringdb.com/"
 PEERINGDB_MAX_AGE_S = 7 * 86_400
 
 OVERPASS_ENDPOINTS = [
@@ -129,6 +131,34 @@ class PeeringDBSource:
             log_event("ground_snapshot", provider="peeringdb", facilities=len(data))
             self._data, self._loaded_at = data, time.time()
             return data
+
+    async def summary(self, *, days: int = 30) -> dict[str, Any]:
+        """What the snapshot holds: every US facility PeeringDB lists, and how
+        many were added in the last `days`. Engine arithmetic over the data;
+        `added` is None for a snapshot made before `created` was asked for."""
+        data = await self._snapshot()
+        since = time.time() - days * 86_400
+        added = 0
+        dated = 0
+        for f in data:
+            created = f.get("created")
+            if not isinstance(created, str):
+                continue
+            dated += 1
+            try:
+                ts = datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                continue
+            if ts >= since:
+                added += 1
+        return {
+            "total": len(data),
+            "added": added if dated else None,
+            "days": days,
+            "fetched_at": self._loaded_at,
+            "source_url": PEERINGDB_PAGE,
+            "source_title": "PeeringDB",
+        }
 
     async def near(self, lat: float, lon: float, radius_km: float) -> list[RawSite]:
         out = []
@@ -528,6 +558,17 @@ class FacilityDatabase:
         found = await self.lookup(lat, lon, radius_km)
         return found.facilities, found.notes
 
+    async def summary(self) -> dict[str, Any] | None:
+        """The PeeringDB source's summary, if there is one and it answers."""
+        for src in self.sources:
+            if isinstance(src, PeeringDBSource):
+                try:
+                    return await src.summary()
+                except GroundError as exc:
+                    log_event("ground_failed", provider=src.name, reason=str(exc)[:160])
+                    return None
+        return None
+
     async def lookup(self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM) -> Lookup:
         """The sources are asked out to ten miles so the brief can name the
         campus just past the ring; the ring itself stays five miles."""
@@ -566,6 +607,17 @@ class FakeFacilityDatabase:
         self.notes = notes or []
         self.beyond = beyond
         self.calls = 0
+        self.summary_value: dict[str, Any] | None = {
+            "total": 2,
+            "added": 1,
+            "days": 30,
+            "fetched_at": 0.0,
+            "source_url": PEERINGDB_PAGE,
+            "source_title": "PeeringDB",
+        }
+
+    async def summary(self) -> dict[str, Any] | None:
+        return self.summary_value
 
     async def lookup(self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM) -> Lookup:
         facilities, notes = await self.near(lat, lon, radius_km)

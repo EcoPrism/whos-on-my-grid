@@ -9,11 +9,48 @@ export interface Example {
   ai_rent_usd_per_month: number | null
 }
 
+// Who is signed in, and how many new briefs they have left today.
+export interface Me {
+  email: string
+  remaining: number
+}
+
 export interface Health {
   ok: boolean
   mode: 'fixtures' | 'agent' | 'full' | 'offline'
   examples: Example[]
+  // off: anyone can generate (local dev). google: new briefs need a Google sign-in.
+  auth: 'off' | 'google' | 'fake'
+  google_client_id: string | null
+  user: Me | null
+  quota_per_user_day: number
 }
+
+export interface PulsePeeringDB {
+  total: number
+  added: number | null
+  days: number
+  source_url: string
+  source_title: string
+}
+
+export interface Equivalence {
+  id: string
+  text: string
+  basis: string
+  source_url: string
+  source_title: string
+  quote: string
+}
+
+export interface Pulse {
+  peeringdb: PulsePeeringDB | null
+  equivalences: Equivalence[]
+}
+
+// Every POST carries this header: with SameSite cookies it is the second belt
+// against a cross-site form spending a signed-in user's quota.
+const POST_HEADERS = { 'content-type': 'application/json', 'x-requested-with': 'grid' }
 
 export class ApiError extends Error {
   status: number
@@ -43,11 +80,27 @@ export function getHealth(): Promise<Health> {
   return request<Health>('/api/health')
 }
 
+export function getPulse(): Promise<Pulse> {
+  return request<Pulse>('/api/pulse')
+}
+
+export function signInWithGoogle(credential: string): Promise<Me> {
+  return request<Me>('/api/auth/google', {
+    method: 'POST',
+    headers: POST_HEADERS,
+    body: JSON.stringify({ credential }),
+  })
+}
+
+export function signOut(): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/auth/logout', { method: 'POST', headers: POST_HEADERS })
+}
+
 // Generation can take a minute or two in agent mode; no client-side timeout.
 export function createBrief(address: string): Promise<Brief> {
   return request<Brief>('/api/brief', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: POST_HEADERS,
     body: JSON.stringify({ address }),
   })
 }
@@ -64,7 +117,7 @@ export type BriefEvent =
 export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
   const r = await fetch('/api/brief/stream', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: POST_HEADERS,
     body: JSON.stringify({ address }),
   })
   if (!r.ok || !r.body) {

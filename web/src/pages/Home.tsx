@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AddressInput from '../components/AddressInput'
+import SignIn from '../components/SignIn'
 import TestAddresses from '../components/TestAddresses'
-import { ApiError, getHealth, streamBrief, type Health } from '../lib/api'
+import { ApiError, getHealth, getPulse, streamBrief, type Health, type Me, type Pulse } from '../lib/api'
+import { fmtMoney } from '../lib/format'
 import { setLive, updateLive } from '../lib/live'
 
 export default function Home() {
@@ -11,11 +13,25 @@ export default function Home() {
   const [busy, setBusy] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [pulse, setPulse] = useState<Pulse | null>(null)
   const nav = useNavigate()
   const mode = health?.mode
 
   useEffect(() => {
-    getHealth().then(setHealth).catch(() => setHealth({ ok: false, mode: 'offline', examples: [] }))
+    getHealth()
+      .then(setHealth)
+      .catch(() => setHealth({ ok: false, mode: 'offline', examples: [], auth: 'off', google_client_id: null, user: null, quota_per_user_day: 0 }))
+  }, [])
+
+  // The pulse is measured and free: what PeeringDB lists, and the house-terms lines.
+  useEffect(() => {
+    if (mode !== 'full' && mode !== 'agent') return
+    getPulse().then(setPulse).catch(() => setPulse(null))
+  }, [mode])
+
+  const onUser = useCallback((me: Me | null) => {
+    setHealth((h) => (h ? { ...h, user: me } : h))
+    setError(null)
   }, [])
 
   useEffect(() => {
@@ -52,6 +68,10 @@ export default function Home() {
     } catch (err) {
       if (id) updateLive(id, { stage: 'error', error: messageFor(err, mode) })
       else setError(messageFor(err, mode))
+      // A spent quota shows up in the count; a lost session shows the button again.
+      if (err instanceof ApiError && (err.status === 401 || err.status === 429)) {
+        getHealth().then(setHealth).catch(() => undefined)
+      }
     } finally {
       setBusy(false)
     }
@@ -84,6 +104,7 @@ export default function Home() {
         {(mode === 'agent' || mode === 'full') && (
           <TestAddresses onPick={onChange} disabled={busy} />
         )}
+        {health && <SignIn health={health} onUser={onUser} />}
         {busy && (mode === 'agent' || mode === 'full') && (
           <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
             Spark is drafting five sections, then Spark Open fetches every cited page and checks each
@@ -116,6 +137,40 @@ export default function Home() {
         </section>
       )}
 
+      {pulse && (pulse.peeringdb || pulse.equivalences.length > 0) && (
+        <section className="mt-14 max-w-[64ch]">
+          {pulse.peeringdb && (
+            <p className="text-lg leading-snug">
+              <a href={pulse.peeringdb.source_url} rel="noopener">{pulse.peeringdb.source_title}</a> lists{' '}
+              <span className="num font-semibold">{pulse.peeringdb.total.toLocaleString('en-US')}</span> data-center
+              facilities in the United States today
+              {pulse.peeringdb.added !== null && (
+                <>
+                  , <span className="num font-semibold">{pulse.peeringdb.added.toLocaleString('en-US')}</span> of them added in the last{' '}
+                  {pulse.peeringdb.days} days
+                </>
+              )}
+              .
+            </p>
+          )}
+          {pulse.equivalences.length > 0 && (
+            <>
+              <h2 className="mt-8 text-sm text-[var(--ink-soft)]">A data center, in house terms</h2>
+              <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                {pulse.equivalences.map((e) => (
+                  <li key={e.id} className="py-3">
+                    <p>{e.text}</p>
+                    <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                      {e.basis} Source: <a href={e.source_url} rel="noopener" title={e.quote}>{e.source_title}</a>.
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+
       {mode === 'agent' && (
         <p className="mt-14 max-w-[64ch] text-sm text-[var(--ink-soft)]">
           Any US street address. Operators, sources and quotes come from Muse Spark's own knowledge
@@ -143,7 +198,15 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
       case 422:
         return 'Could not find that US address. Include the street number, city and state.'
       case 403:
-        return 'This service covers US addresses and is only available from the United States.'
+        return err.detail === 'cross_site'
+          ? 'That request did not come from this page. Reload and try again.'
+          : 'This service covers US addresses and is only available from the United States.'
+      case 401:
+        return 'Sign in with Google to run a new address. Shared briefs and the example addresses need no sign-in.'
+      case 429:
+        return err.detail === 'quota_exceeded_user'
+          ? "You have used today's new briefs. Try again tomorrow, or open a shared brief."
+          : "Today's brief budget is spent. Shared briefs and the example addresses still open."
       case 503:
         return 'The address lookup service is not answering. Try again in a minute.'
       case 502:
@@ -153,15 +216,4 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
     }
   }
   return 'Cannot reach the brief service. Is it running?'
-}
-
-export function fmtMoney(n: number) {
-  const sign = n < 0 ? '−' : '+'
-  return `${sign}$${Math.abs(n).toFixed(0)}`
-}
-
-// The modeled bill change is shown as a range, never as a point estimate alone.
-export function fmtRange([lo, hi]: [number, number]) {
-  const sign = hi < 0 ? '−' : '+'
-  return `${sign}$${Math.abs(lo).toFixed(0)} to $${Math.abs(hi).toFixed(0)}`
 }

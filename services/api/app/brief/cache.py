@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import uuid
 from collections.abc import Awaitable, Callable
 from functools import lru_cache
 from pathlib import Path
@@ -72,7 +73,8 @@ class BriefCache:
         if p is None:
             raise ValueError("bad brief id")
         brief["engine"] = engine_fingerprint()
-        tmp = p.with_suffix(".tmp")
+        # A unique temp name: two writers of the same id never share a file.
+        tmp = p.with_suffix(f".{uuid.uuid4().hex[:8]}.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(brief, f, ensure_ascii=False, indent=1)
         os.replace(tmp, p)
@@ -83,6 +85,9 @@ class Inflight:
 
     def __init__(self) -> None:
         self._tasks: dict[str, asyncio.Task[dict[str, Any]]] = {}
+
+    def running(self, key: str) -> bool:
+        return key in self._tasks
 
     async def run(self, key: str, make: Callable[[], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
         task = self._tasks.get(key)

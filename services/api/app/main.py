@@ -7,6 +7,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.auth import get_sessions, get_usage_store, get_verifier
+from app.auth.gate import Gate
 from app.brief.cache import BriefCache
 from app.brief.fetch import Fetcher, HttpFetcher, TranscriptFetcher
 from app.brief.pipeline import BriefService
@@ -14,7 +16,8 @@ from app.config import Settings, get_settings
 from app.geocode import CensusGeocoder
 from app.ground import get_ground
 from app.llm import get_draft_provider, get_verify_provider
-from app.routers import brief
+from app.routers import auth, brief
+from app.static import mount_web
 from app.telemetry import log_event, uptime_ms
 
 
@@ -56,6 +59,12 @@ def create_app(service: BriefService | None = None) -> FastAPI:
             "GRID_OPENAI_API_KEY is required in agent and full mode (gateway virtual key)"
         )
 
+    # The sign-in gate and the usage store fail fast on a half-configured deploy:
+    # google without a client id or a session secret, table without an account.
+    verifier = get_verifier(settings)
+    sessions = get_sessions(settings)
+    usage = get_usage_store(settings)
+
     logging.basicConfig(level=logging.INFO)
 
     @asynccontextmanager
@@ -66,12 +75,18 @@ def create_app(service: BriefService | None = None) -> FastAPI:
             mode=settings.brief_source,
             llm=settings.llm_provider,
             verifier=settings.llm_provider != "openai" or bool(settings.baseten_api_key),
+            auth=settings.auth_provider,
+            usage=settings.usage_store,
+            web=web_mounted,
         )
         yield
 
     app = FastAPI(title="Who's On My Grid API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.service = service or default_service(settings)
+    app.state.verifier = verifier
+    app.state.sessions = sessions
+    app.state.gate = Gate(settings, sessions, usage)
 
     origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     if origins:
@@ -114,4 +129,7 @@ def create_app(service: BriefService | None = None) -> FastAPI:
             return await call_next(request)
 
     app.include_router(brief.router)
+    app.include_router(auth.router)
+    # Last: the SPA catch-all must sit behind every /api route.
+    web_mounted = mount_web(app, settings.web_dist_path)
     return app

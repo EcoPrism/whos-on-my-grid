@@ -9,7 +9,7 @@ import { ApiError, getBrief } from '../lib/api'
 import { useLive } from '../lib/live'
 import type { Brief, Section, SectionId, Status } from '../types'
 import type { Live } from '../lib/live'
-import { fmtMoney, fmtRange } from './Home'
+import { fmtMoney, fmtRange } from '../lib/format'
 
 const ORDER: SectionId[] = ['on_your_grid', 'coming', 'your_bill', 'protection', 'hearing']
 

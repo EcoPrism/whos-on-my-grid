@@ -12,7 +12,13 @@ Read `README.md` first, then `docs/build-log.md` for what was built when and why
 - `web` — Vite + React + TypeScript. `src/types.ts` mirrors `schema/brief.schema.json`.
 - `data/` — curated JSON that is committed (`tariffs.json`, `facilities.json`, `hearings/`,
   `perception/`) and caches that are not (`briefs/`, `ground/`).
-- `eval/` — the 30-address test set and `run_eval.py`.
+- `eval/` — the 30-address test set and `run_eval.py`. `eval/addresses.json` is also the sign-in
+  gate's allow-list: those addresses run without an account.
+- `services/api/app/auth` — the sign-in gate (`gate.py`), Google id_token check, session cookie,
+  usage store (memory or Azure Table). `app/static.py` serves `web/dist` when it exists.
+- `infra/` and `scripts/deploy.ps1` — one resource group on Azure Container Apps; `docs/deploy.md`
+  is the runbook. `Dockerfile` builds from the repo root and keeps the repo layout (the engine
+  fingerprint hashes it).
 
 ## Commands
 
@@ -30,6 +36,10 @@ cd web && npx tsc -p tsconfig.app.json --noEmit
 - Facts from data are `measured`; a model's sentences are `reported` or `modelled`, and the
   section says which. Do not promote a model's guess to a measured status.
 - Hearing recordings come from the official archive only, never from video platforms.
+- The gate guards only new briefs. Usage rows hold a subject, an email and a brief id, never an
+  address. Home-page figures come from `data/equivalences.json` with a source page and quote.
+- Secret values stay out of Bicep, the console and the chat: `scripts/deploy.ps1 -Phase secrets`
+  is run by the user and pipes `.env` values into Key Vault.
 - The brief cache is stamped with an engine fingerprint (`app/brief/cache.py`); a code or
   curated-data change regenerates briefs on request. No manual cache clearing is needed.
 - Long heredocs break in this environment's bash and halve backslashes. Write scripts to the

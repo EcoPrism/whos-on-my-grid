@@ -170,6 +170,19 @@ autocomplete (US only). `GRID_BASETEN_API_KEY` is optional; without it claims st
 `GRID_ALLOWED_COUNTRIES=US` gates `/api/brief` behind an edge that sets `GRID_COUNTRY_HEADER`
 from the visitor IP; leave it empty locally.
 
+## Deploy
+
+One container serves the API and the built web app (`Dockerfile`, build context the repo root).
+On Azure it runs as a single Container App in its own resource group with a file share for the
+brief cache and datasets, two tables for sign-ins and usage, and a Key Vault for the keys
+(`infra/main.bicep`, `scripts/deploy.ps1`, runbook in `docs/deploy.md`).
+
+Making a brief for a new address needs a Google sign-in and counts against a daily quota per
+person and overall, because each one spends model tokens. Opening a brief, and running one of the
+test-set addresses, needs no sign-in. The usage tables hold an email and brief ids, never an
+address. The home page also shows what PeeringDB lists today and two "in house terms" lines; the
+constants behind those are in `data/equivalences.json`, each with the page and sentence it comes from.
+
 ## What was built when
 
 Everything in this repository was written during the hackathon, from 27 October 2026. The first

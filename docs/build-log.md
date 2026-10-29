@@ -146,3 +146,20 @@ from anything pre-existing.
   Eval after all of this (`eval/runs/step6`): 28 of 30. Maiden, Tucson and Manassas now pass;
   New Albany waits on the SAM run; Elk Grove is a model-variance miss (the row wants PJM capacity
   costs named in the bill attribution and Spark left them out this run).
+- 2026-10-28, hosting. One image (`Dockerfile`, Node builds the web, Python serves it with the
+  API; `app/static.py` mounts `web/dist` with an SPA fallback behind every `/api` route) on a
+  single Azure Container App in its own resource group (`infra/main.bicep`, `scripts/deploy.ps1`,
+  runbook `docs/deploy.md`): Key Vault for the gateway, Baseten and session secrets, read through a
+  user-assigned identity; a file share mounted at `/mnt/grid` for the brief cache and the
+  downloaded datasets, so shared links survive restarts; two tables for sign-ins and usage. One
+  replica by design. The sign-in gate guards only new briefs: `BriefService.resolve` does the
+  tokenless part (geocode, id, cache), and the router admits a cached or in-flight brief to anyone,
+  a test-set address to anyone (counted toward the global cap), and a new address only to a
+  signed-in user with quota left, charged before `generate` runs. Google Identity Services on the
+  page, id_token verified against Google's JWKS, an HttpOnly SameSite cookie, `X-Requested-With`
+  on every POST. Quotas 5 per user and 40 overall per UTC day. Home page: a measured PeeringDB
+  line (the snapshot now asks for `created`, so "added in the last 30 days" is arithmetic over
+  it) and two cited equivalence lines from `data/equivalences.json` (EIA's 10,791 kWh per home per
+  year; a football field's 57,600 sq ft), a footer with the EcoPrism wordmark (placeholder SVG at
+  `web/public/ecoprism.svg`) and an About page that says what is stored. The cache's temp file
+  name is now unique per write.

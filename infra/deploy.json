@@ -1,0 +1,11 @@
+{
+  "_about": "Non-secret deploy settings read by scripts/deploy.ps1. Secrets live in the resource group's Key Vault.",
+  "subscription": "EcoPrism - Prod",
+  "resourceGroup": "rg-whoisinmygrid",
+  "location": "eastus2",
+  "googleClientId": "",
+  "allowedCountries": "",
+  "verifyModel": "meta-models/muse-spark-open-1026",
+  "quotaPerUserDay": 5,
+  "quotaGlobalDay": 40
+}

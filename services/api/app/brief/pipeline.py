@@ -9,6 +9,7 @@ import asyncio
 import time
 from collections import Counter
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from app.brief.assemble import assemble_brief
@@ -43,6 +44,14 @@ class BriefInvalid(Exception):
         self.errors = errors
 
 
+@dataclass(frozen=True)
+class Resolved:
+    geo: GeocodeResult
+    brief_id: str
+    cached: dict | None  # a brief by the current engine, if there is one
+    inflight: bool  # another request is making it right now
+
+
 class BriefService:
     def __init__(
         self,
@@ -64,12 +73,9 @@ class BriefService:
         self.cache = cache
         self.inflight = Inflight()
 
-    async def brief_for_address(self, address: str, progress: Progress | None = None) -> dict:
-        """The finished brief. With `progress`, the caller also sees the brief
-        take shape: a partial brief after the ground truth lands, again as each
-        section is drafted, and a count as claims are checked. Only the first
-        caller for an address gets the stages; a second concurrent request
-        joins the same run and sees the result."""
+    async def resolve(self, address: str) -> Resolved:
+        """Everything that costs no model tokens: geocode, derive the id, look
+        in the cache. The router decides from this who may pay for the rest."""
         geo = await self.geocoder.geocode(address)
         if geo is None:
             raise AddressNotFound()
@@ -77,8 +83,21 @@ class BriefService:
         cached = self.cache.get(brief_id, current_only=True)
         if cached is not None:
             log_event("brief_cache_hit", brief_id=brief_id)
-            return cached
+        return Resolved(geo, brief_id, cached, self.inflight.running(brief_id))
+
+    async def generate(self, resolved: Resolved, progress: Progress | None = None) -> dict:
+        """The finished brief. With `progress`, the caller also sees the brief
+        take shape: a partial brief after the ground truth lands, again as each
+        section is drafted, and a count as claims are checked. Only the first
+        caller for an address gets the stages; a second concurrent request
+        joins the same run and sees the result."""
+        if resolved.cached is not None:
+            return resolved.cached
+        geo, brief_id = resolved.geo, resolved.brief_id
         return await self.inflight.run(brief_id, lambda: self._generate(geo, brief_id, progress))
+
+    async def brief_for_address(self, address: str, progress: Progress | None = None) -> dict:
+        return await self.generate(await self.resolve(address), progress)
 
     async def _generate(
         self, geo: GeocodeResult, brief_id: str, progress: Progress | None = None

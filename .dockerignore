@@ -1,0 +1,23 @@
+# Allow-list. Everything is out unless named here, so caches (data/briefs,
+# data/ground, eval/runs), .env files and node_modules never reach the build.
+*
+!services/api/pyproject.toml
+!services/api/uv.lock
+!services/api/app
+services/api/app/**/__pycache__
+!schema
+!data/tariffs.json
+!data/facilities.json
+!data/equivalences.json
+!data/hearings
+data/hearings/audio
+!data/perception
+data/perception/**/*.png
+data/perception/**/*.tif
+!fixtures
+!eval/addresses.json
+!web
+web/node_modules
+web/dist
+web/.env
+web/.env.*

@@ -80,6 +80,25 @@ class Settings(BaseSettings):
     allowed_countries: str = ""
     country_header: str = "cf-ipcountry"
 
+    # Sign-in gate for *new* briefs. off = anyone can generate (local dev); google =
+    # Google Identity Services id_tokens; fake = "fake:<sub>:<email>" tokens (tests only).
+    # Viewing a brief, and running a test-set address, never needs sign-in.
+    auth_provider: str = "off"
+    google_client_id: str = ""
+    # HS256 secret for the session cookie. Required when auth_provider is not off.
+    session_secret: str = ""
+    cookie_secure: bool = True
+    session_days: int = 30
+    # Where sign-ins and generated briefs are recorded: memory | table (Azure Table
+    # Storage, reached with the managed identity). Rows hold email and brief id, never
+    # an address.
+    usage_store: str = "memory"
+    storage_account: str = ""
+    quota_per_user_day: int = 5
+    quota_global_day: int = 40
+    # The built web app, served by this process when the directory exists.
+    web_dist: str = "web/dist"
+
     @property
     def data_path(self) -> Path:
         p = Path(self.data_dir)
@@ -99,6 +118,15 @@ class Settings(BaseSettings):
     def hearings_path(self) -> Path:
         p = Path(self.hearings_dir)
         return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def web_dist_path(self) -> Path:
+        p = Path(self.web_dist)
+        return p if p.is_absolute() else REPO_ROOT / p
+
+    @property
+    def gate_on(self) -> bool:
+        return self.auth_provider != "off"
 
 
 @lru_cache

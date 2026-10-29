@@ -1,5 +1,5 @@
 import type { Brief } from '../types'
-import { fmtMoney, fmtRange } from '../pages/Home'
+import { fmtMoney, fmtRange } from '../lib/format'
 
 // 1200x630, the X/OG card size, scaled to fit. Rendered in the DOM for now;
 // an image endpoint will rasterise the same markup later.

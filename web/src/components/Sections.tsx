@@ -1,5 +1,5 @@
 import type { ClaimSection, Section, SectionId, Source, Status } from '../types'
-import { fmtMoney } from '../pages/Home'
+import { fmtMoney } from '../lib/format'
 
 export const SECTION_TITLES: Record<ClaimSection, string> = {
   on_your_grid: 'On your grid',

@@ -1,0 +1,46 @@
+# One image: the web app built by Node, served with the API by Python.
+# Build from the repo root (the engine fingerprint hashes a repo-relative
+# layout, so the image keeps it): docker build -t grid .
+#
+# The Maps key is baked into the page at build time; it is public by design
+# (HTTP-referrer restricted on Google's side). Pass it as a build arg.
+
+FROM node:22-slim AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+ARG VITE_GOOGLE_MAPS_API_KEY=
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+RUN npm run build
+
+FROM python:3.13-slim AS api
+COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /usr/local/bin/uv
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
+
+# Dependencies first, so a code change does not reinstall them. The `index`
+# dependency group (imagery, audio) is for the offline indexers, not the API.
+WORKDIR /app/services/api
+COPY services/api/pyproject.toml services/api/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# The repo subset the API reads, at the same relative paths as in the repo.
+COPY services/api/app ./app
+COPY schema /app/schema
+COPY data/tariffs.json data/facilities.json data/equivalences.json /app/data/
+COPY data/hearings /app/data/hearings
+COPY data/perception /app/data/perception
+COPY fixtures /app/fixtures
+COPY eval/addresses.json /app/eval/addresses.json
+COPY --from=web /web/dist /app/web/dist
+
+# Briefs and downloaded datasets go to a mounted share in production
+# (GRID_DATA_DIR, GRID_GROUND_DIR); locally they land under /app/data.
+RUN useradd --system --uid 10001 --no-create-home grid \
+    && mkdir -p /app/data/briefs /app/data/ground /mnt/grid \
+    && chown -R grid:grid /app/data /mnt/grid
+USER grid
+
+ENV PATH="/app/services/api/.venv/bin:$PATH"
+EXPOSE 8000
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
