@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useCurrentRegion } from '../lib/region'
+import { STATUS_WORD } from '../lib/words'
 
 // DRAFT privacy text for Irish addresses (plan 0.11): for the user's review,
 // not legal advice. The EEA transfer mechanism (EU-US Data Privacy Framework or
@@ -35,13 +36,15 @@ export default function About() {
           households, and what was said at the last hearing.
         </p>
         <p>
-          Every section is one of four kinds. <b className="tag-measured">Measured</b> comes from public
-          data the engine reads itself: PeeringDB and OpenStreetMap for facilities, HIFLD for the serving
-          utility, EIA-861 for prices, USDA aerial imagery for new construction, the county's own hearing
-          archive for what was said. <b className="tag-reported">Reported</b> is a sentence a model wrote
-          with a page it cites, and a second model checked the sentence against that page.{' '}
-          <b className="tag-modelled">Modeled</b> is arithmetic over a measured number, shown as a range.{' '}
-          <b className="tag-unavailable">Unavailable</b> means the brief does not know, and says so.
+          Every tile, sentence and section carries one of four words. <b className="tag-measured">{STATUS_WORD.measured}</b>{' '}
+          means the engine read it from a public dataset itself: PeeringDB and OpenStreetMap for facilities,
+          HIFLD for the serving utility, EIA-861 for prices, USDA aerial imagery for new construction, the
+          county's own hearing archive for what was said. <b className="tag-reported">{STATUS_WORD.reported}</b>{' '}
+          is a sentence a model wrote with a page it cites, and a second model checked the sentence against
+          that page. <b className="tag-modelled">{STATUS_WORD.modelled}</b> is our arithmetic over a cited
+          figure, shown as a range, not a measurement. <b className="tag-unavailable">{STATUS_WORD.unavailable}</b>{' '}
+          means nobody publishes it, and the brief says so instead of guessing. Next to the word, solid,
+          likely or rough says how sure the engine is; the exact figure is in the claims list.
         </p>
         {ie && (
           <p>

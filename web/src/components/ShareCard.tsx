@@ -56,7 +56,7 @@ export default function ShareCard({ brief, hypothetical = false }: { brief: Brie
               <span className="block text-[8.5cqw] font-extrabold leading-none text-[var(--signal)]">
                 {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month, currency) : `about ${fmtMoney(h.ai_rent_usd_per_month, currency)}`}
               </span>
-              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, {period} · {currency === 'USD' ? 'modeled' : 'modelled'}</span>
+              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, {period} · our estimate</span>
             </p>
           )}
         </div>

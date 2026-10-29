@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { getPulse, type PulseConstant, type ScaleRef } from '../lib/api'
 import { fmtNice } from '../lib/format'
+import { STATUS_WORD } from '../lib/words'
 
 const MW_MIN = 20
 const MW_MAX = 2000
@@ -185,7 +186,7 @@ export default function MwSlider({ value, onChange, disabled = false, id }: Prop
                 title={`${c.home.quote} (load factor ${c.loadFactor.value}, ${c.loadFactor.source_title})`}
                 className="tag-modelled text-xs font-semibold no-underline hover:underline"
               >
-                Modeled
+                {STATUS_WORD.modelled}
               </a>
             </span>
           )}
@@ -247,7 +248,7 @@ export default function MwSlider({ value, onChange, disabled = false, id }: Prop
               </>
             )}
             .{' '}
-            <span className="tag-reported text-xs font-semibold">Reported</span>
+            <span className="tag-reported text-xs font-semibold">{STATUS_WORD.reported}</span>
           </p>
           <details className="mt-1">
             <summary className="cursor-pointer text-[var(--ink-soft)]">How big is that? Compare real data centers</summary>

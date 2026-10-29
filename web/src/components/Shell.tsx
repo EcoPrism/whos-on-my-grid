@@ -1,16 +1,13 @@
 import { Link, Outlet } from 'react-router-dom'
 import { regionDefaults, useCurrentRegion } from '../lib/region'
+import { STATUS_GLOSS, STATUS_WORD } from '../lib/words'
+import type { Status } from '../types'
 
 // Every page sits inside the shell: the page, then one footer. The footer is
 // the fence at the edge of the yard: ink, a signal stripe along the top, and
 // three things on it: whose project this is, the key to the four colours
 // every brief uses, and where the fine print lives.
-const LEGEND = [
-  { status: 'measured', word: 'Measured', text: 'read from public data by the engine itself' },
-  { status: 'reported', word: 'Reported', text: 'a model wrote it, cited a page, and a second model checked it' },
-  { status: 'modelled', word: 'Modeled', text: 'arithmetic over a measured number, shown as a range' },
-  { status: 'unavailable', word: 'Not known', text: 'the brief does not know, and says so' },
-]
+const LEGEND: Status[] = ['measured', 'reported', 'modelled', 'unavailable']
 
 export default function Shell() {
   // The data line names the sources of the region on screen (the home page's
@@ -42,10 +39,10 @@ export default function Shell() {
           </div>
 
           <dl className="grid gap-y-2 text-sm">
-            {LEGEND.map((l) => (
-              <div key={l.status} className={`key key-${l.status} pl-3`}>
-                <dt className="inline font-semibold">{l.word}</dt>
-                <dd className="inline text-[var(--paper-soft)]">{' '}{l.text}</dd>
+            {LEGEND.map((status) => (
+              <div key={status} className={`key key-${status} pl-3`}>
+                <dt className="inline font-semibold">{STATUS_WORD[status]}</dt>
+                <dd className="inline text-[var(--paper-soft)]">{' '}{STATUS_GLOSS[status]}</dd>
               </div>
             ))}
           </dl>

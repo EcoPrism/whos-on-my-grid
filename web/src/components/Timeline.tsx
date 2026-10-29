@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { usePrefersReducedMotion } from '../lib/motion'
+import { STATUS_WORD } from '../lib/words'
 import type { Impact } from '../types'
 import { fmtAcres, fmtNice, fmtUsd } from '../lib/format'
 
@@ -109,7 +110,7 @@ export default function Timeline({ months, impact }: Props) {
     },
     {
       key: 'bill',
-      label: 'Your bill',
+      label: 'Electric bill',
       fill: range ? load : 0,
       value: range
         ? `+${fmtUsd(range[0] * load)} to ${fmtUsd(range[1] * load)} a month`
@@ -134,7 +135,7 @@ export default function Timeline({ months, impact }: Props) {
         <h2 id={`${id}-head`} className="wide text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">
           From announcement to energised
         </h2>
-        <span className="tag-modelled text-xs font-semibold">Modeled</span>
+        <span className="tag-modelled text-xs font-semibold">{STATUS_WORD.modelled}</span>
       </div>
 
       <div className="mt-3 flex items-start gap-3">
@@ -225,7 +226,7 @@ export default function Timeline({ months, impact }: Props) {
                 {b.value !== null && <span className="impact-bar-fill block h-full" style={{ width: `${b.fill * 100}%` }} />}
               </span>
               <span className="num col-start-2 text-sm text-[var(--ink-soft)] sm:col-start-auto">
-                {b.value ?? 'Not known'}
+                {b.value ?? STATUS_WORD.unavailable}
               </span>
             </dd>
           </div>

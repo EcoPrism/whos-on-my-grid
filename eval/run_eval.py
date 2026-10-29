@@ -328,15 +328,21 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
     notes, ok = [], True
     lines = b.get("at_your_house") or []
     topics = [ln["topic"] for ln in lines]
+    # A topic the brief covers on a tile counts: noise past half a mile is a
+    # distance with no sentence, and a topic nobody publishes is "Not public"
+    # with who to ask (its strip line folded into the one `other` line).
+    glance = b.get("glance") or {}
+    covered = set(topics) | {t for t, g in glance.items() if g.get("value") or g.get("status") == "unavailable"}
     for tp in exp.get("strip_requires", []):
-        if tp not in topics:
+        if tp not in covered:
             ok = False
             notes.append(f"no {tp} line")
-    if exp.get("strip_requires_any") and not any(tp in topics for tp in exp["strip_requires_any"]):
+    if exp.get("strip_requires_any") and not any(tp in covered for tp in exp["strip_requires_any"]):
         ok = False
         notes.append(f"none of {exp['strip_requires_any']}")
-    model_lines = [ln for ln in lines if ln["topic"] != "bill"]
-    if exp.get("strip_lead") and (not model_lines or model_lines[0]["topic"] != exp["strip_lead"]):
+    model_lines = [ln for ln in lines if ln["topic"] not in ("bill", "other")]
+    lead_folded = (glance.get(exp.get("strip_lead") or "") or {}).get("status") == "unavailable"
+    if exp.get("strip_lead") and not lead_folded and (not model_lines or model_lines[0]["topic"] != exp["strip_lead"]):
         ok = False
         notes.append(f"strip leads with {model_lines[0]['topic'] if model_lines else 'nothing'}, expected {exp['strip_lead']}")
     # a consequence line that asserts a nearby facility while the brief lists none

@@ -1,18 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { fmtAcres, fmtNice, fmtUsd } from '../lib/format'
+import { basisFor, type Basis } from '../lib/glance'
 import { useAnimatedNumber, usePrefersReducedMotion } from '../lib/motion'
-import type { HouseLine, HouseTopic, Impact } from '../types'
+import { STATUS_GLOSS, STATUS_WORD, confidenceWord } from '../lib/words'
+import type { HouseLine, Impact, Status } from '../types'
 import { SourceLink } from './Sections'
 
 const COUNT_MS = 900
-
-// The basis (the working) for a counter: the impact block's own, or the
-// matching strip line's, with that line's sources.
-function basisFor(block: { basis?: string } | null | undefined, topic: HouseTopic, lines: HouseLine[] | undefined) {
-  const line = lines?.find((l) => l.topic === topic)
-  const text = block?.basis ?? (line && 'basis' in line ? String((line as { basis?: unknown }).basis ?? '') : '')
-  return { text: text || line?.text || '', sources: line?.sources ?? [] }
-}
 
 type Props = {
   impact: Impact
@@ -111,38 +105,71 @@ function pctOf(v: number): string {
   return p < 1 ? `${p.toFixed(1)}%` : `${Math.round(p)}%`
 }
 
-type CounterProps = {
+export type CounterProps = {
   label: string
-  value: string | null // what is on screen now (animating); null when not known
+  status?: Status // the kind of evidence behind the tile; the what-if's counters are all modelled
+  value: string | null // what is on screen now (animating); null when there is no number
   final: string | null // the settled value, for screen readers
+  text?: string // a sentence in place of a number (a model's line on a brief tile)
   sub?: string
-  unknown?: boolean // a word stands in for the number ("Unknown"): tagged not known
-  basis: { text: string; sources: HouseLine['sources'] }
+  unknown?: boolean // nothing is published: the Not public word stands in for the number
+  confidence?: number
+  draft?: boolean // a model's sentence the second model has not checked yet
+  basis?: Basis
+  size?: 'big' | 'small' // the what-if's four counters are big; six brief tiles share a row
 }
 
-function Counter({ label, value, final, sub, unknown = false, basis }: CounterProps) {
-  const known = value !== null && !unknown
+// One tile: a label, a big number (or a short sentence), a line under it, the
+// status word and, on tap, the working. Shared by the what-if counters and the
+// brief's glance tiles.
+export function Counter({ label, status = 'modelled', value, final, text, sub, unknown = false, confidence, draft = false, basis, size = 'big' }: CounterProps) {
+  const sentence = value === null && Boolean(text)
+  const tone: Status = unknown || (value === null && !sentence) ? 'unavailable' : status
+  const known = tone !== 'unavailable'
+  // The Not public word already stands where the number would be: no second tag under it.
+  const wordShown = !known && value === null && !sentence
+  const numSize = size === 'big' ? 'text-[clamp(2rem,5vw,2.75rem)]' : 'text-[clamp(1.6rem,2.6vw,2.1rem)]'
   return (
-    <li className={`tile ${known ? 'tile-modelled' : 'tile-unavailable'} pt-3`}>
+    <li className={`tile tile-${tone} pt-3`}>
       <h3 className="text-sm font-semibold leading-tight text-[var(--ink-soft)]">{label}</h3>
-      {/* The ticking number is hidden from screen readers; they get the final one. */}
-      <p className="wide num mt-2 text-[clamp(2rem,5vw,2.75rem)] font-bold leading-none tracking-tight" aria-hidden>
-        {value ?? '—'}
-      </p>
-      <p className="sr-only">{value !== null ? final : 'Not known'}</p>
+      {sentence ? (
+        <p className={`mt-2 text-[15px] leading-snug ${draft ? 'text-[var(--ink-soft)]' : ''}`}>
+          {draft && <span className="chip-draft">Draft</span>}
+          {text}
+        </p>
+      ) : (
+        <>
+          {/* The ticking number is hidden from screen readers; they get the final one. */}
+          <p
+            className={`wide num mt-2 font-bold leading-none tracking-tight ${value === null ? 'text-2xl' : numSize}`}
+            aria-hidden
+          >
+            {value ?? (unknown ? STATUS_WORD.unavailable : '—')}
+          </p>
+          <p className="sr-only">{value !== null ? final : STATUS_WORD.unavailable}</p>
+        </>
+      )}
       {sub && <p className="mt-2 text-sm leading-snug text-[var(--ink-soft)]">{sub}</p>}
       {/* relative: the working's popover is anchored to this row, so it is never wider than the tile. */}
-      <div className="relative mt-2 flex flex-wrap items-center gap-x-2 text-xs">
-        <span className={`${known ? 'tag-modelled' : 'tag-unavailable'} font-semibold`}>{known ? 'Modeled' : 'Not known'}</span>
-        {basis.text && <Basis label={label} basis={basis} />}
-      </div>
+      {(!wordShown || (basis && basis.text)) && (
+        <div className="relative mt-2 flex flex-wrap items-center gap-x-2 text-xs">
+          {!wordShown && (
+            <span className={`tag-${tone} font-semibold`}>
+              {draft ? 'Draft' : STATUS_WORD[tone]}
+              {known && !draft && confidence != null && <span className="font-normal text-[var(--ink-soft)]"> · {confidenceWord(confidence)}</span>}
+              {draft && <span className="font-normal text-[var(--ink-soft)]"> · not yet checked</span>}
+            </span>
+          )}
+          {basis && basis.text && <Basis label={label} basis={basis} status={tone} />}
+        </div>
+      )}
     </li>
   )
 }
 
 // The working behind a number, on tap: a disclosure (not a dialog; focus stays
 // on the button). Escape or a tap elsewhere closes it and hands focus back.
-function Basis({ label, basis }: { label: string; basis: CounterProps['basis'] }) {
+function Basis({ label, basis, status = 'modelled' }: { label: string; basis: Basis; status?: Status }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLSpanElement>(null)
   const button = useRef<HTMLButtonElement>(null)
@@ -195,7 +222,7 @@ function Basis({ label, basis }: { label: string; basis: CounterProps['basis'] }
               ))}
             </span>
           )}
-          <span className="tag-modelled mt-2 block text-xs font-semibold">Modeled: the engine’s arithmetic over cited figures, not a measurement.</span>
+          <span className={`tag-${status} mt-2 block text-xs font-semibold`}>{STATUS_WORD[status]}: {STATUS_GLOSS[status]}.</span>
         </span>
       )}
     </span>

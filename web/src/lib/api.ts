@@ -198,7 +198,10 @@ export function createBrief(address: string, region?: string): Promise<Brief> {
 }
 
 // One event per line from /api/brief/stream while the brief is made.
+export type GroundStep = 'facilities' | 'utility' | 'prices' | 'tariff' | 'imagery' | 'hearings'
+export type StepState = 'ok' | 'none' | 'failed'
 export type BriefEvent =
+  | { stage: 'gathering'; step: GroundStep; state: StepState }
   | { stage: 'ground' | 'drafting' | 'done'; brief: Brief }
   | { stage: 'verifying'; verified: number; claims: number }
   | { stage: 'error'; status: number; detail: string }

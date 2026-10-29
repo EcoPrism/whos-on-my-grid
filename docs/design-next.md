@@ -531,7 +531,7 @@ and stores it as `app.state.scenarios`.
 | `ScenarioMap.tsx` | `{ center, pin, acres, facilities, onPinMove }` | Leaflet. Footprint is a square of `acres` centred on the pin; `useAnimatedNumber(acres, 600ms)` drives its side. Flow lines from the pin to the ZIP centroid and to the existing facilities reuse the dashed-line layer from `MapView`. Draggable marker; drop fires `onPinMove`. |
 | `ImpactCounters.tsx` | `{ impact }` | Homes, gallons a day, acres, bill range. Each counter animates with `useAnimatedNumber`; each carries the modelled tag and a tap-to-see-basis popover. |
 | `Timeline.tsx` | `{ months: [lo, hi], impact }` | Scrubber 0–100 across announced → permitted → under construction → energised; power, water and bill bars fill to their final values at the energised mark; land fills during construction. Pure client-side. |
-| `HouseStrip` (existing) | `{ lines }` | Unchanged. |
+| `HouseStrip` (existing) | `{ lines }` | Unchanged. (Plain-words round, 2026-10-29: on a brief the strip carries only lines that say something; `brief.glance` feeds the tiles above it, and `Counter` is shared with the what-if page.) |
 | `Claims` (existing) | `{ claims }` | Unchanged; section label "scenario". |
 | `ShareMenu` (A.6) | `kind="scenario"` | Enabled once `claims` are all checked or the verifier is off. |
 

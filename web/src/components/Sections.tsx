@@ -1,22 +1,6 @@
-import { US_LOCALE, type ClaimSection, type Locale, type Section, type SectionId, type Source, type Status } from '../types'
+import { US_LOCALE, type Locale, type Section, type SectionId, type Source } from '../types'
 import { dcNoun, fmtDate, fmtDistance, fmtMoney, fmtRate, localDate, outerWords, periodLabel as halfYears, ringWords } from '../lib/format'
-
-export const SECTION_TITLES: Record<ClaimSection, string> = {
-  on_your_grid: 'On your grid',
-  coming: 'Coming',
-  your_bill: 'Your bill',
-  protection: 'Protection',
-  hearing: 'Hearing',
-  at_your_house: 'At your house',
-  scenario: 'What-if',
-}
-
-const STATUS_WORD: Record<Status, string> = {
-  measured: 'Measured',
-  reported: 'Reported',
-  modelled: 'Modeled',
-  unavailable: 'Not known',
-}
+import { STATUS_WORD, confidenceWord, sectionTitle } from '../lib/words'
 
 // While a brief streams, a section is one of: not drafted yet, a model's
 // draft whose claims are unchecked, engine text from the data whose claims
@@ -29,22 +13,21 @@ export type Readiness = 'pending' | 'draft' | 'engine' | 'final'
 // currency, the date order and the spelling of the engine's own words.
 export function SectionBlock({ id, section, readiness = 'final', locale = US_LOCALE }: { id: SectionId; section: Section; readiness?: Readiness; locale?: Locale }) {
   const draft = readiness === 'draft' || readiness === 'pending'
-  const statusWord = (s: Status) => (s === 'modelled' && locale.language !== 'en-US' ? 'Modelled' : STATUS_WORD[s])
   return (
     <section id={id} className={`rail-${section.status} border-l-4 pl-5 sm:pl-7`}>
       <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h2 className="text-3xl font-bold leading-none">{SECTION_TITLES[id]}</h2>
+        <h2 className="text-3xl font-bold leading-none">{sectionTitle(id, locale)}</h2>
         <p className={`${draft ? 'text-[var(--ink-soft)]' : `tag-${section.status}`} text-sm font-semibold`}>
-          {readiness === 'pending' ? 'Drafting' : readiness === 'draft' ? 'Draft' : statusWord(section.status)}
+          {readiness === 'pending' ? 'Writing' : readiness === 'draft' ? 'Draft' : STATUS_WORD[section.status]}
           {readiness === 'final' && section.status !== 'unavailable' && (
-            <span className="num font-normal text-[var(--ink-soft)]"> · confidence {Math.round(section.confidence * 100)}%</span>
+            <span className="font-normal text-[var(--ink-soft)]"> · {confidenceWord(section.confidence)}</span>
           )}
           {(readiness === 'draft' || readiness === 'engine') && <span className="font-normal text-[var(--ink-soft)]"> · not yet checked</span>}
         </p>
       </header>
       {readiness === 'draft' && (
         <p className="mt-2 max-w-[64ch] text-sm text-[var(--ink-soft)]">
-          Muse Spark's draft. Every claim in it is being checked against its source; the status and confidence appear when that finishes.
+          A draft. Every claim in it is being checked against its page; the status appears when that finishes.
         </p>
       )}
 

@@ -2,6 +2,7 @@
 the share card, all derived from the assembled sections. No model call:
 nothing here can introduce a causal claim."""
 
+import re
 from typing import Any
 from urllib.parse import urlparse
 
@@ -9,7 +10,7 @@ from app.brief import units as u
 from app.brief.draft import DraftResult, SectionFailure
 from app.brief.vocab import vocab_for
 from app.geocode import GeocodeResult
-from app.ground.types import GroundTruth
+from app.ground.types import GroundTruth, HearingQuote
 from app.regions.locale import US_LOCALE, Locale
 from app.scenario.model import noise_at
 from app.schema import SECTION_IDS
@@ -221,11 +222,27 @@ def bill_house_line(sections: Sections, *, locale: Locale = US_LOCALE) -> dict[s
     }
 
 
+# Within this distance the engine writes a noise sentence; further out the
+# distance alone goes on the page (the glance block) and the sentence is left
+# unwritten, unless a hearing transcript shows noise was raised.
+NOISE_SENTENCE_MI = 0.5
+_NOISE_WORDS = re.compile(r"\b(nois\w*|sound|hum|humming|loud|decibel\w*)\b", re.I)
+
+
+def noise_raised(truth: GroundTruth) -> HearingQuote | None:
+    """The first indexed hearing quote that mentions noise, if any."""
+    if truth.hearing is None:
+        return None
+    return next((q for q in truth.hearing.quotes if _NOISE_WORDS.search(q.text)), None)
+
+
 def noise_house_line(
     truth: GroundTruth, now_iso: str, *, locale: Locale = US_LOCALE
 ) -> dict[str, Any] | None:
     """Noise, modeled from distance to the nearest building in the facility
-    database. Low confidence by design: nobody has measured it."""
+    database. Written only where it says something: under half a mile, where
+    nothing is nearby, or where a hearing transcript shows noise came up.
+    Low confidence by design: nobody has measured it."""
     if truth.facilities is None:
         return None
     adj = vocab_for(locale).dc_noun.replace(" ", "-")
@@ -239,6 +256,36 @@ def noise_house_line(
             "confidence": 0.8,
             "sources": [],
         }
+    facility_source = {
+        "title": nearest.source_title,
+        "url": nearest.source_url,
+        "retrieved_at": now_iso,
+        "quote": nearest.name,
+    }
+    raised = noise_raised(truth)
+    if raised is not None and truth.hearing is not None:
+        h = truth.hearing
+        return {
+            "text": (
+                f"Noise came up at the {h.body} meeting on {h.date}. The nearest {adj} "
+                f"building, {nearest.name}, is {u.dist(nearest.distance_km, locale.units)} "
+                "from your house."
+            ),
+            "topic": "noise",
+            "status": "measured",
+            "confidence": 0.7,
+            "sources": [
+                {
+                    "title": h.page_title,
+                    "url": h.page_url,
+                    "retrieved_at": now_iso,
+                    "quote": raised.text,
+                },
+                facility_source,
+            ],
+        }
+    if nearest.distance_km * KM_TO_MI >= NOISE_SENTENCE_MI:
+        return None
     heard = noise_at(nearest.distance_km)
     basis = heard.basis
     if locale.units != "us":
@@ -253,14 +300,7 @@ def noise_house_line(
         "topic": "noise",
         "status": "modelled",
         "confidence": heard.confidence,
-        "sources": [
-            {
-                "title": nearest.source_title,
-                "url": nearest.source_url,
-                "retrieved_at": now_iso,
-                "quote": nearest.name,
-            }
-        ],
+        "sources": [facility_source],
     }
 
 

@@ -236,8 +236,11 @@ async def test_ie_grid_section_in_km() -> None:
         "Campus, 0.9 km away, operated by Halvex Digital."
     )
     assert "2 data centres within 8 km" in brief["card"]["lines"]
-    noise = next(line for line in brief["at_your_house"] if line["topic"] == "noise")
-    assert "0.9 km from your house" in noise["text"]
+    # 0.9 km is past the half-mile line: the distance goes on the tile, no sentence.
+    assert all(line["topic"] != "noise" for line in brief["at_your_house"])
+    noise = brief["glance"]["noise"]
+    assert noise["value"] == "0.9 km" and noise["text"] is None
+    assert noise["sub"].startswith("to Halvex Dublin 15 Campus, ")
     osm = next(c for c in brief["claims"] if "osm/way/9002" in c["source"]["url"])
     assert "under construction" in osm["text"]
 

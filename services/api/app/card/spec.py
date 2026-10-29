@@ -125,8 +125,7 @@ def spec_from_brief(brief: dict[str, Any], *, public_base_url: str = "") -> Card
         span = headline.get("ai_rent_range_usd_per_month")
         big = fmt_range(*span, currency) if span else f"about {fmt_money(rent, currency)}"
         price = ((brief.get("sections") or {}).get("your_bill") or {}).get("price")
-        word = "modeled" if currency == "USD" else "modelled"
-        caption = f"a month for a typical home, {_years(price)} · {word}"
+        caption = f"a month for a typical home, {_years(price)} · our estimate"
     verified, grounded = _checked(brief)
     disclosure = disclosure_line(
         str(brief.get("brief_id") or ""),

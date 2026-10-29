@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import SignIn from './SignIn'
 import { ApiError, getHealth, streamInterpretation, type Health, type Me } from '../lib/api'
+import { STATUS_WORD, confidenceWord } from '../lib/words'
 import type { Scenario } from '../types'
 
 // The what-if in plain words. The numbers above are the engine's arithmetic
@@ -97,7 +98,7 @@ export default function Interpretation({
         <h2 id={headId} className="text-3xl font-bold leading-none">In plain words</h2>
         {it && (
           <p className="tag-reported text-sm font-semibold">
-            Reported
+            {STATUS_WORD.reported}
             {it.draft && checked === 0 && (
               <span className="font-normal text-[var(--ink-soft)]"> · not checked by a second model</span>
             )}
@@ -108,7 +109,7 @@ export default function Interpretation({
               </span>
             )}
             {(!it.draft || checked > 0) && (
-              <span className="num font-normal text-[var(--ink-soft)]"> · confidence {Math.round(it.confidence * 100)}%</span>
+              <span className="font-normal text-[var(--ink-soft)]"> · {confidenceWord(it.confidence)}</span>
             )}
           </p>
         )}
@@ -179,7 +180,7 @@ function stageText(run: Running): string {
     case 'starting':
       return 'Asking for an explanation…'
     case 'drafting':
-      return 'Muse Spark is drafting from the figures on this page…'
+      return 'Writing from the figures on this page…'
     case 'verifying':
       return run.claims > 0
         ? `Checking its claims against their sources: ${run.verified} of ${run.claims}.`

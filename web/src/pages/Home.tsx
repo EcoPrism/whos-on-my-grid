@@ -1,34 +1,45 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AddressInput from '../components/AddressInput'
+import GroundSteps from '../components/GroundSteps'
 import SignIn from '../components/SignIn'
 import TestAddresses from '../components/TestAddresses'
 import WhatIfPanel from '../components/WhatIfPanel'
 import { ApiError, createScenario, getPulse, isUnknownRegion, streamBrief, type Health, type Me, type Pulse, type RegionInfo } from '../lib/api'
 import { fmtMoney } from '../lib/format'
-import { setLive, setLiveScenario, updateLive } from '../lib/live'
+import { setLive, setLiveScenario, updateLive, type Steps } from '../lib/live'
 import { regionDefaults, useRegion } from '../lib/region'
 import { scenarioMessage } from '../lib/scenario'
-import type { ScenarioInputs } from '../types'
+import { STATUS_WORD, sectionTitle } from '../lib/words'
+import { US_LOCALE, type Locale, type ScenarioInputs, type SectionId, type Status } from '../types'
+
+const IE_LOCALE: Locale = { country: 'IE', currency: 'EUR', units: 'metric', language: 'en-IE' }
 
 // The five parts of a brief, in the brief page's own words. The colour on
 // each tile is the kind of evidence that part usually rests on, the same key
 // the brief sections and the footer use.
-const PARTS = [
-  { title: 'On your grid', status: 'measured', word: 'Measured', text: 'The data centers within reach of your address, with operator and distance, from PeeringDB and OpenStreetMap.' },
-  { title: 'Coming', status: 'reported', word: 'Reported, checked', text: 'What is announced, permitted or under construction near you, each line cited to a page you can open.' },
-  { title: 'Your bill', status: 'modelled', word: 'Modeled', text: 'Your utility’s household price over its last two reported years, from EIA-861, worked into a range for a bill like yours.' },
-  { title: 'Protection', status: 'reported', word: 'Reported, checked', text: 'Whether a large-load tariff in your state shields households, and what it actually says.' },
-  { title: 'Hearing', status: 'measured', word: 'Measured where indexed', text: 'What was said at the last public hearing, from the official archive, never a video platform.' },
+interface Part {
+  id: SectionId
+  status: Status
+  word: string
+  text: string
+}
+
+const PARTS: Part[] = [
+  { id: 'on_your_grid', status: 'measured', word: STATUS_WORD.measured, text: 'The data centers within reach of your address, with operator and distance, from PeeringDB and OpenStreetMap.' },
+  { id: 'coming', status: 'reported', word: STATUS_WORD.reported, text: 'What is announced, permitted or under construction near you, each line cited to a page you can open.' },
+  { id: 'your_bill', status: 'modelled', word: STATUS_WORD.modelled, text: 'Your utility’s household price over its last two reported years, from EIA-861, worked into a range for a bill like yours.' },
+  { id: 'protection', status: 'reported', word: STATUS_WORD.reported, text: 'Whether a large-load tariff in your state shields households, and what it actually says.' },
+  { id: 'hearing', status: 'measured', word: `${STATUS_WORD.measured}, where an archive is indexed`, text: 'What was said at the last public hearing, from the official archive, never a video platform.' },
 ]
 
 // The same five parts for an Irish address, in the sources that region reads.
-const PARTS_IE = [
-  { title: 'On your grid', status: 'measured', word: 'Measured', text: 'The data centres within reach of your address, with operator and distance, from PeeringDB and OpenStreetMap, on the ESB Networks grid.' },
-  { title: 'Coming', status: 'reported', word: 'Reported, checked', text: 'What is announced, granted or under construction near you, including planning decisions, each line cited to a page you can open.' },
-  { title: 'Your bill', status: 'modelled', word: 'Modelled', text: 'The national household electricity price from Eurostat, the same half-year two years apart, worked into a figure for a typical home.' },
-  { title: 'Protection', status: 'reported', word: 'Reported, checked', text: 'What a CRU connection policy for new data centres requires, and what its stated aim is.' },
-  { title: 'Hearing', status: 'measured', word: 'Measured where indexed', text: 'What was said at the last public meeting, from the official archive, never a video platform.' },
+const PARTS_IE: Part[] = [
+  { id: 'on_your_grid', status: 'measured', word: STATUS_WORD.measured, text: 'The data centres within reach of your address, with operator and distance, from PeeringDB and OpenStreetMap, on the ESB Networks grid.' },
+  { id: 'coming', status: 'reported', word: STATUS_WORD.reported, text: 'What is announced, granted or under construction near you, including planning decisions, each line cited to a page you can open.' },
+  { id: 'your_bill', status: 'modelled', word: STATUS_WORD.modelled, text: 'The national household electricity price from Eurostat, the same half-year two years apart, worked into a figure for a typical home.' },
+  { id: 'protection', status: 'reported', word: STATUS_WORD.reported, text: 'What a CRU connection policy for new data centres requires, and what its stated aim is.' },
+  { id: 'hearing', status: 'measured', word: `${STATUS_WORD.measured}, where an archive is indexed`, text: 'What was said at the last public meeting, from the official archive, never a video platform.' },
 ]
 
 const PARTS_BY_REGION: Record<string, typeof PARTS> = { us: PARTS, ie: PARTS_IE }
@@ -84,6 +95,10 @@ export default function Home() {
   const { health, setHealth, choose, reload, info } = useRegion()
   const [busy, setBusy] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  // The ground steps as they land, shown under the button until the first
+  // partial brief moves the reader to the brief page (where they ride along).
+  const [steps, setSteps] = useState<Steps>({})
+  const stepsRef = useRef<Steps>({})
   const [error, setError] = useState<string | null>(null)
   // Kept with the region it was fetched for, so a switch never shows the other region's figure.
   const [pulseOf, setPulseOf] = useState<{ region: string; pulse: Pulse | null } | null>(null)
@@ -95,6 +110,7 @@ export default function Home() {
   const regions = health?.regions ?? []
   const copy = copyFor(region, info)
   const parts = PARTS_BY_REGION[region ?? 'us'] ?? PARTS_IE
+  const partLocale = region === 'ie' ? IE_LOCALE : US_LOCALE
   const scenarios = health?.scenarios ?? info?.scenarios ?? true
   const countries = health?.places_country ?? info?.places_country ?? defaults.places_country
   const addressLabel = info?.address_label || defaults.address_label
@@ -162,13 +178,21 @@ export default function Home() {
     if (busy || !input.trim()) return
     setError(null)
     setBusy(true)
-    // The brief streams in stages. The first partial (the facts: map, utility,
-    // bill number) moves us to the brief page; later events update it there.
+    stepsRef.current = {}
+    setSteps({})
+    // The brief streams in stages. The ground steps come first; the first
+    // partial (the facts: map, utility, bill number) moves us to the brief
+    // page; later events update it there.
     let id: string | null = null
     const startedAt = Date.now()
     try {
       await streamBrief(input, region, (ev) => {
         if (ev.stage === 'error') return // thrown by streamBrief instead
+        if (ev.stage === 'gathering') {
+          stepsRef.current = { ...stepsRef.current, [ev.step]: ev.state }
+          setSteps(stepsRef.current)
+          return
+        }
         if (ev.stage === 'verifying') {
           if (id) updateLive(id, { stage: 'verifying', verified: ev.verified, claims: ev.claims })
           return
@@ -176,7 +200,7 @@ export default function Home() {
         const first = id === null
         const bid = ev.brief.brief_id
         id = bid
-        setLive(bid, { brief: ev.brief, stage: ev.stage, verified: 0, claims: 0, startedAt, endedAt: ev.stage === 'done' ? Date.now() : undefined })
+        setLive(bid, { brief: ev.brief, stage: ev.stage, steps: stepsRef.current, verified: 0, claims: 0, startedAt, endedAt: ev.stage === 'done' ? Date.now() : undefined })
         if (first) nav(`/b/${bid}`)
       })
     } catch (err) {
@@ -250,10 +274,16 @@ export default function Home() {
               </p>
             )}
             {busy && live && (
-              <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
-                Spark is drafting five sections, then Spark Open fetches every cited page and checks each
-                claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
-              </p>
+              <div className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
+                <p>
+                  <span className="mr-2 font-semibold text-[var(--ink)]">Finding</span>
+                  <GroundSteps steps={steps} />
+                </p>
+                <p className="mt-1">
+                  Then the sentences are written and every claim is checked against its page. Usually
+                  30–90 seconds. <span className="num">{elapsed}s</span>
+                </p>
+              </div>
             )}
             {error && (
               <p className="mt-3 text-sm" role="alert">{error}</p>
@@ -291,7 +321,7 @@ export default function Home() {
 
       {live && pulse && (pulse.peeringdb || pulse.equivalences.length > 0) && (
         <section className="mt-20 border-t-4 border-[var(--measured)] pt-5">
-          <h2 className="tag-measured text-sm font-semibold">Measured today</h2>
+          <h2 className="tag-measured text-sm font-semibold">{STATUS_WORD.measured}, today</h2>
           <div className="mt-4 grid gap-x-12 gap-y-10 md:grid-cols-[1fr_1.3fr]">
             {pulse.peeringdb && (
               <div>
@@ -339,8 +369,8 @@ export default function Home() {
           </p>
           <ul className="mt-8 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
             {parts.map((p) => (
-              <li key={p.title} className={`tile tile-${p.status} pt-3`}>
-                <h3 className="text-xl font-bold leading-tight">{p.title}</h3>
+              <li key={p.id} className={`tile tile-${p.status} pt-3`}>
+                <h3 className="text-xl font-bold leading-tight">{sectionTitle(p.id, partLocale)}</h3>
                 <p className={`tag-${p.status} mt-1 text-xs font-semibold`}>{p.word}</p>
                 <p className="mt-2 text-sm leading-snug text-[var(--ink-soft)]">{p.text}</p>
               </li>

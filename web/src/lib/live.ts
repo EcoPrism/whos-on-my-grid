@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { GroundStep, StepState } from './api'
 import type { Brief, Scenario } from '../types'
 
 // Briefs in progress, keyed by brief id. Home starts a stream and moves to the
@@ -8,9 +9,13 @@ import type { Brief, Scenario } from '../types'
 
 export type Stage = 'ground' | 'drafting' | 'verifying' | 'done' | 'error'
 
+export type Steps = Partial<Record<GroundStep, StepState>>
+
 export interface Live {
   brief: Brief
   stage: Stage
+  // What the ground gathering reported before the first partial brief.
+  steps: Steps
   verified: number
   claims: number
   startedAt: number

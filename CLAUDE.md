@@ -35,7 +35,9 @@ cd web && npx tsc -p tsconfig.app.json --noEmit
 - Every engine claim cites a page the verifier can fetch, with a verbatim quote from that page.
   A claim must say only what its cited page shows; distance and counts are the engine's arithmetic.
 - Facts from data are `measured`; a model's sentences are `reported` or `modelled`, and the
-  section says which. Do not promote a model's guess to a measured status.
+  section says which. Do not promote a model's guess to a measured status. The page shows the
+  four statuses as From the data / Written by AI, checked / Our estimate / Not public, from
+  `web/src/lib/words.ts` only; the schema values never change.
 - Hearing recordings come from the official archive only, never from video platforms.
 - The gate guards only new briefs. Usage rows hold a subject, an email and a brief id, never an
   address. Home-page figures come from `data/equivalences.json` with a source page and quote.

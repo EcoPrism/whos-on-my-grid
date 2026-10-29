@@ -10,6 +10,7 @@ from typing import Any
 from app.brief import units as u
 from app.brief.draft import DraftResult, SectionFailure
 from app.brief.headline import (
+    NOISE_SENTENCE_MI,
     Drafts,
     bill_house_line,
     derive_card,
@@ -18,6 +19,7 @@ from app.brief.headline import (
     land_house_line,
     monthly_change,
     noise_house_line,
+    period_words,
 )
 from app.brief.vocab import CONNECTION_POLICY_AIM, US_VOCAB, Vocab, vocab_for
 from app.config import DRAFT_MODEL_ID
@@ -34,6 +36,7 @@ from app.ground.types import (
     PriceSeries,
 )
 from app.regions.locale import US_LOCALE, Locale
+from app.scenario.model import noise_at
 from app.schema import SECTION_IDS
 from app.telemetry import log_event
 
@@ -63,11 +66,35 @@ _EMPTY_EXTRA: dict[str, dict[str, Any]] = {
 }
 
 # Strip lines about impact need a facility to be about. These words mark a
-# line that says there is none to report, which may stay.
+# line that only says there is nothing to report: nothing published, nothing
+# nearby. Such lines fold into one (see _quiet_line).
 _SAYS_NONE = re.compile(
-    r"not (known|public|published)|no (data[- ]cent(?:er|re)|facilit|nearby|building)", re.I
+    r"not (known|public|published|disclosed|available|reported|on record)"
+    r"|do(?:es)? not (publish|disclose|report|share|say)"
+    r"|no (public |published )?(figure|data|record|number|breakdown)"
+    r"|no (data[- ]cent(?:er|re)|facilit|nearby|building)",
+    re.I,
 )
 _IMPACT_TOPICS = {"noise", "water", "air", "land"}
+# Model lines on these topics that only say nothing is published are folded
+# into one short line; the glance block marks the topic Not public.
+_QUIET_TOPICS = ("water", "land", "air", "taxes")
+_QUIET_WORDS = {
+    "US": {
+        "water": "water use",
+        "land": "land",
+        "air": "generator permits",
+        "taxes": "property taxes",
+    },
+    "IE": {
+        "water": "water use",
+        "land": "land",
+        "air": "generator licences",
+        "taxes": "commercial rates",
+    },
+}
+# The tiles on the brief page, in the order people feel them.
+GLANCE_TOPICS = ("bill", "grid", "noise", "water", "land", "taxes", "air")
 # The order people feel them: the bill, then water, then noise, then the rest.
 _TOPIC_ORDER = {
     t: i for i, t in enumerate(["bill", "water", "noise", "land", "air", "grid", "taxes", "other"])
@@ -148,7 +175,8 @@ def assemble_brief(
                 sections[sid]["status"] = "reported"
                 log_event("coverage_downgrade", section=sid)
 
-    at_your_house = _strip(sections, house or [], claims, now_iso, truth, locale)
+    at_your_house = _strip(sections, house or [], claims, now_iso, truth, locale, geo)
+    headline = derive_headline(sections, geo, truth, locale=locale)
 
     return {
         "brief_id": brief_id,
@@ -157,10 +185,13 @@ def assemble_brief(
         "fixture": False,
         "address": _address(geo, truth),
         "locale": dataclasses.asdict(locale),
-        "headline": derive_headline(sections, geo, truth, locale=locale),
+        "headline": headline,
         "sections": sections,
         "claims": claims,
         "at_your_house": at_your_house[:5],
+        "glance": _glance(
+            sections, at_your_house, house or [], truth, headline, geo, now_iso, locale
+        ),
         "card": derive_card(
             card_lines,
             geo,
@@ -1030,6 +1061,56 @@ def _protection_section(
 # --- the strip -------------------------------------------------------------------
 
 
+def _says_none(line: dict[str, Any]) -> bool:
+    """A model line that only reports a gap: nothing published, nothing nearby."""
+    return bool(_SAYS_NONE.search(line["text"]))
+
+
+def _ask_words(truth: GroundTruth | None, geo: GeocodeResult, v: Vocab) -> list[str]:
+    """Who to ask when operators publish nothing: the county, the utility."""
+    out: list[str] = []
+    if geo.county:
+        out.append(v.county_words(geo.county))
+    if truth is not None and truth.utility is not None:
+        out.append(truth.utility.name)
+    return out
+
+
+def _and(words: list[str]) -> str:
+    return words[0] if len(words) == 1 else ", ".join(words[:-1]) + " and " + words[-1]
+
+
+def _quiet_line(
+    quiet: list[dict[str, Any]],
+    own: list[dict[str, Any]],
+    truth: GroundTruth | None,
+    geo: GeocodeResult,
+    locale: Locale,
+) -> dict[str, Any]:
+    """One line for every topic the model could only call not public."""
+    v = vocab_for(locale)
+    words = _QUIET_WORDS.get(locale.country, _QUIET_WORDS["US"])
+    topics = [t for t in _QUIET_TOPICS if any(line["topic"] == t for line in quiet)]
+    what = _and([words[t] for t in topics])
+    grounded_empty = truth is not None and truth.facilities is not None and not truth.facilities
+    if grounded_empty:
+        text = (
+            f"No {v.dc_noun} within {u.radius_words(locale.units)}, so there is nothing to "
+            f"report on {what}."
+        )
+    else:
+        ask = _ask_words(truth, geo, v)
+        text = f"Not public: {what}. The operators near you do not publish it"
+        text += f"; {_and(ask)} {'are' if len(ask) > 1 else 'is'} where to ask." if ask else "."
+    return {
+        "text": text,
+        "topic": "other",
+        "status": "unavailable",
+        "confidence": max(0.0, min(1.0, min(float(line["confidence"]) for line in quiet))),
+        "sources": _distinct_sources(own),
+    }
+
+
 def _strip(
     sections: dict[str, Any],
     house: list[dict[str, Any]],
@@ -1037,10 +1118,14 @@ def _strip(
     now_iso: str,
     truth: GroundTruth | None,
     locale: Locale = US_LOCALE,
+    geo: GeocodeResult | None = None,
 ) -> list[dict[str, Any]]:
     """The bill sentence first, the engine's noise sentence when it has a
-    facility list, then the model's lines, each `reported` with its claims."""
+    facility list, then the model's lines, each `reported` with its claims.
+    Lines that only say a topic is not public fold into one short line."""
     out: list[dict[str, Any]] = []
+    quiet: list[dict[str, Any]] = []
+    quiet_claims: list[dict[str, Any]] = []
     bill = bill_house_line(sections, locale=locale)
     if bill:
         out.append(bill)
@@ -1050,9 +1135,12 @@ def _strip(
     engine_land = land_house_line(truth, now_iso, locale=locale) if truth is not None else None
     if engine_land:
         out.append(engine_land)
-    grounded_empty = truth is not None and truth.facilities is not None and not truth.facilities
+    grounded = truth.facilities if truth is not None else None
+    grounded_empty = grounded is not None and not grounded
     for line in house:
-        if engine_noise and line["topic"] == "noise":
+        # With a facility list the noise line is the engine's, written only
+        # where it says something; the model's never stands in for it.
+        if line["topic"] == "noise" and (engine_noise or grounded is not None):
             continue
         if engine_land and line["topic"] == "land":
             continue
@@ -1068,6 +1156,10 @@ def _strip(
             for n, c in enumerate(line["claims"], start=first)
         ]
         claims.extend(own)
+        if line["topic"] in _QUIET_TOPICS and _says_none(line):
+            quiet.append(line)
+            quiet_claims.extend(own)
+            continue
         out.append(
             {
                 "text": line["text"],
@@ -1077,8 +1169,203 @@ def _strip(
                 "sources": _distinct_sources(own),
             }
         )
+    if quiet and geo is not None:
+        out.append(_quiet_line(quiet, quiet_claims, truth, geo, locale))
     out.sort(key=lambda line: _TOPIC_ORDER.get(line["topic"], 99))
     return out
+
+
+# --- the glance: one entry per concern, for the tiles -----------------------------
+
+
+def _entry(
+    status: str,
+    value: str | None,
+    sub: str | None,
+    text: str | None,
+    confidence: float,
+    sources: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "value": value,
+        "sub": sub,
+        "text": text,
+        "confidence": max(0.0, min(1.0, float(confidence))),
+        "sources": list(sources),
+    }
+
+
+def _glance(
+    sections: dict[str, Any],
+    strip: list[dict[str, Any]],
+    house: list[dict[str, Any]],
+    truth: GroundTruth | None,
+    headline: dict[str, Any],
+    geo: GeocodeResult,
+    now_iso: str,
+    locale: Locale,
+) -> dict[str, Any]:
+    """What each tile on the brief page shows: a number where the engine has
+    one (bill range, facility count, distance, acres), the model's sentence
+    where it wrote one, and Not public with who to ask where nobody publishes.
+    Everything here is derived from the sections and the strip: no new claim."""
+    v = vocab_for(locale)
+    units = locale.units
+    radius = u.radius_words(units)
+    by_topic = {line["topic"]: line for line in reversed(strip)}
+    raw = {line["topic"]: line for line in reversed(house)}
+    grounded = truth is not None and truth.facilities is not None
+    grounded_empty = grounded and not truth.facilities  # type: ignore[union-attr]
+    out: dict[str, Any] = {}
+
+    # The bill: the hero's range, with the strip's own sentence behind it.
+    bill = sections.get("your_bill") or {}
+    span = headline.get("ai_rent_range_usd_per_month")
+    bill_line = by_topic.get("bill")
+    if span is not None and bill_line is not None:
+        price = bill.get("price") or {}
+        cur = str(price.get("currency") or locale.currency)
+        lo, hi = float(span[0]), float(span[1])
+        same_sign = (lo >= 0) == (hi >= 0)
+        value = f"{u.money(lo, cur)} to {u.money_abs(hi, cur) if same_sign else u.money(hi, cur)}"
+        now, then = period_words(price)
+        when = f"{now[3:]} vs {then[3:]}" if now else "vs two years ago"
+        out["bill"] = _entry(
+            "modelled",
+            value,
+            f"a month for a typical home, {when}",
+            bill_line["text"],
+            bill_line["confidence"],
+            bill_line["sources"],
+        )
+    else:
+        out["bill"] = _entry(
+            "unavailable",
+            None,
+            f"No household price series for this {v.utility_word}",
+            None,
+            0.0,
+            [],
+        )
+
+    # Electricity: how many are on the grid, and how near the nearest is.
+    grid = sections.get("on_your_grid") or {}
+    facilities = [f for f in grid.get("facilities") or [] if f.get("status") != "rejected"]
+    nearest_km = min((float(f["distance_km"]) for f in facilities), default=None)
+    if grid.get("status") == "unavailable":
+        out["grid"] = _entry(
+            "unavailable", None, "The facility databases did not answer", None, 0.0, []
+        )
+    else:
+        sub = (
+            f"within {radius}, nearest {u.dist(nearest_km, units)}"
+            if nearest_km is not None
+            else f"none within {radius}"
+        )
+        out["grid"] = _entry(
+            grid["status"],
+            str(len(facilities)),
+            sub,
+            grid.get("summary"),
+            grid.get("confidence", 0.0),
+            grid.get("sources") or [],
+        )
+
+    # Noise: the distance, always; the sentence only where it says something.
+    if grounded:
+        nearest = truth.nearest  # type: ignore[union-attr]
+        noise_line = by_topic.get("noise")
+        if nearest is None:
+            out["noise"] = _entry(
+                "measured",
+                "None",
+                f"nothing within {radius} to hear",
+                noise_line["text"] if noise_line else None,
+                0.8,
+                [],
+            )
+        else:
+            miles = nearest.distance_km * KM_TO_MI
+            if noise_line is not None and noise_line["status"] == "measured":
+                sub = "came up at a public meeting"
+            elif miles < NOISE_SENTENCE_MI:
+                sub = "can be heard outdoors, especially at night"
+            elif miles < 1.5:
+                sub = "unlikely to carry over neighborhood sound"
+            else:
+                sub = "too far to hear from your house"
+            if units != "us":
+                sub = sub.replace("neighborhood", "neighbourhood")
+            out["noise"] = _entry(
+                noise_line["status"] if noise_line else "modelled",
+                u.dist(nearest.distance_km, units),
+                f"to {nearest.name}, {sub}",
+                noise_line["text"] if noise_line else None,
+                noise_line["confidence"]
+                if noise_line
+                else noise_at(nearest.distance_km).confidence,
+                noise_line["sources"]
+                if noise_line
+                else [
+                    {
+                        "title": nearest.source_title,
+                        "url": nearest.source_url,
+                        "retrieved_at": now_iso,
+                        "quote": nearest.name,
+                    }
+                ],
+            )
+    elif by_topic.get("noise"):
+        line = by_topic["noise"]
+        out["noise"] = _entry(
+            line["status"], None, None, line["text"], line["confidence"], line["sources"]
+        )
+
+    # Land: what the aerial photos measured, else what the model wrote.
+    img = truth.imagery if truth is not None else None
+    land_line = by_topic.get("land")
+    if img is not None and land_line is not None and land_line["status"] == "measured":
+        then, now = img.vintages
+        if img.counted:
+            value = u.area(img.new_acres, units)
+            sub = f"of new roof, {then} to {now} photos"
+        else:
+            value = None
+            sub = f"no new roof in the {then} and {now} photos"
+        out["land"] = _entry(
+            "measured", value, sub, land_line["text"], land_line["confidence"], land_line["sources"]
+        )
+
+    # Water, taxes, air, and land without imagery: the model's line, or Not public.
+    ask = _ask_words(truth, geo, v)
+    for topic in ("water", "land", "taxes", "air"):
+        if topic in out:
+            continue
+        line = by_topic.get(topic)
+        if line is not None and line["status"] != "unavailable":
+            out[topic] = _entry(
+                line["status"], None, None, line["text"], line["confidence"], line["sources"]
+            )
+            continue
+        quiet = raw.get(topic)
+        if grounded_empty:
+            # Nothing nearby is a measured fact, not a gap in what is published.
+            out[topic] = _entry(
+                "measured",
+                "None",
+                f"no {v.dc_noun} within {radius}",
+                None,
+                grid.get("confidence", 0.8),
+                grid.get("sources") or [],
+            )
+            continue
+        sub = f"Ask {_and(ask)}" if ask else "Not published by the operators near you"
+        # The page the model cited for the gap sits on the strip's folded line.
+        out[topic] = _entry(
+            "unavailable", None, sub, None, float(quiet["confidence"]) if quiet else 0.0, []
+        )
+    return {t: out[t] for t in GLANCE_TOPICS if t in out}
 
 
 # --- claims ---------------------------------------------------------------------

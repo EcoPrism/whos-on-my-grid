@@ -1,5 +1,6 @@
-import type { Claim, Verdict } from '../types'
-import { SECTION_TITLES, SourceLink } from './Sections'
+import { US_LOCALE, type Claim, type Locale, type Verdict } from '../types'
+import { sectionTitle } from '../lib/words'
+import { SourceLink } from './Sections'
 
 const MARK: Record<Verdict, { glyph: string; word: string; cls: string }> = {
   supported: { glyph: '✓', word: 'Supported', cls: 'text-[var(--measured)]' },
@@ -10,7 +11,7 @@ const MARK: Record<Verdict, { glyph: string; word: string; cls: string }> = {
 
 // The appendix. Each claim: what was said, the quote it rests on, and what the
 // second model made of it. Disagreements are shown, not hidden.
-export default function Claims({ claims, checking = false }: { claims: Claim[]; checking?: boolean }) {
+export default function Claims({ claims, checking = false, locale = US_LOCALE }: { claims: Claim[]; checking?: boolean; locale?: Locale }) {
   if (!claims.length) return null
   const verifier = claims.find((c) => c.verified_by)?.verified_by
   return (
@@ -31,7 +32,7 @@ export default function Claims({ claims, checking = false }: { claims: Claim[]; 
               <div className="max-w-[64ch]">
                 <p>{c.text}</p>
                 <p className="mt-1 text-sm text-[var(--ink-soft)]">
-                  {SECTION_TITLES[c.section]} · <SourceLink s={c.source} />
+                  {sectionTitle(c.section, locale)} · <SourceLink s={c.source} />
                   {c.source.quote && <> · <q>{c.source.quote}</q></>}
                 </p>
                 {c.verifier_note && <p className={`mt-1 text-sm ${m.cls}`}>{m.word}: {c.verifier_note}</p>}

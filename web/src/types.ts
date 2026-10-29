@@ -136,7 +136,25 @@ export interface PartialInfo {
   pending: SectionId[]
   drafted: number
   sections: number
+  // The strip's model lines have landed (full mode drafts them in parallel).
+  house?: boolean
 }
+
+// One tile on the brief page. `value` is the number or short word on the tile
+// (null: the status word stands in), `sub` the line under it, `text` the
+// sentence behind it when one was written. Derived by the engine from the
+// sections and the strip, never a new claim.
+export interface GlanceItem {
+  status: Status
+  value: string | null
+  sub: string | null
+  text: string | null
+  confidence: number
+  sources: Source[]
+}
+
+export type GlanceTopic = 'bill' | 'grid' | 'noise' | 'water' | 'land' | 'taxes' | 'air'
+export type Glance = Partial<Record<GlanceTopic, GlanceItem>>
 
 export interface Brief {
   brief_id: string
@@ -169,6 +187,9 @@ export interface Brief {
   sections: Record<SectionId, Section>
   claims: Claim[]
   at_your_house?: HouseLine[]
+  // Absent on briefs cached before the tiles existed; the engine fingerprint
+  // regenerates those on request.
+  glance?: Glance
   // disclosure: the AI-assisted line the share card prints in its footer band; the PNG prints the same.
   card: { title: string; lines: string[]; footer?: string; disclosure?: string }
 }

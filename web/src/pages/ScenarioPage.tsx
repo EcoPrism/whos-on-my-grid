@@ -12,6 +12,7 @@ import Timeline from '../components/Timeline'
 import { ApiError, createScenario, getScenario } from '../lib/api'
 import { setLiveScenario, useLiveScenario } from '../lib/live'
 import { scenarioMessage, shareable } from '../lib/scenario'
+import { STATUS_WORD } from '../lib/words'
 import type { Cooling, Scenario, ScenarioInputs } from '../types'
 
 const DISCLOSURE = 'Hypothetical. Modelled, not measured.'
@@ -196,12 +197,12 @@ function ScenarioView({ scenario: s, routeKey }: { scenario: Scenario; routeKey:
               <h1 className="sign mt-1 text-[clamp(1.9rem,5vw,3rem)]">{s.place.display}</h1>
               <p className={`mt-3 text-[15px] leading-snug transition-opacity ${pending ? 'opacity-60' : ''}`} aria-busy={pending || undefined}>
                 A hypothetical <span className="num font-bold text-[var(--modelled)]">{s.inputs.mw.toLocaleString('en-US')} MW</span> campus with {coolingWord} cooling.
-                <span className="tag-modelled ml-1 text-xs font-semibold">Modeled</span>
+                <span className="tag-modelled ml-1 text-xs font-semibold">{STATUS_WORD.modelled}</span>
                 {pending && <span className="ml-1 text-xs text-[var(--ink-soft)]">(updating)</span>}
               </p>
               <p className="mt-1 text-sm text-[var(--ink-soft)]">
                 <span className="num font-semibold text-[var(--ink)]">{count}</span> {count === 1 ? 'data center is' : 'data centers are'} already within reach
-                <span className="tag-measured ml-1 text-xs font-semibold">Measured</span>
+                <span className="tag-measured ml-1 text-xs font-semibold">{STATUS_WORD.measured}</span>
               </p>
             </div>
           </div>

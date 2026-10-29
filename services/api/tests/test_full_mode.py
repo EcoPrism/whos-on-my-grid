@@ -378,25 +378,49 @@ async def test_no_retail_polygon_falls_back_to_eia_county_list(tmp_path) -> None
 
 
 async def test_progress_streams_ground_then_sections_then_verdicts(tmp_path) -> None:
-    """The page can show the facts within seconds: the first event is a partial
-    brief with the engine's facilities, utility and bill number and every
-    section pending; one event per drafted section; a count per verdict."""
+    """The page can show the facts within seconds: one event per ground step
+    as it lands, then a partial brief with the engine's facilities, utility and
+    bill number and every section pending; one event per drafted section and
+    one when the strip's model lines land; a count per verdict."""
     svc = fakes.service(tmp_path, brief_source="full")
     svc.ground = ground()
     events: list[dict] = []
     brief = await svc.brief_for_address("21715 Filigree Ct, Ashburn, VA", events.append)
 
     stages = [e["stage"] for e in events]
-    assert stages[0] == "ground"
-    first = events[0]["brief"]
+    gathering = [e for e in events if e["stage"] == "gathering"]
+    assert stages[: len(gathering)] == ["gathering"] * len(gathering)
+    assert {e["step"]: e["state"] for e in gathering} == {
+        "facilities": "ok",
+        "utility": "ok",
+        "prices": "ok",
+        "tariff": "none",
+        "imagery": "none",
+        "hearings": "none",
+    }
+    assert stages[len(gathering)] == "ground"
+    first = events[len(gathering)]["brief"]
     assert first["partial"]["pending"] == list(SECTION_IDS)
+    assert first["partial"]["house"] is False
     assert first["address"]["utility"] == "Dominion Energy Virginia"
     assert first["sections"]["on_your_grid"]["facilities"][0]["name"] == "Northgate Campus DC1-DC9"
     assert first["headline"]["ai_rent_usd_per_month"] is not None
+    # The tiles have their numbers from the first partial: the strip's model
+    # lines are not in yet, so water is Not public for now.
+    assert (
+        first["glance"]["grid"]["value"] == "2"
+        and first["glance"]["bill"]["value"] == "+$16 to $24"
+    )
+    assert first["glance"]["noise"]["value"] == "0.2 miles"
+    assert first["glance"]["water"]["status"] == "unavailable"
 
-    assert stages.count("drafting") == len(SECTION_IDS)
-    last_draft = [e for e in events if e["stage"] == "drafting"][-1]["brief"]
-    assert last_draft["partial"]["pending"] == []
+    # One drafting event per section, plus one when the strip's lines land.
+    assert stages.count("drafting") == len(SECTION_IDS) + 1
+    drafting = [e for e in events if e["stage"] == "drafting"]
+    assert any(e["brief"]["partial"]["house"] for e in drafting)
+    last_draft = drafting[-1]["brief"]
+    assert last_draft["partial"]["pending"] == [] and last_draft["partial"]["house"]
+    assert last_draft["glance"]["water"]["status"] == "reported"
 
     verifying = [e for e in events if e["stage"] == "verifying"]
     assert verifying[0]["verified"] == 0

@@ -10,28 +10,39 @@ costs arrive later, as a higher bill, a louder night and a rate case in a docket
 data to answer the three questions is public, but it sits in six different places, in formats built
 for engineers and lawyers, and none of them know your address.
 
-Who's On My Grid turns one address into one brief and one card. The brief has five sections:
+Who's On My Grid turns one address into one brief and one card. The brief page opens with the
+concerns as tiles, **Electric bill, Electricity, Noise, Water, Land, Taxes**: a number where the
+engine has one (the bill range, the facility count, the distance to the nearest building, acres of
+new roof), the sentence a model wrote where it wrote one, and *Not public* with who to ask where
+nobody publishes it. The tiles are the brief's `glance` block, derived from the five sections
+below, which the page calls "Where this comes from" (schema ids in the first column, the page's
+words in brackets):
 
 | Section | Question it answers |
 |---|---|
-| On your grid | Which data-center facilities are within five miles, who operates them, including the operator behind a codename, and that they are served by the same utility as you. Which substation serves an address is not public data, so the brief never claims it; at most it says a facility is likely on the same one, and says that is inferred |
-| Coming | New large-roof construction visible from the air between the two most recent public aerial-imagery vintages, and announced or permitted campuses |
-| Your bill | What your state's residential price has done over two years, what that means per month for a typical home, shown as a range because it is modeled, and what the people who set rates say about why |
-| Protection | Whether your state has a large-load tariff, and the sentence the card exists for: does it shield households, yes, in part, no or not yet, with the page that says so |
-| Hearing | When the next county or commission hearing is, and what was said at the last one, with who said it |
+| On your grid (Data centers near you) | Which data-center facilities are within five miles, who operates them, including the operator behind a codename, and that they are served by the same utility as you. Which substation serves an address is not public data, so the brief never claims it; at most it says a facility is likely on the same one, and says that is inferred |
+| Coming (Being built or proposed) | New large-roof construction visible from the air between the two most recent public aerial-imagery vintages, and announced or permitted campuses |
+| Your bill (Your electric bill) | What your state's residential price has done over two years, what that means per month for a typical home, shown as a range because it is modeled, and what the people who set rates say about why |
+| Protection (Who pays for the new power) | Whether your state has a large-load tariff, and the sentence the card exists for: does it shield households, yes, in part, no or not yet, with the page that says so |
+| Hearing (Next public meeting) | When the next county or commission hearing is, and what was said at the last one, with who said it |
 
 Under the hero sits one strip, **What this means at your house**: three or four plain-language
 sentences a resident would screenshot for a neighbor. The bill, the water the campuses are permitted
 to use compared with homes, how close the nearest building is and what neighbors have said about the
 noise, the acres of field or forest now roof, and the other side in the same breath, the share of local
 taxes the data centers pay. Each sentence still carries its status, confidence and sources. The cards
-are for the reporter; the strip is for everyone.
+are for the reporter; the strip is for everyone. A sentence that would only say a topic is not
+published is not written out: those topics fold into one short line, and their tiles say *Not
+public* with who to ask. The engine's noise sentence is written only within half a mile of the
+nearest building, where nothing is nearby, or where a hearing transcript shows noise came up;
+further out the tile carries the distance and nothing more.
 
-Every section is one of four kinds, **measured**, **reported**, **modeled** (schema value `modelled`)
-or **unavailable**, and
-carries its sources, a confidence level and the model that produced it. The brief says plainly when
-it does not know. It never claims that a data center caused a bill increase; it shows the numbers
-and cites who attributes what.
+Every section is one of four kinds, **measured**, **reported**, **modelled** or **unavailable**
+(the schema values), and carries its sources, a confidence level and the model that produced it.
+The page shows those four as **From the data**, **Written by AI, checked**, **Our estimate** and
+**Not public**, and the confidence as one of three words, solid, likely or rough (the figure stays
+in the claims list). The brief says plainly when it does not know. It never claims that a data
+center caused a bill increase; it shows the numbers and cites who attributes what.
 
 Built for the Meta Global AI Developer Hackathon, 26 October to 4 November 2026. Startups track,
 Push the Frontier.

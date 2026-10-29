@@ -181,14 +181,32 @@ def get_ground_ie(settings: Settings, data_dir: Path = IE_DATA_DIR) -> Ground:
     )
 
 
-async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTruth:
+# Progress while the ground truth is gathered: (step, state) for each of
+# facilities, utility, prices, tariff, imagery, hearings; state is "ok", "none"
+# (no provider, or nothing found) or "failed". The page ticks them off.
+OnStep = Callable[[str, str], None]
+GROUND_STEPS = ("facilities", "utility", "prices", "tariff", "imagery", "hearings")
+
+
+async def gather_ground(
+    geo: GeocodeResult, ground: Ground | None, on_step: OnStep | None = None
+) -> GroundTruth:
     truth = GroundTruth(radius_km=FIVE_MILES_KM)
+    failed: set[str] = set()
+
+    def step(name: str, state: str) -> None:
+        if on_step is not None:
+            on_step(name, state)
+
     if ground is None:
+        for name in GROUND_STEPS:
+            step(name, "none")
         return truth
     jurisdiction = ground.jurisdiction(geo)
 
     async def facilities() -> None:
         if ground.facilities is None:
+            step("facilities", "none")
             return
         try:
             looked = await ground.facilities.lookup(geo.lat, geo.lon, truth.radius_km)
@@ -201,9 +219,11 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                 reason=str(exc)[:160],
             )
             truth.notes.append(_failure(ground.facilities, FACILITIES_FAILURE))
+            step("facilities", "failed")
             return
         truth.facilities = found
         truth.notes.extend(notes)
+        step("facilities", "ok" if found else "none")
 
     async def utility_then_its_prices() -> None:
         if ground.utility is not None:
@@ -216,6 +236,11 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                     reason=str(exc)[:160],
                 )
                 truth.notes.append(_failure(ground.utility, UTILITY_FAILURE))
+                step("utility", "failed")
+            else:
+                step("utility", "ok" if truth.utility is not None else "none")
+        else:
+            step("utility", "none")
         directory = ground.utility_prices
         u = truth.utility
         if u is not None and u.eia_id and u.ba_code is None and hasattr(directory, "ba_code"):
@@ -243,6 +268,7 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                 reason=str(exc)[:160],
             )
             truth.notes.append(_failure(ground.utility_prices, UTILITY_PRICES_FAILURE))
+            failed.add("prices")
 
     async def prices() -> None:
         if ground.prices is None:
@@ -254,8 +280,14 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                 "ground_failed", provider=_label(ground.prices, "eia861m"), reason=str(exc)[:160]
             )
             truth.notes.append(_failure(ground.prices, PRICES_FAILURE))
+            failed.add("prices")
 
     await asyncio.gather(facilities(), utility_then_its_prices(), prices())
+    step(
+        "prices",
+        "ok" if truth.best_price is not None else "failed" if "prices" in failed else "none",
+    )
+    step("tariff", "ok" if truth.tariff is not None else "none")
 
     # The two indexes are local files: no await, and a broken file is a note,
     # never a failed brief.
@@ -265,6 +297,13 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         except Exception as exc:  # noqa: BLE001
             log_event("ground_failed", provider="perception", reason=str(exc)[:160])
             truth.notes.append("The aerial-imagery index could not be read.")
+            step("imagery", "failed")
+        else:
+            step("imagery", "ok" if truth.imagery is not None else "none")
+    else:
+        step("imagery", "none")
+    if ground.hearings is None:
+        step("hearings", "none")
     if ground.hearings is not None:
         try:
             truth.hearing = ground.hearings.for_place(
@@ -287,6 +326,9 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         except Exception as exc:  # noqa: BLE001
             log_event("ground_failed", provider="hearings", reason=str(exc)[:160])
             truth.notes.append("The hearing index could not be read.")
+            step("hearings", "failed")
+        else:
+            step("hearings", "ok" if truth.hearing is not None or truth.decisions else "none")
 
     log_event(
         "ground",

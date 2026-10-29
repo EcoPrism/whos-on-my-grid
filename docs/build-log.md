@@ -349,3 +349,34 @@ from anything pre-existing.
   the three Nominatim fixtures the streams had reconstructed were re-captured live. Built as one
   multi-agent workflow: a contracts phase, six streams in one tree, an integration pass.
   719 tests.
+- **2026-10-29, plain words.** The brief page in the reader's vocabulary, after the user's review
+  of a live Quincy brief: "modeled" and "protection" meant nothing to a resident, half the strip
+  said only that something was not published, and the progress strip named models instead of
+  steps. (1) One vocabulary, `web/src/lib/words.ts`: the four schema statuses are shown as From
+  the data / Written by AI, checked / Our estimate / Not public, the same in every region (the
+  Modeled/Modelled split is gone); confidence is solid / likely / rough (≥0.75, ≥0.5, below), the
+  percentage staying in the claims list; the sections are called Data centers near you, Being
+  built or proposed, Your electric bill, Who pays for the new power, Next public meeting (schema
+  ids unchanged). Every local word table (BriefPage, Sections, HouseStrip, Shell, Home, About,
+  the what-if counters, timeline, slider and interpretation) now imports from there. (2) The
+  glance block: `assemble._glance` writes `brief.glance`, one entry per concern (bill, grid,
+  noise, water, land, taxes, air) with a value where the engine has a number, the model's
+  sentence where it wrote one, and `unavailable` with "Ask {county} and {utility}" where nobody
+  publishes; `schema/brief.schema.json` `$defs/glance_item`. The page leads with the tiles
+  (`GlanceTiles`, reusing the what-if `Counter`, now exported and status-aware), then the
+  strip, then "Where this comes from" over the five section tabs. (3) Honest progress:
+  `gather_ground(..., on_step)` reports facilities, utility, prices, tariff, imagery, hearings
+  as ok/none/failed; the pipeline streams them as `{"stage":"gathering"}` events before the
+  first partial, and the strip's model lines now appear in a partial as soon as they land
+  (`partial.house`). The home page shows the ground steps under the button; the brief page's
+  strip reads Facts / Writing (bill, noise, land, water, taxes, sections n of 5) / Checking (n
+  of m claims), with no model names. (4) Quieter unknowns: model strip lines on water, land, air
+  or taxes that only say nothing is published fold into one `other` line ("Not public: water use
+  and property taxes. The operators near you do not publish it; Loudoun County and Dominion
+  Energy Virginia are where to ask."), their claims kept and checked; the engine's noise
+  sentence is written only within half a mile (`NOISE_SENTENCE_MI`), where nothing is nearby, or
+  where an indexed hearing quote mentions noise ("Noise came up at the … meeting on …",
+  measured, the transcript line as the quote); a model's noise line never stands in for it. The
+  house prompt's rule 4 asks for one short line on a gap. The card caption reads "· our
+  estimate". The eval scorer counts a noise tile as the noise topic. US golden digests
+  re-recorded in `tests/us_golden.py` for this deliberate change. 732 tests.

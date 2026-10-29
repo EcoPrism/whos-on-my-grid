@@ -124,13 +124,24 @@ class BriefService:
         now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         verified = self.verify_provider is not None
 
-        truth = await gather_ground(geo, self.ground) if self.ground is not None else None
+        on_step = None
+        if progress is not None:
+            emit = progress
+
+            def on_step(name: str, state: str) -> None:
+                emit({"stage": "gathering", "step": name, "state": state})
+
+        truth = await gather_ground(geo, self.ground, on_step) if self.ground is not None else None
 
         drafts: dict[str, DraftResult | SectionFailure] = {}
         # With an indexed transcript the Hearing section is the engine's: no draft.
         engine_sections = {"hearing"} if truth is not None and truth.hearing else set()
         for sid in engine_sections:
             drafts[sid] = SectionFailure(sid, "Written by the engine from the transcript.")
+
+        # The strip's model lines, once drafted; a partial brief carries them as
+        # soon as they land, so the page fills its tiles while sections draft.
+        house: list[dict] | None = None
 
         def partial(stage: str) -> None:
             """Assemble what is known so far and hand it to the caller. Undrafted
@@ -144,7 +155,7 @@ class BriefService:
             brief = assemble_brief(
                 geo,
                 filled,
-                None,
+                house,
                 brief_id=brief_id,
                 now_iso=now_iso,
                 verified=verified,
@@ -158,6 +169,7 @@ class BriefService:
                 "pending": [sid for sid in SECTION_IDS if sid not in drafts],
                 "drafted": len([d for d in drafts.values() if isinstance(d, DraftResult)]),
                 "sections": len(SECTION_IDS),
+                "house": house is not None,
             }
             progress({"stage": stage, "brief": brief})
 
@@ -179,12 +191,18 @@ class BriefService:
         # The strip reads the five summaries, so it normally runs after them. In
         # full mode its lines anchor to the facts block instead, and it runs in
         # parallel: that is a fifth of the wait.
-        house: list[dict] | None = None
         to_draft = [sid for sid in SECTION_IDS if sid not in engine_sections]
+
+        async def house_lines() -> None:
+            nonlocal house
+            house = await draft_house_lines(
+                self.draft_provider, geo, now_iso, {}, truth, locale=self.locale
+            )
+            partial("drafting")
+
         if truth is not None:
-            _, house = await asyncio.gather(
-                asyncio.gather(*(one_section(sid) for sid in to_draft)),
-                draft_house_lines(self.draft_provider, geo, now_iso, {}, truth, locale=self.locale),
+            await asyncio.gather(
+                asyncio.gather(*(one_section(sid) for sid in to_draft)), house_lines()
             )
         else:
             await asyncio.gather(*(one_section(sid) for sid in to_draft))

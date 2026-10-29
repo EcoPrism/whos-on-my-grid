@@ -1,12 +1,6 @@
-import { US_LOCALE, type HouseLine, type Locale, type Status } from '../types'
+import { US_LOCALE, type HouseLine, type Locale } from '../types'
+import { STATUS_WORD, confidenceWord } from '../lib/words'
 import { SourceLink } from './Sections'
-
-const STATUS_WORD: Record<Status, string> = {
-  measured: 'Measured',
-  reported: 'Reported',
-  modelled: 'Modeled',
-  unavailable: 'Not known',
-}
 
 // "What this means at your house": three or four plain sentences under the
 // hero, the thing a resident screenshots for a neighbor. A layer over the five
@@ -16,7 +10,6 @@ const STATUS_WORD: Record<Status, string> = {
 // screen reader and the browser's spell-check read the model's lines as written.
 export default function HouseStrip({ lines, checking = false, locale = US_LOCALE }: { lines: HouseLine[]; checking?: boolean; locale?: Locale }) {
   if (!lines.length) return null
-  const modelled = locale.language === 'en-US' ? 'Modeled' : 'Modelled'
   return (
     <section aria-label="What this means at your house" lang={locale.language} className="border-y-2 border-[var(--ink)] bg-white">
       <div className="mx-auto max-w-6xl px-4 py-4 sm:py-5">
@@ -28,8 +21,8 @@ export default function HouseStrip({ lines, checking = false, locale = US_LOCALE
             <li key={i} className={`rail-${l.status} border-l-4 pl-3`}>
               <p className={`text-[17px] leading-snug ${checking ? 'text-[var(--ink-soft)]' : ''}`}>{l.text}</p>
               <p className="mt-1 text-xs text-[var(--ink-soft)]">
-                <span className={`tag-${l.status} font-semibold`}>{l.status === 'modelled' ? modelled : STATUS_WORD[l.status]}</span>
-                {checking ? <span> · not yet checked</span> : l.status !== 'unavailable' && <span className="num"> · {Math.round(l.confidence * 100)}%</span>}
+                <span className={`tag-${l.status} font-semibold`}>{STATUS_WORD[l.status]}</span>
+                {checking ? <span> · not yet checked</span> : l.status !== 'unavailable' && <span> · {confidenceWord(l.confidence)}</span>}
                 {l.sources.map((s) => (
                   <span key={s.url}> · <SourceLink s={s} /></span>
                 ))}

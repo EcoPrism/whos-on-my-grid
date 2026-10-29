@@ -229,6 +229,19 @@
         "$ref": "#/$defs/house_line"
       }
     },
+    "glance": {
+      "type": "object",
+      "description": "One entry per concern for the tiles at the top of the brief page: bill, grid, noise, water, land, taxes, air. Derived from the sections and the strip, never a new claim. `value` is the number or short word on the tile (null: show the status word); `sub` the line under it; `text` the sentence behind it, if one was written.",
+      "properties": {
+        "bill": { "$ref": "#/$defs/glance_item" },
+        "grid": { "$ref": "#/$defs/glance_item" },
+        "noise": { "$ref": "#/$defs/glance_item" },
+        "water": { "$ref": "#/$defs/glance_item" },
+        "land": { "$ref": "#/$defs/glance_item" },
+        "taxes": { "$ref": "#/$defs/glance_item" },
+        "air": { "$ref": "#/$defs/glance_item" }
+      }
+    },
     "card": {
       "type": "object",
       "required": [
@@ -419,6 +432,51 @@
         "beyond_ring": {
           "description": "On your grid only: the nearest facility with a known operator past the 8 km (five-mile) ring, within 16 km (ten miles). Never counted among the facilities within the ring.",
           "$ref": "#/$defs/facility"
+        }
+      }
+    },
+    "glance_item": {
+      "type": "object",
+      "required": [
+        "status",
+        "value",
+        "sub",
+        "text",
+        "confidence",
+        "sources"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sub": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
         }
       }
     },
