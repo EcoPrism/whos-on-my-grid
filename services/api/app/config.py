@@ -63,8 +63,9 @@ class Settings(BaseSettings):
     ground_dir: str = "data/ground"
     # Step 4 indexes: what SAM 3.1 measured per area and what Voice Transcribe heard per
     # meeting. Committed data products; the API reads them, the indexers write them.
-    perception_dir: str = "data/perception"
-    hearings_dir: str = "data/hearings"
+    # US only: other regions read theirs from data/regions/<id>/.
+    perception_dir: str = "data/regions/us/perception"
+    hearings_dir: str = "data/regions/us/hearings"
 
     # Meta Model API, direct: used only by the offline indexers (app.perception,
     # app.hearings), never on the request path. Key from dev.meta.ai.
@@ -103,6 +104,11 @@ class Settings(BaseSettings):
     # clientip-country); the app trusts the header, so never enable it without one.
     allowed_countries: str = ""
     country_header: str = "cf-ipcountry"
+    # Regions this process serves (app/regions), comma-separated ids: "us,ie" enables
+    # Ireland on the same image. A request names its region, or the country header
+    # picks one (only when the gate above is on), or it gets the default.
+    regions: str = "us"
+    default_region: str = "us"
 
     # Sign-in gate for *new* briefs. off = anyone can generate (local dev); google =
     # Google Identity Services id_tokens; fake = "fake:<sub>:<email>" tokens (tests only).
@@ -145,13 +151,11 @@ class Settings(BaseSettings):
 
     @property
     def perception_path(self) -> Path:
-        p = Path(self.perception_dir)
-        return p if p.is_absolute() else REPO_ROOT / p
+        return _repo_path(self.perception_dir)
 
     @property
     def hearings_path(self) -> Path:
-        p = Path(self.hearings_dir)
-        return p if p.is_absolute() else REPO_ROOT / p
+        return _repo_path(self.hearings_dir)
 
     @property
     def web_dist_path(self) -> Path:
@@ -161,6 +165,30 @@ class Settings(BaseSettings):
     @property
     def gate_on(self) -> bool:
         return self.auth_provider != "off"
+
+    @property
+    def region_ids(self) -> tuple[str, ...]:
+        """GRID_REGIONS as ids, lowercased, blanks and repeats dropped, in order."""
+        ids = (r.strip().lower() for r in self.regions.split(","))
+        return tuple(dict.fromkeys(r for r in ids if r))
+
+    @property
+    def default_region_id(self) -> str:
+        return self.default_region.strip().lower()
+
+
+# Where the step-4 indexes lived before data/regions/. A .env copied from an older
+# .env.example still names them; read as the new place, not as an empty index.
+_LEGACY_DIRS = {
+    "data/perception": "data/regions/us/perception",
+    "data/hearings": "data/regions/us/hearings",
+}
+
+
+def _repo_path(value: str) -> Path:
+    value = _LEGACY_DIRS.get(value.replace("\\", "/").rstrip("/"), value)
+    p = Path(value)
+    return p if p.is_absolute() else REPO_ROOT / p
 
 
 @lru_cache

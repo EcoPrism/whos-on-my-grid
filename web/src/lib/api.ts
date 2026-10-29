@@ -26,6 +26,9 @@ export interface Health {
   google_client_id: string | null
   user: Me | null
   quota_per_user_day: number
+  // The region new briefs are made for, and the ones this deployment serves.
+  region?: string
+  regions?: { id: string; label: string }[]
 }
 
 export interface PulsePeeringDB {

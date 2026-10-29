@@ -70,16 +70,16 @@ Nothing is wired to real data until the page already works on fixtures.
 4. **Perception.** SAM 3.1 on two imagery vintages makes "Coming" `measured`. Voice Transcribe on
    pre-indexed hearings for a first set of counties makes "Hearing" `measured`. Both run as
    offline indexers (`app.perception.index`, `app.hearings.index`) whose output is committed
-   under `data/perception/` and `data/hearings/`; the brief reads the index, so a request never
-   waits on imagery or audio. Areas and bodies covered so far: `data/perception/areas.json`,
-   `docs/counties.md`. Votes on named campuses (a rejection, a court-voided rezoning) are
+   under `data/regions/us/perception/` and `data/regions/us/hearings/`; the brief reads the
+   index, so a request never waits on imagery or audio. Areas and bodies covered so far:
+   `data/regions/us/perception/areas.json`, `docs/counties.md`. Votes on named campuses (a rejection, a court-voided rezoning) are
    hand-entered decisions in the hearing sources and appear in "Coming" with the page that says
    so.
 5. **Ground-truth providers.** Facilities from PeeringDB and OpenStreetMap, serving utility from
    HIFLD's service-territory map, residential prices from EIA-861M (state, monthly) and EIA-861
-   (this utility, annual), large-load tariffs from a hand-curated table (`data/tariffs.json`),
-   operators the maps leave blank from a second one (`data/facilities.json`, each with the page
-   that names them). The engine looks ten miles out and names the nearest campus past the ring.
+   (this utility, annual), large-load tariffs from a hand-curated table
+   (`data/regions/us/tariffs.json`), operators the maps leave blank from a second one
+   (`data/regions/us/facilities.json`, each with the page that names them). The engine looks ten miles out and names the nearest campus past the ring.
    The engine owns existence, location, distance, utility and price; Spark writes the sentences
    around them and adds what no dataset holds (announced and rejected campuses, codenames,
    attributions, hearings). `BRIEF_SOURCE=full`. Scored against a 30-address test set in `eval/`.
@@ -132,12 +132,12 @@ the brief service itself never does. `uv sync --group index` adds their dependen
 cd services/api
 uv run python -m app.perception.index --area new_albany          # SAM 3.1 on NAIP 2023 vs 2025
 uv run python -m app.hearings.index --meeting loudoun-2025-03-18 --captions-only
-uv run python -m app.hearings.index --meeting pwc-2023-12-12 --audio data/hearings/audio/pwcgov_3410.mp3
+uv run python -m app.hearings.index --meeting pwc-2023-12-12 --audio data/regions/us/hearings/audio/pwcgov_3410.mp3
 ```
 
 Imagery is keyless and public domain (Planetary Computer for the earlier vintage, USDA FPAC for
 the latest). Recordings come from the official archive page (download the MP3 in a browser into
-`data/hearings/audio/`, or pass `--download`); `--captions-only` builds the transcript from the
+`data/regions/us/hearings/audio/`, or pass `--download`); `--captions-only` builds the transcript from the
 archive's closed captions where it publishes them, and the section then says no model of ours
 produced the words.
 

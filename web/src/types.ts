@@ -6,6 +6,19 @@ export type SectionId = 'on_your_grid' | 'coming' | 'your_bill' | 'protection' |
 export type ClaimSection = SectionId | 'at_your_house' | 'scenario'
 export type HouseTopic = 'bill' | 'water' | 'noise' | 'land' | 'air' | 'grid' | 'taxes' | 'other'
 export type Verdict = 'supported' | 'contradicted' | 'unverifiable' | 'unchecked'
+export type Units = 'us' | 'metric'
+// How often the price series reports. Engine-owned; a model's price has none.
+export type PriceGranularity = 'monthly' | 'semiannual' | 'annual'
+
+// The region a brief was made for. Absent on older briefs: read as US_LOCALE.
+export interface Locale {
+  country: string
+  currency: string
+  units: Units
+  language: string
+}
+
+export const US_LOCALE: Locale = { country: 'US', currency: 'USD', units: 'us', language: 'en-US' }
 
 export interface Source {
   title: string
@@ -53,6 +66,7 @@ export interface Price {
   typical_household_kwh_month: number
   attribution?: string | null
   as_of?: string
+  granularity?: PriceGranularity
 }
 
 export interface Tariff {
@@ -132,11 +146,16 @@ export interface Brief {
     display: string
     lat: number
     lon: number
-    state: string
+    // US aliases of region_code and postal_code; every US brief has them.
+    state?: string
     county?: string
-    zip: string
+    zip?: string
+    country?: string
+    region_code?: string
+    postal_code?: string
     utility?: string | null
   }
+  locale?: Locale
   headline: {
     ai_rent_usd_per_month: number | null
     ai_rent_range_usd_per_month?: [number, number] | null

@@ -3,6 +3,7 @@ JSON. Facts the engine measured (facilities, utility, prices) are the
 engine's; the model's drafts supply sentences, annotations and what no
 dataset holds. Claims start `unchecked`; the verifier fills them in."""
 
+import dataclasses
 import re
 from typing import Any
 
@@ -28,6 +29,7 @@ from app.ground.types import (
     ImageryResult,
     PriceSeries,
 )
+from app.regions.locale import US_LOCALE, Locale
 from app.schema import SECTION_IDS
 
 KM_TO_MI = 0.621371
@@ -77,6 +79,7 @@ def assemble_brief(
     verified: bool = True,
     truth: GroundTruth | None = None,
     public_base_url: str = "",
+    locale: Locale = US_LOCALE,
 ) -> dict[str, Any]:
     claims: list[dict[str, Any]] = []
     sections: dict[str, Any] = {}
@@ -126,8 +129,12 @@ def assemble_brief(
             "state": geo.state,
             **({"county": geo.county} if geo.county else {}),
             "zip": geo.zip,
+            "country": geo.country,
+            "region_code": geo.region_code,
+            "postal_code": geo.postal_code,
             "utility": truth.utility.name if truth is not None and truth.utility else None,
         },
+        "locale": dataclasses.asdict(locale),
         "headline": derive_headline(sections, geo, truth),
         "sections": sections,
         "claims": claims,
@@ -236,7 +243,7 @@ def _grid_section(
         for n, f in enumerate(engine[:ENGINE_CLAIM_FACILITIES], start=first)
     ]
     claims.extend(own)
-    # A curated operator (data/facilities.json) gets its own claim citing the
+    # A curated operator (data/regions/us/facilities.json) gets its own claim citing the
     # page that names it; the map record's claim above says nothing about who.
     cited: set[str] = set()
     for f in engine[:ENGINE_CLAIM_FACILITIES]:
@@ -721,7 +728,7 @@ def _bill_section(
     assert p is not None
     attribution = (section.get("price") or {}).get("attribution") if drafted else None
     price: dict[str, Any] = {
-        "currency": "USD",
+        "currency": p.currency,
         "rate_now": p.rate_now,
         "rate_then": p.rate_then,
         "trend_pct": p.trend_pct,
@@ -731,6 +738,7 @@ def _bill_section(
     }
     if p.as_of:
         price["as_of"] = p.as_of
+    price["granularity"] = p.granularity
     for text, url, title, quote in _price_claims(truth, geo):
         claims.append(_engine_claim("your_bill", text, url, title, quote, len(claims) + 1, now_iso))
     change = monthly_change(price)

@@ -41,7 +41,7 @@ def resolve_address(text: str) -> str | None:
         tokens = [
             key,
             *b["address"]["display"].lower().replace(",", " ").split(),
-            b["address"]["zip"],
+            b["address"].get("zip") or b["address"].get("postal_code", ""),
         ]
         if any(len(t) > 2 and t in q for t in tokens):
             return key

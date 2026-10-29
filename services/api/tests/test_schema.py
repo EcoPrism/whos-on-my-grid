@@ -48,6 +48,18 @@ def test_normalise_and_id() -> None:
     b = brief_id_for("21715  FILIGREE CT  ASHBURN VA 20147")
     assert a == b and len(a) == 16
     assert normalise("A-B, c.") == "a b c"
+    # Pinned: a US id never changes, or every share link and cached brief breaks.
+    assert brief_id_for("21715 FILIGREE CT, ASHBURN, VA, 20147") == "4fb253585fde1c93"
+    assert brief_id_for("zip:20147") == "59605c4e69c5d94c"
+    assert brief_id_for(fakes.GEO.matched, "US") == brief_id_for(fakes.GEO.matched)
+    assert brief_id_for(fakes.GEO.matched, "us") == brief_id_for(fakes.GEO.matched)
+    assert brief_id_for(fakes.GEO.matched, "IE") != brief_id_for(fakes.GEO.matched)
+
+
+def test_geocode_result_us_aliases() -> None:
+    g = fakes.GEO
+    assert g.country == "US"
+    assert g.state == g.region_code == "VA" and g.zip == g.postal_code == "20147"
 
 
 def test_display_strips_house_number() -> None:

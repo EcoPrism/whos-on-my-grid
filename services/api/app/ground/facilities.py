@@ -305,7 +305,7 @@ def _link(a: RawSite, b: RawSite) -> bool:
     return d < 0.2
 
 
-OVERRIDES_PATH = REPO_ROOT / "data" / "facilities.json"
+OVERRIDES_PATH = REPO_ROOT / "data" / "regions" / "us" / "facilities.json"
 
 
 @dataclass(frozen=True)

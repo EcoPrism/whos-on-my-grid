@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-curated like data/tariffs.json. Bodies whose official meeting archive is indexed for the Hearing section, the meetings and windows that have been (or are to be) transcribed, the decisions on the public record about named campuses, and listed upcoming hearings. Recordings come from the official archive only, never from video platforms. Windows are seconds into the recording, taken from the archive's own agenda index points.",
+  "_about": "Hand-curated like tariffs.json. Bodies whose official meeting archive is indexed for the Hearing section, the meetings and windows that have been (or are to be) transcribed, the decisions on the public record about named campuses, and listed upcoming hearings. Recordings come from the official archive only, never from video platforms. Windows are seconds into the recording, taken from the archive's own agenda index points.",
   "bodies": [
     {
       "id": "pwc-bocs",

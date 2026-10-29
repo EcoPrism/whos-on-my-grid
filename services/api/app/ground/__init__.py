@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
-from app.config import Settings
+from app.config import REPO_ROOT, Settings
 from app.geocode import GeocodeResult
 from app.ground.facilities import (
     FacilityDatabase,
@@ -15,6 +15,7 @@ from app.ground.facilities import (
     GroundError,
     OverpassSource,
     PeeringDBSource,
+    load_overrides,
 )
 from app.ground.hearings import FakeHearingIndex, HearingIndex
 from app.ground.imagery import FakeImageryIndex, ImageryIndex
@@ -42,19 +43,16 @@ from app.ground.types import (
     Upcoming,
     Utility,
 )
-from app.ground.utility import (
-    RETAIL_TYPES,
-    FakeUtility,
-    HifldUtility,
-    Hint,
-    UtilityProvider,
-    choose,
-)
+from app.ground.utility import FakeUtility, HifldUtility, UtilityProvider
 from app.telemetry import log_event
+
+# The US region's curated data: tariff table, operator overrides, scenario
+# constants and the step-4 indexes.
+US_DATA_DIR = REPO_ROOT / "data" / "regions" / "us"
 
 
 class Tariffs(Protocol):
-    def match(self, state: str, utility_raw_name: str | None) -> TariffEntry | None: ...
+    def match(self, jurisdiction: str, utility_raw_name: str | None) -> TariffEntry | None: ...
 
 
 @dataclass
@@ -68,70 +66,28 @@ class Ground:
     hearings: HearingIndex | FakeHearingIndex | None = None
 
 
-def get_ground(settings: Settings) -> Ground:
+def get_ground(settings: Settings, data_dir: Path = US_DATA_DIR) -> Ground:
+    """The US ground layer. Curated files come from `data_dir`; the imagery and
+    hearing indexes from settings (GRID_PERCEPTION_DIR, GRID_HEARINGS_DIR), whose
+    defaults are the same region's directories."""
     cache = Path(settings.ground_path)
     endpoints = [e.strip() for e in settings.overpass_endpoints.split(",") if e.strip()]
     t = settings.ground_timeout_seconds
+    # EIA-861 is both the utility's price and the directory that settles
+    # overlapping territories, so one instance serves both.
+    up = Eia861UtilityPrices(cache, timeout=max(120.0, t))
     return Ground(
         facilities=FacilityDatabase(
-            [PeeringDBSource(cache, timeout=t), OverpassSource(endpoints, timeout=t)]
+            [PeeringDBSource(cache, timeout=t), OverpassSource(endpoints, timeout=t)],
+            overrides=load_overrides(data_dir / "facilities.json"),
         ),
-        utility=HifldUtility(url=settings.hifld_url, timeout=t),
+        utility=HifldUtility(url=settings.hifld_url, timeout=t, directory=up),
         prices=Eia861mPrices(cache, timeout=max(60.0, t)),
-        utility_prices=Eia861UtilityPrices(cache, timeout=max(120.0, t)),
-        tariffs=TariffTable(),
+        utility_prices=up,
+        tariffs=TariffTable(data_dir / "tariffs.json"),
         imagery=ImageryIndex(settings.perception_path),
         hearings=HearingIndex(settings.hearings_path),
     )
-
-
-async def _choose_utility(geo: GeocodeResult, ground: Ground) -> Utility | None:
-    """HIFLD polygons that contain the point, disambiguated with EIA-861's
-    customer counts and county lists when the annual file is available."""
-    assert ground.utility is not None
-    if not hasattr(ground.utility, "candidates"):
-        return await ground.utility.at(geo.lat, geo.lon, geo.state)
-    features = await ground.utility.candidates(geo.lat, geo.lon)
-    directory = ground.utility_prices
-    city = _city(geo)
-    retail = [
-        f for f in features if str(f.get("TYPE") or f.get("type") or "").upper() in RETAIL_TYPES
-    ]
-    if not retail and geo.county and directory is not None and hasattr(directory, "in_county"):
-        # Only a federal marketer's polygon (or nothing) here: ask EIA-861 which
-        # utilities report serving this county instead.
-        try:
-            features = await directory.in_county(geo.state, geo.county)
-        except Exception as exc:  # noqa: BLE001
-            log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
-        if features:
-            log_event("ground_county_fallback", provider="hifld", candidates=len(features))
-    if not features:
-        return None
-    if len(features) == 1 or directory is None or not hasattr(directory, "customers"):
-        return choose(features, geo.state, city=city)
-    hints: dict[str, Hint] = {}
-    for f in features:
-        uid = f.get("ID") or f.get("id")
-        if uid in (None, ""):
-            continue
-        uid = str(uid).strip()
-        try:
-            customers = await directory.customers(uid, geo.state)
-            serves = await directory.serves(uid, geo.state, geo.county) if geo.county else None
-        except Exception as exc:  # noqa: BLE001 - hints are optional
-            log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
-            break
-        hints[uid] = (customers, serves)
-    if len(hints) > 1:
-        log_event("ground_overlap", provider="hifld", candidates=len(features), hinted=len(hints))
-    return choose(features, geo.state, hints, city=city)
-
-
-def _city(geo: GeocodeResult) -> str | None:
-    """'Filigree Ct, Ashburn, VA 20147' -> 'Ashburn'."""
-    parts = [p.strip() for p in geo.display.split(",")]
-    return parts[-2] if len(parts) >= 3 else None
 
 
 async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTruth:
@@ -158,7 +114,7 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
     async def utility_then_its_prices() -> None:
         if ground.utility is not None:
             try:
-                truth.utility = await _choose_utility(geo, ground)
+                truth.utility = await ground.utility.locate(geo)
             except Exception as exc:  # noqa: BLE001 - a data provider, never fatal
                 log_event("ground_failed", provider="hifld", reason=str(exc)[:160])
                 truth.notes.append(
@@ -169,7 +125,7 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         u = truth.utility
         if u is not None and u.eia_id and u.ba_code is None and hasattr(directory, "ba_code"):
             try:
-                code = await directory.ba_code(u.eia_id, geo.state)  # type: ignore[union-attr]
+                code = await directory.ba_code(u.eia_id, geo.region_code)  # type: ignore[union-attr]
             except Exception as exc:  # noqa: BLE001 - optional, used by the what-if bill line
                 log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
             else:
@@ -177,13 +133,13 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
                     truth.utility = replace(u, ba_code=code)
         if ground.tariffs is not None:
             truth.tariff = ground.tariffs.match(
-                geo.state, truth.utility.raw_name if truth.utility else None
+                geo.region_code, truth.utility.raw_name if truth.utility else None
             )
         if ground.utility_prices is None or truth.utility is None or not truth.utility.eia_id:
             return
         try:
             truth.utility_price = await ground.utility_prices.for_utility(
-                truth.utility.eia_id, geo.state
+                truth.utility.eia_id, geo.region_code
             )
         except Exception as exc:  # noqa: BLE001
             log_event("ground_failed", provider="eia861", reason=str(exc)[:160])
@@ -196,7 +152,7 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
         if ground.prices is None:
             return
         try:
-            truth.price = await ground.prices.series(geo.state)
+            truth.price = await ground.prices.series(geo.region_code)
         except Exception as exc:  # noqa: BLE001
             log_event("ground_failed", provider="eia861m", reason=str(exc)[:160])
             truth.notes.append(
@@ -217,11 +173,11 @@ async def gather_ground(geo: GeocodeResult, ground: Ground | None) -> GroundTrut
     if ground.hearings is not None:
         try:
             truth.hearing = ground.hearings.for_place(
-                geo.state, geo.county, truth.utility.name if truth.utility else None
+                geo.region_code, geo.county, truth.utility.name if truth.utility else None
             )
-            truth.decisions = ground.hearings.decisions_for(geo.state, geo.county)
+            truth.decisions = ground.hearings.decisions_for(geo.region_code, geo.county)
             if truth.hearing is None:
-                truth.hearing_note = ground.hearings.coverage_note(geo.state, geo.county)
+                truth.hearing_note = ground.hearings.coverage_note(geo.region_code, geo.county)
         except Exception as exc:  # noqa: BLE001
             log_event("ground_failed", provider="hearings", reason=str(exc)[:160])
             truth.notes.append("The hearing index could not be read.")
@@ -269,4 +225,5 @@ __all__ = [
     "Utility",
     "gather_ground",
     "get_ground",
+    "US_DATA_DIR",
 ]

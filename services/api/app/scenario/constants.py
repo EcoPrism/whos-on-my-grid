@@ -1,7 +1,8 @@
 """The cited constants a scenario's arithmetic runs on. data/equivalences.json
-first (the home page's figures), then data/scenario_constants.json, merged by
-id into one table. Each row names the page it comes from and quotes it
-verbatim, so a constant can back a claim the verifier checks like any other.
+first (the home page's figures), then the region's constants.json (for the US,
+data/regions/us/constants.json), merged by id into one table. Each row names
+the page it comes from and quotes it verbatim, so a constant can back a claim
+the verifier checks like any other.
 
 A file that is absent, or a row that is incomplete, is skipped: the model
 leaves out what it cannot cite rather than guess."""
@@ -16,7 +17,7 @@ from app.config import REPO_ROOT
 from app.telemetry import log_event
 
 EQUIVALENCES_PATH = REPO_ROOT / "data" / "equivalences.json"
-SCENARIO_CONSTANTS_PATH = REPO_ROOT / "data" / "scenario_constants.json"
+SCENARIO_CONSTANTS_PATH = REPO_ROOT / "data" / "regions" / "us" / "constants.json"
 _REQUIRED = ("id", "value", "unit", "source_title", "source_url", "quote")
 
 
@@ -97,6 +98,11 @@ def load(
         for c in _read(p):
             table[c.id] = c
     return table
+
+
+def load_region(data_dir: Path) -> Constants:
+    """A region's table: the shared equivalences, then the region's own file."""
+    return load((EQUIVALENCES_PATH, data_dir / "constants.json"))
 
 
 @lru_cache(maxsize=1)

@@ -1,11 +1,11 @@
-"""Index one meeting from `data/hearings/sources.json`:
+"""Index one meeting from `data/regions/us/hearings/sources.json`:
 
     uv run python -m app.hearings.index --meeting loudoun-2025-03-18 --captions-only
     uv run python -m app.hearings.index --meeting pwc-2023-12-12 \
-        --audio data/hearings/audio/pwcgov_3410.mp3
+        --audio data/regions/us/hearings/audio/pwcgov_3410.mp3
     uv run python -m app.hearings.index --meeting pwc-2023-12-12 --download
 
-Writes `data/hearings/<body>/<meeting>.json`: the transcript turns for the
+Writes `data/regions/us/hearings/<body>/<meeting>.json`: the transcript turns for the
 meeting's windows (Muse Voice Transcribe on the recording, or the archive's
 captions with --captions-only), speaker roles labelled by Muse Spark, the
 agreement between transcript and captions where both exist, and the agenda
@@ -106,7 +106,7 @@ async def main() -> None:
     ap.add_argument(
         "--audio",
         type=Path,
-        help="local recording (mp3/mp4); default: data/hearings/audio/<site>_<clip>.mp3",
+        help="local recording (mp3/mp4); default: <hearings dir>/audio/<site>_<clip>.mp3",
     )
     ap.add_argument(
         "--download",

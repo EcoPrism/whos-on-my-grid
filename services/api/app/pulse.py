@@ -92,15 +92,19 @@ def equivalences() -> list[dict[str, Any]]:
 
 # What the what-if slider needs to label its MW live, read from the same
 # table the scenario engine reads (data/equivalences.json, then
-# data/scenario_constants.json), so the label and the scenario's own homes
+# data/regions/us/constants.json), so the label and the scenario's own homes
 # counter agree, and each value travels with its page and verbatim quote.
 SLIDER_CONSTANTS = ("us_home_kwh_per_year", "dc_load_factor")
 
 
-def cited_constants() -> dict[str, dict[str, Any]]:
+def cited_constants(
+    table: scenario_constants.Constants | None = None,
+) -> dict[str, dict[str, Any]]:
     """Each slider constant with its value and the page and sentence it comes
-    from. One without a cited row is left out; the slider then shows no label."""
-    table = scenario_constants.default()
+    from. One without a cited row is left out; the slider then shows no label.
+    `table` is the region's; None reads the committed US table."""
+    if table is None:
+        table = scenario_constants.default()
     out: dict[str, dict[str, Any]] = {}
     for cid in SLIDER_CONSTANTS:
         c = table.get(cid)
@@ -118,8 +122,11 @@ def cited_constants() -> dict[str, dict[str, Any]]:
 
 
 class Pulse:
-    def __init__(self, ground: Ground | None) -> None:
+    def __init__(
+        self, ground: Ground | None, constants: scenario_constants.Constants | None = None
+    ) -> None:
         self.ground = ground
+        self.constants = constants
         self._value: dict[str, Any] | None = None
         self._at = 0.0
 
@@ -132,7 +139,7 @@ class Pulse:
         self._value = {
             "peeringdb": peeringdb,
             "equivalences": equivalences(),
-            "constants": cited_constants(),
+            "constants": cited_constants(self.constants),
             "scale": scale(),
         }
         self._at = time.monotonic()

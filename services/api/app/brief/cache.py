@@ -24,12 +24,14 @@ _ENGINE_GLOBS = (
     "services/api/app/**/*.py",
     "schema/brief.schema.json",
     "schema/scenario.schema.json",
-    "data/tariffs.json",
-    "data/facilities.json",
-    "data/hearings/**/*.json",
-    "data/perception/*.json",
     "data/equivalences.json",
-    "data/scenario_constants.json",
+    # Each region's curated data. JSON (and GeoJSON) only: recordings and imagery
+    # tiles stay out of the image (.dockerignore), so a broader glob would give
+    # the container a different fingerprint from the machine that built it.
+    "data/regions/*/*.json",
+    "data/regions/*/hearings/**/*.json",
+    "data/regions/*/perception/*.json",
+    "data/regions/*/**/*.geojson",
 )
 
 

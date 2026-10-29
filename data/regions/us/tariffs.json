@@ -1,8 +1,8 @@
 {
-  "_about": "Large-load tariffs and rules the engine knows about, keyed by state and utility. Curated by hand on 2026-10-27 from public commission orders and statutes; the verifier fetches each `url` and judges the claim like any other, so a stale or wrong entry shows as contradicted or unverifiable rather than as fact. `status`: in_force | proposed | none_found. `protects_households`: whether the rule's stated purpose is to keep large-load build-out costs off other customers. Add entries with their official page; never a news story as the only source. `min_mw`: the rule's size floor in MW as its summary states it (null: none stated); `min_mw_inclusive`: true for \"and above\" or \"or more\", false for \"above\". A what-if campus under the floor is not covered by the rule.",
+  "_about": "Large-load tariffs and rules the engine knows about, keyed by `jurisdiction` (the two-letter state) and utility. Curated by hand on 2026-10-27 from public commission orders and statutes; the verifier fetches each `url` and judges the claim like any other, so a stale or wrong entry shows as contradicted or unverifiable rather than as fact. `status`: in_force | proposed | none_found. `protects_households`: whether the rule's stated purpose is to keep large-load build-out costs off other customers. Add entries with their official page; never a news story as the only source. `min_mw`: the rule's size floor in MW as its summary states it (null: none stated); `min_mw_inclusive`: true for \"and above\" or \"or more\", false for \"above\". A what-if campus under the floor is not covered by the rule.",
   "entries": [
     {
-      "state": "VA",
+      "jurisdiction": "VA",
       "utility_match": "VIRGINIA ELECTRIC|DOMINION",
       "name": "Rate Schedule GS-5 (customers above 25 MW)",
       "status": "in_force",
@@ -15,7 +15,7 @@
       "min_mw_inclusive": false
     },
     {
-      "state": "OH",
+      "jurisdiction": "OH",
       "utility_match": "OHIO POWER|AEP",
       "name": "AEP Ohio data-center tariff (85% minimum demand, 12 years)",
       "status": "in_force",
@@ -28,7 +28,7 @@
       "min_mw_inclusive": false
     },
     {
-      "state": "GA",
+      "jurisdiction": "GA",
       "utility_match": "GEORGIA POWER",
       "name": "Georgia Public Service Commission large-load rules (100 MW and above)",
       "status": "in_force",
@@ -41,7 +41,7 @@
       "min_mw_inclusive": true
     },
     {
-      "state": "TX",
+      "jurisdiction": "TX",
       "utility_match": "ONCOR|CENTERPOINT|AEP TEXAS|TEXAS-NEW MEXICO",
       "name": "Senate Bill 6 (2025): large-load interconnection standards in ERCOT",
       "status": "in_force",
@@ -54,7 +54,7 @@
       "min_mw_inclusive": true
     },
     {
-      "state": "OR",
+      "jurisdiction": "OR",
       "utility_match": "PORTLAND GENERAL|PACIFICORP|PACIFIC POWER",
       "name": "POWER Act (House Bill 3546, 2025): separate rate class for loads above 20 MW",
       "status": "in_force",
@@ -67,7 +67,7 @@
       "min_mw_inclusive": false
     },
     {
-      "state": "IN",
+      "jurisdiction": "IN",
       "utility_match": "INDIANA MICHIGAN POWER|I&M",
       "name": "Indiana Michigan Power large-load settlement (70 MW and above)",
       "status": "in_force",
@@ -80,7 +80,7 @@
       "min_mw_inclusive": true
     },
     {
-      "state": "WA",
+      "jurisdiction": "WA",
       "utility_match": "PUGET SOUND ENERGY",
       "name": null,
       "status": "none_found",

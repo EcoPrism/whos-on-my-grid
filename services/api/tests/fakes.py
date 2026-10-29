@@ -16,9 +16,9 @@ GEO = GeocodeResult(
     display="Filigree Ct, Ashburn, VA 20147",
     lat=39.0163,
     lon=-77.4588,
-    state="VA",
+    region_code="VA",
     county="Loudoun",
-    zip="20147",
+    postal_code="20147",
     matched="21715 FILIGREE CT, ASHBURN, VA, 20147",
 )
 

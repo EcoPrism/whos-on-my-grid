@@ -1,7 +1,7 @@
 """What was said at the last indexed hearing for this county, read from the
-hearing index: `data/hearings/sources.json` (bodies, meetings, decisions,
+hearing index: `data/regions/us/hearings/sources.json` (bodies, meetings, decisions,
 upcoming dates; hand-curated like the tariff table) and one transcript file
-per meeting (`data/hearings/<body>/<meeting>.json`, written offline by
+per meeting beside it (`<body>/<meeting>.json`, written offline by
 `app.hearings.index` from the official recording through Muse Voice
 Transcribe, or from the archive's own closed captions where those exist).
 
@@ -16,7 +16,7 @@ from typing import Any
 from app.config import REPO_ROOT
 from app.ground.types import Decision, HearingQuote, HearingResult, Upcoming
 
-HEARINGS_DIR = REPO_ROOT / "data" / "hearings"
+HEARINGS_DIR = REPO_ROOT / "data" / "regions" / "us" / "hearings"
 TRANSCRIBE_MODEL_ID = "muse-voice-transcribe-1.0"
 
 MAX_QUOTES = 3

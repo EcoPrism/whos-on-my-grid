@@ -156,8 +156,25 @@ def scenario_errors(scenario: dict[str, Any]) -> list[str]:
 # --- draft schemas ----------------------------------------------------------
 
 
+# Keys the engine owns and a model never fills: pruned from the draft schemas,
+# so the prompts and strict schemas stay as they were before the key existed.
+_ENGINE_ONLY: dict[str, tuple[str, ...]] = {"price": ("granularity",)}
+
+
 def _defs() -> dict[str, Any]:
     return load_brief_schema()["$defs"]
+
+
+def _draft_defs() -> dict[str, Any]:
+    """The $defs a draft is built from: the brief's, less engine-only keys."""
+    defs = copy.deepcopy(_defs())
+    for name, keys in _ENGINE_ONLY.items():
+        node = defs[name]
+        for k in keys:
+            node["properties"].pop(k, None)
+        if "required" in node:
+            node["required"] = [r for r in node["required"] if r not in keys]
+    return defs
 
 
 def _inline(node: Any, defs: dict[str, Any]) -> Any:
@@ -175,7 +192,7 @@ def _inline(node: Any, defs: dict[str, Any]) -> Any:
 def build_draft_schema(section_id: str) -> dict[str, Any]:
     """The un-strict (original-rules) schema for one section's draft: what the
     model's output is validated against after null pruning."""
-    defs = _defs()
+    defs = _draft_defs()
     prop, def_name, is_array = SECTION_EXTRA[section_id]
     extra = (
         {"type": "array", "items": {"$ref": f"#/$defs/{def_name}"}}

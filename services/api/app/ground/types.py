@@ -3,7 +3,7 @@ the serving utility, the state's residential price series. Each comes from a
 public dataset with a URL a reader (and the verifier) can open."""
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from app.ground.tariffs import TariffEntry
@@ -15,7 +15,7 @@ BEYOND_RING_KM = 16.09  # ten miles: how far the engine looks for a campus past 
 @dataclass(frozen=True)
 class OperatorSource:
     """The page that names a site's operator when the map does not
-    (data/facilities.json). The claim and quote are what the verifier checks."""
+    (data/regions/<id>/facilities.json). The claim and quote are what the verifier checks."""
 
     url: str
     title: str
@@ -70,6 +70,8 @@ class PriceSeries:
     label: str = ""  # "WA statewide" or the utility's name in the dataset
     latest_month_rate: float | None = None  # USD/kWh for the newest month alone (EPM table)
     eia_id: str | None = None
+    currency: str = "USD"  # ISO 4217; the rates above are in it per kWh
+    granularity: Literal["monthly", "semiannual", "annual"] = "monthly"  # the source's period
 
 
 # --- perception: what SAM 3.1 measured on two imagery vintages -----------------

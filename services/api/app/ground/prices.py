@@ -47,7 +47,7 @@ Key = tuple[str, str]  # (EIA utility number, state)
 
 
 class PriceProvider(Protocol):
-    async def series(self, state: str) -> PriceSeries | None: ...
+    async def series(self, jurisdiction: str) -> PriceSeries | None: ...
 
 
 class UtilityPriceProvider(Protocol):
@@ -130,6 +130,8 @@ def series_from_rows(state: str, rows: list[Row]) -> PriceSeries | None:
         as_of=f"{latest[0]}-{latest[1]:02d}",
         label=f"{state} statewide",
         latest_month_rate=round(latest_row[2] / latest_row[3], 4),
+        currency="USD",
+        granularity="monthly",
     )
 
 
@@ -177,9 +179,9 @@ class Eia861mPrices:
             self._loaded_at = time.time()
             return self._rows
 
-    async def series(self, state: str) -> PriceSeries | None:
+    async def series(self, jurisdiction: str) -> PriceSeries | None:
         table = await self._table()
-        return series_from_rows(state.upper(), table.get(state.upper(), []))
+        return series_from_rows(jurisdiction.upper(), table.get(jurisdiction.upper(), []))
 
 
 # --- utility, annual (EIA-861) ------------------------------------------------------
@@ -319,6 +321,8 @@ def utility_series_from_rows(
         as_of=f"{year_now}-12",
         label=now[3],
         eia_id=eia_id,
+        currency="USD",
+        granularity="annual",
     )
 
 
@@ -480,7 +484,7 @@ class FakePrices:
         self._series = series
         self.fail = fail
 
-    async def series(self, state: str) -> PriceSeries | None:
+    async def series(self, jurisdiction: str) -> PriceSeries | None:
         if self.fail:
             raise RuntimeError("fake")
         return self._series

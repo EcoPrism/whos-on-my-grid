@@ -1,5 +1,6 @@
 """Perception indexer: two vintages of USDA NAIP aerial imagery in, the
-large roofs that appeared between them out (`data/perception/<area>.json`),
+large roofs that appeared between them out
+(`data/regions/us/perception/<area>.json`),
 read per brief by `app.ground.imagery`. Run offline:
 
     uv run python -m app.perception.index --area new_albany

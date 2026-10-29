@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-curated like data/tariffs.json: sites the facility databases map without an operator, with the official page that names who runs them. An entry applies to an operator-less cluster whose centre is within radius_m of (lat, lon). The claim and quote are what the verifier checks against source_url; a stale entry shows up as contradicted or unverifiable, never as fact.",
+  "_about": "Hand-curated like tariffs.json: sites the facility databases map without an operator, with the official page that names who runs them. An entry applies to an operator-less cluster whose centre is within radius_m of (lat, lon). The claim and quote are what the verifier checks against source_url; a stale entry shows up as contradicted or unverifiable, never as fact.",
   "entries": [
     {
       "name": "Apple Maiden data center",

@@ -1,6 +1,8 @@
 """Full mode: the engine's facilities, utility and prices are the brief's;
 Spark's drafts supply sentences and what no dataset holds."""
 
+import dataclasses
+
 from app.ground import (
     FakeFacilityDatabase,
     FakePrices,
@@ -290,9 +292,10 @@ UTILITY_PRICE = PriceSeries(
     as_of="2024-12",
     label="Virginia Electric & Power Co",
     eia_id="19876",
+    granularity="annual",
 )
 TARIFF = TariffEntry(
-    state="VA",
+    jurisdiction="VA",
     utility_match="VIRGINIA ELECTRIC",
     name="Rate Schedule GS-5",
     status="in_force",
@@ -360,17 +363,13 @@ async def test_no_retail_polygon_falls_back_to_eia_county_list(tmp_path) -> None
                     "customers": 11,
                     "id": "1738",
                 }
-            ]
+            ],
+            directory=directory,
         ),
         utility_prices=directory,
     )
-    geo = fakes.GEO.__class__(
-        **{
-            **fakes.GEO.__dict__,
-            "county": "Crook",
-            "state": "OR",
-            "display": "N Main St, Prineville, OR 97754",
-        }
+    geo = dataclasses.replace(
+        fakes.GEO, county="Crook", region_code="OR", display="N Main St, Prineville, OR 97754"
     )
     svc.geocoder = fakes.FakeGeocoder(geo)
     brief = await svc.brief_for_address("1207 N Main St, Prineville, OR")

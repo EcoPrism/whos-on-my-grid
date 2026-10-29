@@ -23,9 +23,9 @@ ZIP_GEO = GeocodeResult(
     display="ZIP 20147, Loudoun County, VA",
     lat=39.0438,
     lon=-77.4874,
-    state="VA",
+    region_code="VA",
     county="Loudoun",
-    zip="20147",
+    postal_code="20147",
     matched="zip:20147",
 )
 
@@ -126,7 +126,7 @@ PAGES[HIFLD_PAGE] = PAGES["https://example.org/hifld"]
 
 def tariff(status: str = "in_force", protects: bool | None = True) -> TariffEntry:
     return TariffEntry(
-        state="VA",
+        jurisdiction="VA",
         utility_match="NORTHGATE",
         name="Schedule LL-1",
         status=status,

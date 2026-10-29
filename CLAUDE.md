@@ -10,8 +10,9 @@ Read `README.md` first, then `docs/build-log.md` for what was built when and why
   verify); `app/ground` is the engine's data (facilities, utility, prices, tariffs, imagery and
   hearing indexes); `app/perception` and `app/hearings` are offline indexers.
 - `web` — Vite + React + TypeScript. `src/types.ts` mirrors `schema/brief.schema.json`.
-- `data/` — curated JSON that is committed (`tariffs.json`, `facilities.json`, `hearings/`,
-  `perception/`) and caches that are not (`briefs/`, `ground/`).
+- `data/` — curated JSON that is committed (`equivalences.json`, shared, and per region under
+  `data/regions/<id>/`: `tariffs.json`, `facilities.json`, `constants.json`, `hearings/`,
+  `perception/`; the US is `data/regions/us/`) and caches that are not (`briefs/`, `ground/`).
 - `eval/` — the 30-address test set and `run_eval.py`. `eval/addresses.json` is also the sign-in
   gate's allow-list: those addresses run without an account.
 - `services/api/app/auth` — the sign-in gate (`gate.py`), Google id_token check, session cookie,

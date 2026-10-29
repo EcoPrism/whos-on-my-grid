@@ -49,10 +49,21 @@ class GeocodeResult:
     display: str  # street and city, no house number: what the UI shows
     lat: float
     lon: float
-    state: str
+    region_code: str  # first-level division; US: the two-letter state
     county: str | None
-    zip: str
+    postal_code: str  # US: the five-digit ZIP
     matched: str  # the geocoder's canonical one-line address, used for the id
+    country: str = "US"  # ISO 3166-1 alpha-2
+
+    @property
+    def state(self) -> str:
+        """US spelling of region_code; the prompts and brief text read it."""
+        return self.region_code
+
+    @property
+    def zip(self) -> str:
+        """US spelling of postal_code."""
+        return self.postal_code
 
 
 class Geocoder(Protocol):
@@ -67,10 +78,15 @@ def normalise(address: str) -> str:
     return _WS.sub(" ", _PUNCT.sub(" ", address.lower())).strip()
 
 
-def brief_id_for(matched: str) -> str:
+def brief_id_for(matched: str, country: str = "US") -> str:
     """sha256 of the normalised address, first 16 hex chars. This is the only
-    thing derived from the address that is ever written to disk or a log."""
-    return hashlib.sha256(normalise(matched).encode("utf-8")).hexdigest()[:16]
+    thing derived from the address that is ever written to disk or a log.
+    Outside the US the country prefixes the key, so the same street line in two
+    countries gets two ids; US ids are what they always were."""
+    key = normalise(matched)
+    if country.upper() != "US":
+        key = f"{country.lower()}|{key}"
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
 
 
 _HOUSE_NUMBER = re.compile(r"^\s*\d+[A-Za-z]?(?:-\d+)?\s+")
@@ -177,10 +193,11 @@ class CensusGeocoder:
             display=display_from(matched, state, zip_code),
             lat=lat,
             lon=lon,
-            state=state,
+            region_code=state,
             county=county,
-            zip=zip_code,
+            postal_code=zip_code,
             matched=matched,
+            country="US",
         )
 
 
@@ -330,10 +347,11 @@ class ZctaCentroids:
             display=", ".join(bits),
             lat=lat,
             lon=lon,
-            state=area.state,
+            region_code=area.state,
             county=area.county,
-            zip=zip5,
+            postal_code=zip5,
             matched=f"zip:{zip5}",
+            country="US",
         )
 
 

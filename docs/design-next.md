@@ -22,7 +22,7 @@ baseline, and the page says so everywhere.
 - **Input**: ZIP code, campus size in MW (presets 50, 100, 300, 1,000), cooling type (evaporative
   or closed loop), and a pin the user can drag on the map. ZIP resolves to a centroid from the
   Census ZCTA gazetteer, keyless. A ZIP is coarser than an address, but the same hygiene applies.
-- **Engine**: `gather_ground` for the centroid, then arithmetic over `data/scenario_constants.json`
+- **Engine**: `gather_ground` for the centroid, then arithmetic over `data/regions/us/constants.json`
   (same shape as `data/equivalences.json`: value, source page, verbatim quote). Lines: power as
   homes-equivalent and as a share of this utility's residential customers; bill, branching on the
   tariff table and shown as a range or as "shielded"; water by cooling type; land in acres and
@@ -231,7 +231,9 @@ loaded by the user-run secrets phase.
 
 ### B. Scenario engine
 
-#### B.1 Data: `data/scenario_constants.json`
+#### B.1 Data: `data/regions/us/constants.json`
+
+Built as `data/scenario_constants.json`; step 5 (D.3) moved it to the US region's directory.
 
 Same shape as `equivalences.json` (`{"_about", "constants": [{id, value, unit, as_of,
 source_title, source_url, quote, checked}]}`). `app/scenario/constants.py::load()` merges
@@ -276,7 +278,8 @@ quote says (no derived value), which is the text of the constant's engine claim.
 Each `Constant` exposes `.source(now_iso) -> dict` matching the schema's `source` def
 (`title`, `url`, `retrieved_at` = `checked`, `quote`), so a constant can back a claim directly.
 `_ENGINE_GLOBS` in `app/brief/cache.py` adds `data/scenario_constants.json` and
-`schema/scenario.schema.json`; `.dockerignore` adds `!data/scenario_constants.json`.
+`schema/scenario.schema.json`; `.dockerignore` adds `!data/scenario_constants.json`. Since
+step 5 both name `data/regions/` instead (D.3).
 
 #### B.2 ZIP resolution and households
 
@@ -573,6 +576,15 @@ def region_for(*, explicit: str | None, country_header: str | None, default: str
 
 `settings.regions = "us"` enables regions; `GRID_REGIONS=us,eu` enables Europe on the same image.
 
+As built in step 5: `Region` holds `make_ground(settings)` rather than a `Ground`, so a test
+that injects a service never leaves a second, unused ground on the region; the service's
+`ground` is the one a brief reads. `Region` also carries `label`, `countries` (the header
+codes that map to it), `data_dir` and `resolved`. `region_for(regions, *, explicit,
+country_header, default)` takes the registry; the header counts only when
+`GRID_ALLOWED_COUNTRIES` is set, and a blank `region` counts as absent.
+`GRID_DEFAULT_REGION` (default `us`) names the region a request without one gets. The US test
+set stays at `eval/addresses.json` until step 6 adds `eval/ie/`.
+
 #### D.2 Protocol changes in `app/ground`
 
 | Protocol | Today | Change |
@@ -598,6 +610,8 @@ data/regions/in/   tariffs.json  facilities.json  constants.json  discoms.json  
 
 Every curated row keeps the `url`, `title`, `quote` triple. `_ENGINE_GLOBS` adds
 `data/regions/**`. `.dockerignore` adds `!data/regions` and excludes imagery binaries as today.
+As built, the globs name only JSON and GeoJSON under `data/regions/`, so audio and imagery
+tiles that exist locally but not in the image never make the two fingerprints differ.
 
 #### D.4 Schema
 

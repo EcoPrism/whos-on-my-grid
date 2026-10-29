@@ -186,7 +186,7 @@ def assemble_scenario(
     price: dict[str, Any] | None = None
     if p is not None:
         price = {
-            "currency": "USD",
+            "currency": p.currency,
             "rate_now": p.rate_now,
             "rate_then": p.rate_then,
             "trend_pct": p.trend_pct,
@@ -196,6 +196,7 @@ def assemble_scenario(
         }
         if p.as_of:
             price["as_of"] = p.as_of
+        price["granularity"] = p.granularity
     t = truth.tariff
     tariff_source = (
         {"title": t.title, "url": t.url, "retrieved_at": now_iso} if t is not None else None

@@ -2,6 +2,8 @@
 facilities, choosing a utility among overlapping territories, turning the
 EIA-861M rows into a 24-month price series. No network."""
 
+import re
+
 from app.ground.facilities import (
     Override,
     RawSite,
@@ -138,6 +140,7 @@ def test_series_is_trailing_twelve_versus_twelve_ending_two_years_earlier() -> N
     assert s.rate_now == 0.15 and s.rate_then == 0.12
     assert s.trend_pct == 25.0 and s.typical_kwh_month == 1000.0
     assert s.latest == (2026, 12) and s.window_months == 24 and s.data_status == "Final"
+    assert s.currency == "USD" and s.granularity == "monthly"
 
 
 def test_series_needs_both_windows() -> None:
@@ -154,6 +157,7 @@ def test_utility_series_is_annual_and_per_customer() -> None:
     assert s is not None and s.scope == "utility" and s.as_of == "2024-12"
     assert s.rate_now == 0.0601 and s.rate_then == 0.0556 and s.window_months == 24
     assert s.typical_kwh_month == 1659.0 and s.label == "PUD No 2 of Grant County"
+    assert s.currency == "USD" and s.granularity == "annual"
     assert utility_series_from_rows("1", "WA", now, None, 2024, 2022) is None
 
 
@@ -173,6 +177,21 @@ def test_tariff_table_matches_by_state_and_utility() -> None:
             "proposed",
             "none_found",
         )
+
+
+def test_tariff_rows_are_keyed_by_jurisdiction() -> None:
+    """Every row was renamed from `state`; TariffEntry(**row) would raise on a
+    leftover key, so fail here rather than at the first request."""
+    import json
+
+    from app.ground.tariffs import TariffTable
+
+    t = TariffTable()
+    with open(t.path, encoding="utf-8") as f:
+        rows = json.load(f)["entries"]
+    assert rows and all("jurisdiction" in r and "state" not in r for r in rows)
+    assert len(t.entries()) == len(rows)
+    assert all(re.fullmatch(r"[A-Z]{2}", e.jurisdiction) for e in t.entries())
 
 
 def test_choose_prefers_the_utility_named_for_the_city() -> None:

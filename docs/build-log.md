@@ -260,3 +260,40 @@ from anything pre-existing.
   carries a hash of the public chain, so loading a cert re-signs cached cards. Tests sign a card
   with a generated ES256 chain and read the manifest back. Built as one multi-agent workflow:
   three implementers, three reviewers, adversarial verification, one fixer (11 findings fixed).
+- 2026-10-29, regions with the US as the only one (`docs/design-next.md` build order step 5,
+  D.1 to D.5). No behaviour change for a US address: the brief id, prompts, strict draft schemas,
+  gate allow-list, pulse numbers and share links are the same, and tests pin each. `app/regions`
+  holds the registry: `Region` (locale, geocoder, `make_ground`, constants, postal pattern, data
+  directory, test set), `registry(settings)` over `GRID_REGIONS` (default `us`) and
+  `region_for(regions, explicit=, country_header=, default=)`, which prefers an explicit
+  `region`, then the country header (only when `GRID_ALLOWED_COUNTRIES` says an edge sets it),
+  then `GRID_DEFAULT_REGION`. `Locale` sits in `app/regions/locale.py` with no app imports, so
+  the assembler can use it. Curated data moved with `git mv` to `data/regions/us/`
+  (`tariffs.json`, `facilities.json`, `constants.json` (was `data/scenario_constants.json`),
+  `hearings/`, `perception/`); `data/equivalences.json` stays shared, since the home page cites
+  it. `.gitignore`, `.dockerignore` and the Dockerfile follow, and `get_ground(settings,
+  data_dir)` passes the overrides and tariff paths explicitly. A `.env` that still sets
+  `GRID_PERCEPTION_DIR=data/perception` or `GRID_HEARINGS_DIR=data/hearings` (either slash, with
+  or without a trailing one) is read as the new path, so an older copy of `.env.example` keeps
+  its imagery and hearings. The engine fingerprint now hashes the JSON and GeoJSON under
+  `data/regions/`, so cached briefs regenerate once on request; audio and imagery binaries are
+  left out so local and container fingerprints agree. Ground protocols are region-neutral:
+  `GeocodeResult` has `country`, `region_code` and `postal_code` (`state` and `zip` are read-only
+  aliases), utility disambiguation moved from `gather_ground` into `HifldUtility.locate` with the
+  same telemetry, `PriceSeries` carries `currency` and `granularity`, and tariff rows are keyed
+  by `jurisdiction`. `brief_id_for` prefixes the country only outside the US, so every existing
+  link stays valid. The brief JSON gains, additively, `address.country`, `region_code`,
+  `postal_code`, a top-level `locale` and `price.granularity`; `state` and `zip` are still
+  written, and the schema accepts either pair. `granularity` is pruned from the model's draft
+  schema, whose hashes are pinned per section, because it is the engine's to state.
+  `test_schema_compat.py` validates every committed fixture and, where present, every cached
+  brief and scenario, naming each by id and reporting only key paths, never an address. Wiring:
+  one `BriefService` per enabled region over one shared `BriefCache`; `app.state.service` stays
+  the default region's for links, cards and Open Graph. `POST /api/brief` and the stream take an
+  optional `region` (an unknown or disabled one is 422 `unknown_region` before the geocoder, the
+  model or the quota); `/api/health` adds `region` and `regions`, and `/api/pulse?region=` keeps
+  one pulse per region. The gate admits the union of the enabled regions' test sets, today the
+  same thirty. The web gets the types (`Locale`, `Price.granularity`, optional address fields)
+  and `format.ts` helpers (`fmtMoney(n, currency)`, `fmtDistance`, `fmtVolume`, `fmtArea`), with
+  no component rewired (D.6). Deferred to step 6: the PeeringDB country filter on pulse, renaming
+  `PriceSeries.state`, moving the test set to `eval/us/`, and a per-region fingerprint. 446 tests.

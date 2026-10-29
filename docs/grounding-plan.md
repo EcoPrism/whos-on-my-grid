@@ -44,7 +44,7 @@ politics. The verifier then has real pages to check.
 | Residential price, this utility | EIA-861 annual `Sales_Ult_Cust_YYYY.xlsx` (one row per utility and state), joined on the EIA utility number that HIFLD carries as `id`; latest two calendar years available, bundled service only | no key; two 4.5 MB zips cached | probed: Grant County PUD 5.6→6.0¢ while Washington statewide went 11.6→14.2¢, which is the Quincy counter-narrative |
 | Typical household kWh | same workbooks: residential sales ÷ customers | derived | — |
 | Utility disambiguation | EIA-861 `Service_Territory_YYYY.xlsx` (utility → counties) and its customer counts | same zips | HIFLD polygons overlap (Farmers EC over Oncor in Dallas, FPL over Keys Energy in Key West); keep candidates that report the address's county, then most customers |
-| Large-load tariffs | `data/tariffs.json`, hand-curated commission orders and statutes with official URLs | in repo | the verifier fetches each URL like any other claim |
+| Large-load tariffs | `data/regions/us/tariffs.json`, hand-curated commission orders and statutes with official URLs | in repo | the verifier fetches each URL like any other claim |
 
 Clustering: OSM buildings sharing an operator within 500 m become one campus entry ("Microsoft,
 9 buildings"); unnamed buildings merge into a PeeringDB site within 150 m when one exists, else

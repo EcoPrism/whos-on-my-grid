@@ -1,5 +1,6 @@
 """What SAM 3.1 measured on two NAIP vintages, read from the perception index
-(`data/perception/<area>.json`, written offline by `app.perception.index`).
+(`data/regions/us/perception/<area>.json`, written offline by
+`app.perception.index`).
 No network and no model call per brief: the index is a committed data
 product, so the brief says the same thing on every machine."""
 
@@ -18,7 +19,7 @@ from app.ground.types import (
     ImageryVintage,
 )
 
-PERCEPTION_DIR = REPO_ROOT / "data" / "perception"
+PERCEPTION_DIR = REPO_ROOT / "data" / "regions" / "us" / "perception"
 SAM_MODEL_ID = "sam-3.1"
 MAX_SITES = 12
 

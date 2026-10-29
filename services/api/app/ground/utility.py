@@ -5,12 +5,15 @@ when several contain the point the retail utility with the most customers
 wins and the brief notes the overlap."""
 
 import re
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx
 
 from app.ground.types import Utility
 from app.telemetry import log_event
+
+if TYPE_CHECKING:
+    from app.geocode import GeocodeResult
 
 HIFLD_URL = (
     "https://eedgis.pnnl.gov/arcgis/rest/services/Hosted/"
@@ -96,9 +99,10 @@ def display_name(raw: str, state: str | None = None) -> str:
 
 
 class UtilityProvider(Protocol):
-    async def candidates(self, lat: float, lon: float) -> list[dict[str, Any]]: ...
+    """The serving utility for a geocoded address. Each region's provider owns
+    its own disambiguation; the US one is HIFLD plus EIA-861."""
 
-    async def at(self, lat: float, lon: float, state: str | None = None) -> Utility | None: ...
+    async def locate(self, geo: "GeocodeResult") -> Utility | None: ...
 
 
 class UtilityDirectory(Protocol):
@@ -108,14 +112,26 @@ class UtilityDirectory(Protocol):
 
     async def serves(self, eia_id: str, state: str, county: str) -> bool | None: ...
 
+    async def in_county(self, state: str, county: str) -> list[dict[str, Any]]: ...
+
 
 Hint = tuple[int | None, bool | None]  # (customers, serves this county)
 
 
 class HifldUtility:
-    def __init__(self, *, url: str = HIFLD_URL, timeout: float = 25.0) -> None:
+    def __init__(
+        self,
+        *,
+        url: str = HIFLD_URL,
+        timeout: float = 25.0,
+        directory: UtilityDirectory | None = None,
+    ) -> None:
         self.url = url
         self.timeout = timeout
+        self.directory = directory
+
+    async def locate(self, geo: "GeocodeResult") -> Utility | None:
+        return await disambiguate(geo, await self.candidates(geo.lat, geo.lon), self.directory)
 
     async def candidates(self, lat: float, lon: float) -> list[dict[str, Any]]:
         params = {
@@ -136,9 +152,6 @@ class HifldUtility:
         if "error" in body:
             raise RuntimeError(f"HIFLD: {body['error'].get('message', 'error')}")
         return [f.get("attributes", {}) for f in body.get("features") or []]
-
-    async def at(self, lat: float, lon: float, state: str | None = None) -> Utility | None:
-        return choose(await self.candidates(lat, lon), state)
 
 
 def _customers(a: dict[str, Any]) -> int:
@@ -202,17 +215,75 @@ def choose(
     )
 
 
+async def disambiguate(
+    geo: "GeocodeResult",
+    features: list[dict[str, Any]],
+    directory: UtilityDirectory | None,
+) -> Utility | None:
+    """HIFLD polygons that contain the point, disambiguated with EIA-861's
+    customer counts and county lists when the annual file is available."""
+    city = _city(geo)
+    retail = [
+        f for f in features if str(f.get("TYPE") or f.get("type") or "").upper() in RETAIL_TYPES
+    ]
+    if not retail and geo.county and directory is not None and hasattr(directory, "in_county"):
+        # Only a federal marketer's polygon (or nothing) here: ask EIA-861 which
+        # utilities report serving this county instead.
+        try:
+            features = await directory.in_county(geo.region_code, geo.county)
+        except Exception as exc:  # noqa: BLE001
+            log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
+        if features:
+            log_event("ground_county_fallback", provider="hifld", candidates=len(features))
+    if not features:
+        return None
+    if len(features) == 1 or directory is None or not hasattr(directory, "customers"):
+        return choose(features, geo.region_code, city=city)
+    hints: dict[str, Hint] = {}
+    for f in features:
+        uid = f.get("ID") or f.get("id")
+        if uid in (None, ""):
+            continue
+        uid = str(uid).strip()
+        try:
+            customers = await directory.customers(uid, geo.region_code)
+            serves = (
+                await directory.serves(uid, geo.region_code, geo.county) if geo.county else None
+            )
+        except Exception as exc:  # noqa: BLE001 - hints are optional
+            log_event("ground_failed", provider="eia861-directory", reason=str(exc)[:160])
+            break
+        hints[uid] = (customers, serves)
+    if len(hints) > 1:
+        log_event("ground_overlap", provider="hifld", candidates=len(features), hinted=len(hints))
+    return choose(features, geo.region_code, hints, city=city)
+
+
+def _city(geo: "GeocodeResult") -> str | None:
+    """'Filigree Ct, Ashburn, VA 20147' -> 'Ashburn'."""
+    parts = [p.strip() for p in geo.display.split(",")]
+    return parts[-2] if len(parts) >= 3 else None
+
+
 class FakeUtility:
+    """Scripted HIFLD features; locate() runs them through the same
+    disambiguation as the real provider, so claims cite HIFLD_PAGE."""
+
     def __init__(
         self,
         utility: Utility | None = None,
         *,
         fail: bool = False,
         features: list[dict[str, Any]] | None = None,
+        directory: UtilityDirectory | None = None,
     ) -> None:
         self.utility = utility
         self.fail = fail
         self.features = features
+        self.directory = directory
+
+    async def locate(self, geo: "GeocodeResult") -> Utility | None:
+        return await disambiguate(geo, await self.candidates(geo.lat, geo.lon), self.directory)
 
     async def candidates(self, lat: float, lon: float) -> list[dict[str, Any]]:
         if self.fail:
@@ -221,8 +292,3 @@ class FakeUtility:
             u = self.utility
             return [{"NAME": u.raw_name, "TYPE": u.kind, "CUSTOMERS": u.customers, "ID": u.eia_id}]
         return list(self.features or [])
-
-    async def at(self, lat: float, lon: float, state: str | None = None) -> Utility | None:
-        if self.fail:
-            raise RuntimeError("fake")
-        return self.utility

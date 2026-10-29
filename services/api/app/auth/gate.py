@@ -9,6 +9,7 @@ daily cap, which is the gateway budget's belt. A what-if's interpretation
 import json
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 from app.auth.session import Sessions, User
 from app.auth.usage import UsageStore
@@ -31,13 +32,16 @@ def _load(path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-@lru_cache(maxsize=1)
-def test_set_rows() -> tuple[dict[str, str], ...]:
+@lru_cache(maxsize=8)
+def test_set_rows(
+    test_set: Path = TEST_SET, resolved_path: Path | None = RESOLVED
+) -> tuple[dict[str, str], ...]:
     """One row per test address: its id, the address to show (the resolved, numbered
-    one when known) and the raw address from the test set."""
-    resolved = _load(RESOLVED)
+    one when known) and the raw address from the test set. A region passes its own
+    pair; no arguments is the US set."""
+    resolved = _load(resolved_path) if resolved_path is not None else {}
     rows = []
-    for r in _load(TEST_SET).get("addresses", []):
+    for r in _load(test_set).get("addresses", []):
         raw = r.get("address")
         if not isinstance(raw, str):
             continue
@@ -47,12 +51,15 @@ def test_set_rows() -> tuple[dict[str, str], ...]:
     return tuple(rows)
 
 
-@lru_cache(maxsize=1)
-def test_set_addresses() -> frozenset[str]:
+@lru_cache(maxsize=8)
+def test_set_addresses(*sets: tuple[Path, Path | None]) -> frozenset[str]:
+    """Both spellings of every address in the given (test set, resolved) pairs,
+    one pair per enabled region. No arguments is the US set alone."""
     out = set()
-    for r in test_set_rows():
-        out.add(normalise(r["raw"]))
-        out.add(normalise(r["address"]))
+    for test_set, resolved in sets or ((TEST_SET, RESOLVED),):
+        for r in test_set_rows(test_set, resolved):
+            out.add(normalise(r["raw"]))
+            out.add(normalise(r["address"]))
     return frozenset(out)
 
 
@@ -68,6 +75,8 @@ class Gate:
     settings: Settings
     sessions: Sessions | None
     usage: UsageStore
+    # The union of the enabled regions' test sets; None reads the US set.
+    allowed: frozenset[str] | None = None
 
     @property
     def on(self) -> bool:
@@ -84,7 +93,8 @@ class Gate:
         if await self.usage.count_global_today() >= self.settings.quota_global_day:
             log_event("gate_denied", reason="global_quota")
             raise GateDenied(429, "quota_exceeded_today")
-        if normalise(address) in test_set_addresses():
+        allowed = self.allowed if self.allowed is not None else test_set_addresses()
+        if normalise(address) in allowed:
             return None
         if user is None:
             log_event("gate_denied", reason="sign_in")

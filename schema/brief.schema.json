@@ -43,9 +43,22 @@
       "required": [
         "display",
         "lat",
-        "lon",
-        "state",
-        "zip"
+        "lon"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "state",
+            "zip"
+          ]
+        },
+        {
+          "required": [
+            "country",
+            "region_code",
+            "postal_code"
+          ]
+        }
       ],
       "properties": {
         "display": {
@@ -60,12 +73,26 @@
         },
         "state": {
           "type": "string",
-          "pattern": "^[A-Z]{2}$"
+          "pattern": "^[A-Z]{2}$",
+          "description": "US alias of region_code: the two-letter state. Written on every US brief."
         },
         "county": {
           "type": "string"
         },
         "zip": {
+          "type": "string",
+          "description": "US alias of postal_code. Written on every US brief."
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2. Absent on older briefs: read as US."
+        },
+        "region_code": {
+          "type": "string",
+          "description": "The first-level division prices and tariffs are keyed by: a US state, an Irish county."
+        },
+        "postal_code": {
           "type": "string"
         },
         "utility": {
@@ -74,6 +101,36 @@
             "null"
           ],
           "description": "Serving utility from HIFLD service territories, when known."
+        }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "description": "The region's country, currency, units and language. Absent on older briefs: read as US, USD, US units, en-US.",
+      "required": [
+        "country",
+        "currency",
+        "units",
+        "language"
+      ],
+      "properties": {
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "units": {
+          "enum": [
+            "us",
+            "metric"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "description": "BCP 47, e.g. en-US."
         }
       }
     },
@@ -566,6 +623,14 @@
         "as_of": {
           "type": "string",
           "description": "YYYY-MM the 'now' window ends. Annual utility-level data runs a year behind the monthly state series; the UI labels the period instead of saying 'now'."
+        },
+        "granularity": {
+          "enum": [
+            "monthly",
+            "semiannual",
+            "annual"
+          ],
+          "description": "How often the source series reports. Engine-owned: never in the model's draft schema."
         }
       }
     },

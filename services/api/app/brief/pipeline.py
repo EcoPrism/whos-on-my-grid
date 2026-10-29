@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from app.brief.assemble import assemble_brief
 from app.brief.cache import BriefCache, Inflight
@@ -21,8 +22,12 @@ from app.config import Settings
 from app.geocode import Geocoder, GeocodeResult, brief_id_for
 from app.ground import Ground, gather_ground
 from app.llm.base import LLMProvider
+from app.regions.locale import US_LOCALE, Locale
 from app.schema import SECTION_IDS, brief_errors
 from app.telemetry import log_event
+
+if TYPE_CHECKING:
+    from app.regions import Region
 
 Progress = Callable[[dict], None]
 
@@ -63,9 +68,12 @@ class BriefService:
         fetcher: Fetcher,
         cache: BriefCache,
         ground: Ground | None = None,
+        region: "Region | None" = None,
     ) -> None:
         self.settings = settings
         self.ground = ground
+        # The region pins the country of the brief id and the locale; None is the US.
+        self.region = region
         self.geocoder = geocoder
         self.draft_provider = draft_provider
         self.verify_provider = verify_provider
@@ -73,13 +81,18 @@ class BriefService:
         self.cache = cache
         self.inflight = Inflight()
 
+    @property
+    def locale(self) -> Locale:
+        return self.region.locale if self.region is not None else US_LOCALE
+
     async def resolve(self, address: str) -> Resolved:
         """Everything that costs no model tokens: geocode, derive the id, look
         in the cache. The router decides from this who may pay for the rest."""
         geo = await self.geocoder.geocode(address)
         if geo is None:
             raise AddressNotFound()
-        brief_id = brief_id_for(geo.matched)
+        # The country comes from the region, never the geocoder: a US id is unchanged.
+        brief_id = brief_id_for(geo.matched, self.locale.country)
         cached = self.cache.get(brief_id, current_only=True)
         if cached is not None:
             log_event("brief_cache_hit", brief_id=brief_id)
@@ -132,6 +145,7 @@ class BriefService:
                 verified=verified,
                 truth=truth,
                 public_base_url=self.settings.public_base_url,
+                locale=self.locale,
             )
             brief["partial"] = {
                 "stage": stage,
@@ -181,6 +195,7 @@ class BriefService:
             verified=verified,
             truth=truth,
             public_base_url=self.settings.public_base_url,
+            locale=self.locale,
         )
         total = len(brief["claims"])
         done = 0

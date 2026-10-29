@@ -1,8 +1,8 @@
 # Hearing coverage
 
 Bodies whose official meeting archive is indexed for the "Hearing" section. The source of truth
-is `data/hearings/sources.json`; one transcript file per indexed meeting sits beside it under
-`data/hearings/<body>/`. Recordings are fetched from the official archive only, never from video
+is `data/regions/us/hearings/sources.json`; one transcript file per indexed meeting sits beside
+it under `data/regions/us/hearings/<body>/`. Recordings are fetched from the official archive only, never from video
 platforms. Addresses in a county with no indexed body get a `gap` saying so, and the section stays
 the model's recollection (`reported`), never `measured`.
 
@@ -32,8 +32,10 @@ the model's recollection (`reported`), never `measured`.
 
 ## Adding a body
 
-1. Add it to `data/hearings/sources.json` with its archive, counties and a meeting with windows.
-2. Download the recording from the archive page into `data/hearings/audio/<site>_<clip>.mp3`
+1. Add it to `data/regions/us/hearings/sources.json` with its archive, counties and a meeting
+   with windows.
+2. Download the recording from the archive page into
+   `data/regions/us/hearings/audio/<site>_<clip>.mp3`
    (or pass `--download`), then `uv run python -m app.hearings.index --meeting <id>`.
    With captions only: `--captions-only`.
 3. Commit the transcript file. The brief picks it up on the next request.

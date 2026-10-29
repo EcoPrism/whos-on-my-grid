@@ -1,4 +1,4 @@
-"""Index one area from `data/perception/areas.json`:
+"""Index one area from `data/regions/us/perception/areas.json`:
 
     uv run python -m app.perception.index --area new_albany
     uv run python -m app.perception.index --area new_albany --tiles 12 --dry-run
@@ -7,7 +7,7 @@ For every tile in the ring: both vintages are fetched (cached under
 data/ground/naip), SAM 3.1 segments the concept in each, the masks become
 polygons, and the two vintages are diffed. Roofs that are new or much larger
 are labelled against the facility database and written to
-`data/perception/<area>.json` for the brief to read."""
+`data/regions/us/perception/<area>.json` for the brief to read."""
 
 import argparse
 import asyncio

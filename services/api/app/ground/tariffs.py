@@ -1,5 +1,6 @@
-"""Large-load tariffs the engine knows about: data/tariffs.json, a hand-curated
-table of commission orders and statutes keyed by state and utility, each with
+"""Large-load tariffs the engine knows about: data/regions/<id>/tariffs.json, a hand-curated
+table of commission orders and statutes keyed by jurisdiction (in the US, the
+state) and utility, each with
 the official page. The verifier fetches that page like any other source, so a
 stale entry shows up as contradicted or unverifiable rather than as fact."""
 
@@ -10,12 +11,12 @@ from pathlib import Path
 
 from app.config import REPO_ROOT
 
-TARIFFS_PATH = REPO_ROOT / "data" / "tariffs.json"
+TARIFFS_PATH = REPO_ROOT / "data" / "regions" / "us" / "tariffs.json"
 
 
 @dataclass(frozen=True)
 class TariffEntry:
-    state: str
+    jurisdiction: str  # US: the two-letter state
     utility_match: str
     name: str | None
     status: str  # in_force | proposed | none_found
@@ -68,11 +69,11 @@ class TariffTable:
             self._entries = [TariffEntry(**e) for e in raw.get("entries", [])]
         return self._entries
 
-    def match(self, state: str, utility_raw_name: str | None) -> TariffEntry | None:
-        """An entry for this utility in this state, or a statewide one
-        (utility_match "*"). No utility known: statewide entries only."""
+    def match(self, jurisdiction: str, utility_raw_name: str | None) -> TariffEntry | None:
+        """An entry for this utility in this jurisdiction, or one for the whole
+        jurisdiction (utility_match "*"). No utility known: those entries only."""
         for e in self.entries():
-            if e.state != state.upper():
+            if e.jurisdiction != jurisdiction.upper():
                 continue
             if e.utility_match == "*":
                 return e
@@ -85,5 +86,5 @@ class FakeTariffs:
     def __init__(self, entry: TariffEntry | None = None) -> None:
         self.entry = entry
 
-    def match(self, state: str, utility_raw_name: str | None) -> TariffEntry | None:
+    def match(self, jurisdiction: str, utility_raw_name: str | None) -> TariffEntry | None:
         return self.entry
