@@ -13,6 +13,7 @@ from PIL import Image
 
 from app.main import create_app
 from tests import fakes, scenario_fakes
+from tests.test_health_regions import enable_ie
 
 HDR = {"x-requested-with": "grid"}
 SECRET = "s" * 40
@@ -250,3 +251,33 @@ async def test_interpret_with_the_gate_off_needs_no_sign_in(tmp_path) -> None:
         ev = events(await c.post(f"/api/scenario/{sid}/interpret"))
         assert ev[-1]["stage"] == "done"
         assert ev[-1]["scenario"]["interpretation"]["status"] == "reported"
+
+
+async def test_scenario_region_must_run_what_ifs(tmp_path, monkeypatch) -> None:
+    """The what-if is US-only: naming Ireland is scenarios_not_in_region, an
+    unknown or disabled region is unknown_region, and both are refused before
+    any ZIP is looked up. Naming the US, or no region, runs it."""
+    enable_ie(monkeypatch)
+    scenarios = scenario_fakes.service(tmp_path, regions="us,ie")
+    app = create_app(scenarios=scenarios, services=fakes.services(tmp_path))
+    async with client(app) as c:
+        r = await c.post("/api/scenario", json={**BODY, "region": "ie"})
+        assert r.status_code == 422 and r.json()["detail"] == "scenarios_not_in_region"
+        for region in ("zz", "x" * 16):
+            r = await c.post("/api/scenario", json={**BODY, "region": region})
+            assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
+        assert scenarios.cache.get("0123456789abcdef") is None
+        assert not list(scenarios.cache.dir.glob("*.json"))
+        for region in ("us", "US", "", None):
+            body = {**BODY} if region is None else {**BODY, "region": region}
+            assert (await c.post("/api/scenario", json=body)).status_code == 200, region
+    # US-only deploy: Ireland is not enabled, so it is an unknown region there.
+    app = create_app(fakes.service(tmp_path), scenario_fakes.service(tmp_path))
+    async with client(app) as c:
+        r = await c.post("/api/scenario", json={**BODY, "region": "ie"})
+        assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
+
+
+def test_default_scenarios_read_the_us_constants(tmp_path) -> None:
+    app = create_app(fakes.service(tmp_path))
+    assert app.state.scenarios.constants == app.state.regions["us"].constants

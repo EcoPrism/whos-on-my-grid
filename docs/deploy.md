@@ -2,7 +2,7 @@
 
 One container on Azure Container Apps serves the API and the built web app. Everything sits in
 one resource group in the EcoPrism - Prod subscription (`infra/deploy.json` names it). The
-hostname is the app's own `*.azurecontainerapps.io` until `whoisonmygrid.com` is wired through Cloudflare.
+hostname is the app's own `*.azurecontainerapps.io` until the domains are wired through Cloudflare.
 
 ## What is in the group
 
@@ -34,7 +34,8 @@ hostname is the app's own `*.azurecontainerapps.io` until `whoisonmygrid.com` is
 2. Create the Google OAuth **Web application** client in Google Cloud project `ecoprism-ecoutil`
    (APIs & Services → Credentials). Consent screen: external, scopes `email` and `profile`.
    Authorized JavaScript origins: `http://localhost:5173` for now; the app's FQDN is added after
-   step 6, and `https://whoisonmygrid.com` plus `https://www.whoisonmygrid.com` when the domain is
+   step 6, and `https://mygrid.ai`, `https://www.mygrid.ai`, `https://whoisonmygrid.com` plus
+   `https://www.whoisonmygrid.com` when a domain is
    live. No redirect URIs are needed (Google Identity Services uses a
    popup). Put the client id in `infra/deploy.json`. There is no `gcloud` command for a standard
    web client; it is created in the console (`gcloud iam oauth-clients` is Workforce Identity
@@ -54,15 +55,34 @@ so expect the first run of each address after a release to spend tokens.
 
 ## The gate
 
-Opening a brief and running a test-set address (`eval/addresses.json`) need no sign-in. Making a
+Opening a brief and running a test-set address (`eval/us/addresses.json`, plus
+`eval/ie/addresses.json` when Ireland is enabled) need no sign-in. Making a
 brief for a new address needs a Google sign-in and counts against `GRID_QUOTA_PER_USER_DAY` (5) and
 `GRID_QUOTA_GLOBAL_DAY` (40), both set in `infra/deploy.json`. The `usage` table holds, per day,
 the subject, email and brief id of each run; the `users` table holds email and first/last seen.
 Never an address. The web page shows the remaining count and the rule in one line.
 
+## Regions and retention
+
+Four settings in `infra/deploy.json` become Bicep params and app settings (the script falls back to
+the values below when a key is missing):
+
+| `deploy.json` key | Bicep param | App setting | Default | Meaning |
+|---|---|---|---|---|
+| `regions` | `regions` | `GRID_REGIONS` | `us` | Regions served, comma-separated (`us,ie` turns on Ireland) |
+| `defaultRegion` | `defaultRegion` | `GRID_DEFAULT_REGION` | `us` | The region a request without one gets; must be in `regions` |
+| `briefTtlDays` | `briefTtlDays` | `GRID_BRIEF_TTL_DAYS` | `30` | Days a non-US brief (and its cards) is kept before the sweep removes it; 0 keeps them. US briefs never age out |
+| `briefSweepHours` | `briefSweepHours` | `GRID_BRIEF_SWEEP_HOURS` | `6` | Hours between retention sweeps; the sweep runs only when an enabled region has a TTL |
+
+Production stays on `"regions": "us"` for now. Ireland geocodes with Nominatim, and the public
+OpenStreetMap instance allows one request a second from one machine and is not for production use:
+`us,ie` waits on a hosted Nominatim (`GRID_NOMINATIM_URL`) or a Google server key. When Ireland is
+on, `allowedCountries` must list `US,IE` (see step 4 below).
+
 ## Domain and Cloudflare
 
-The domain is `whoisonmygrid.com`, on Cloudflare DNS. Azure's free managed certificate cannot be
+Two domains, both on Cloudflare DNS: `mygrid.ai` (the short one, printed on cards and links) and
+`whoisonmygrid.com` (the original, kept bound). Azure's free managed certificate cannot be
 issued or renewed behind Cloudflare's proxy (the docs name Cloudflare as a blocking intermediate
 CNAME), so the proxy and a managed certificate are mutually exclusive:
 
@@ -75,21 +95,25 @@ CNAME), so the proxy and a managed certificate are mutually exclusive:
    (`az containerapp env show --query properties.staticIp`), `CNAME www` to the app FQDN,
    `TXT asuid` and `TXT asuid.www` with the verification id
    (`az containerapp show --query properties.customDomainVerificationId`).
-2. `az containerapp hostname add -n ca-grid -g rg-whoisinmygrid --hostname whoisonmygrid.com`, and
-   again for `www.whoisonmygrid.com`.
+2. `az containerapp hostname add -n ca-grid -g rg-whoisinmygrid --hostname mygrid.ai`, and again
+   for `www.mygrid.ai` (same for `whoisonmygrid.com`). The add fails with
+   `InvalidCustomHostNameValidation` until public resolvers see the `asuid` TXT record; a freshly
+   registered domain can take up to an hour for the registry to publish its delegation.
 3. Certificate. Managed: `az containerapp hostname bind ... --environment cae-grid
    --validation-method HTTP` for the apex and `CNAME` for `www`. Origin certificate: convert the
    PEM pair to PFX, `az containerapp env certificate upload -g rg-whoisinmygrid -n cae-grid
    --certificate-file grid.pfx`, then `hostname bind ... --certificate <name>` for each hostname,
    and turn the proxy on.
-4. Set `"publicBaseUrl": "https://whoisonmygrid.com"` in `infra/deploy.json` and, with the proxy
+4. Set `"publicBaseUrl": "https://mygrid.ai"` in `infra/deploy.json` and, with the proxy
    on only, `"allowedCountries": "US"`; run `-Phase app`. `publicBaseUrl` becomes
    `GRID_PUBLIC_BASE_URL`, the host share links, cards and Open Graph tags print; empty means the
    app FQDN. With the country gate on, the app reads `cf-ipcountry` and fails closed: the raw FQDN
-   stops serving briefs, which is intended.
-5. Add `https://whoisonmygrid.com` and `https://www.whoisonmygrid.com` to the Google OAuth client's
-   origins, and `https://whoisonmygrid.com/*` and `https://*.whoisonmygrid.com/*` to the Maps key's
-   referrers.
+   stops serving briefs, which is intended. `allowedCountries` must list `US,IE` when `ie` is in
+   `regions`, or Irish visitors get 403.
+5. Add `https://mygrid.ai`, `https://www.mygrid.ai`, `https://whoisonmygrid.com` and
+   `https://www.whoisonmygrid.com` to the Google OAuth client's origins, and `https://mygrid.ai/*`,
+   `https://*.mygrid.ai/*`, `https://whoisonmygrid.com/*` and `https://*.whoisonmygrid.com/*` to the
+   Maps key's referrers.
 
 ## C2PA content credentials
 

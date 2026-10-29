@@ -1,0 +1,37 @@
+{
+ "_note": "Live response, captured 2026-10-29 from nominatim.openstreetmap.org with the app's User-Agent and accept-language=en (countrycodes=ie, limit=1 on search). /reverse at zoom 10 for the Dublin 15 search point.",
+ "request": {
+  "path": "reverse",
+  "zoom": "10"
+ },
+ "response": {
+  "place_id": 276683133,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 1114164,
+  "lat": "53.4942212",
+  "lon": "-6.2249802",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 14,
+  "importance": 0.49292875345192705,
+  "addresstype": "municipality",
+  "name": "Fingal",
+  "display_name": "Fingal, County Dublin, Leinster, Ireland",
+  "address": {
+   "municipality": "Fingal",
+   "county": "County Dublin",
+   "ISO3166-2-lvl6": "IE-D",
+   "state_district": "Leinster",
+   "ISO3166-2-lvl5": "IE-L",
+   "country": "Ireland",
+   "country_code": "ie"
+  },
+  "boundingbox": [
+   "53.3534895",
+   "53.6347254",
+   "-6.4750377",
+   "-5.9945041"
+  ]
+ }
+}

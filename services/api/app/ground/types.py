@@ -37,6 +37,9 @@ class GroundFacility:
     buildings: int = 1
     providers: tuple[str, ...] = ()
     operator_source: OperatorSource | None = None  # set when the operator is curated
+    # The name is the PeeringDB org_name standing in for a hidden record name; the
+    # engine claim then names only the organization, which the page does show.
+    name_from_org: bool = False
 
 
 @dataclass(frozen=True)
@@ -51,27 +54,44 @@ class Utility:
     eia_id: str | None = None  # EIA utility number, the join key to EIA-861
     website: str | None = None
     ba_code: str | None = None  # EIA-861 balancing authority (PJM, MISO, TVA, ...)
+    # Outside the US the map is a curated file that names its own page. None keeps
+    # the US HIFLD text: title HIFLD_TITLE, quote raw_name, the HIFLD claim sentence.
+    source_title: str | None = None
+    quote: str | None = None
+    claim_text: str | None = None
 
 
 @dataclass(frozen=True)
 class PriceSeries:
-    state: str
+    jurisdiction: str  # the series' area: a US state code, or a country code (IE)
     rate_now: float  # USD per kWh, trailing twelve months
     rate_then: float  # USD per kWh, the twelve months ending 24 months earlier
     trend_pct: float
-    typical_kwh_month: float  # residential sales / customers, trailing twelve months
+    # US: residential sales / customers, trailing twelve months. IE: a cited constant / 12;
+    # None when the constant is absent (the bill line is then not measured).
+    typical_kwh_month: float | None
     window_months: int
     latest: tuple[int, int]  # (year, month) of the newest data point
     source_url: str
     source_title: str
     data_status: str  # Preliminary | Final
-    scope: str = "state"  # state | utility
+    scope: str = "state"  # state | utility | country
     as_of: str | None = None  # YYYY-MM the "now" window ends
     label: str = ""  # "WA statewide" or the utility's name in the dataset
     latest_month_rate: float | None = None  # USD/kWh for the newest month alone (EPM table)
     eia_id: str | None = None
     currency: str = "USD"  # ISO 4217; the rates above are in it per kWh
     granularity: Literal["monthly", "semiannual", "annual"] = "monthly"  # the source's period
+    # Set by a provider that writes its own claim (Eurostat); None keeps the US text.
+    claim_text: str | None = None
+    quote: str | None = None  # verbatim from source_url
+    period_now: str | None = None  # the source's own period labels: "2026-S1"
+    period_then: str | None = None
+    # The typical-consumption figure's own citation, when it is not the price source's.
+    kwh_claim_text: str | None = None
+    kwh_source_url: str | None = None
+    kwh_source_title: str | None = None
+    kwh_quote: str | None = None
 
 
 # --- perception: what SAM 3.1 measured on two imagery vintages -----------------
@@ -178,6 +198,9 @@ class Decision:
     lat: float | None = None
     lon: float | None = None
     estimated_mw: float | None = None
+    # Who decided, when it is not `body` (an appeal board granting what the
+    # council refused). None: the body decided, as for every US row.
+    decided_by: str | None = None
 
 
 @dataclass(frozen=True)

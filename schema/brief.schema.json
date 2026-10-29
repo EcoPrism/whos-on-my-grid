@@ -63,13 +63,15 @@
       "properties": {
         "display": {
           "type": "string",
-          "description": "What the UI shows. May be shortened to street and city."
+          "description": "What the UI shows. May be shortened to street and city. Ireland: town, planning authority, county and Eircode routing key, never a house number or full Eircode."
         },
         "lat": {
-          "type": "number"
+          "type": "number",
+          "description": "Ireland: rounded to 3 decimals by the geocoder."
         },
         "lon": {
-          "type": "number"
+          "type": "number",
+          "description": "Ireland: rounded to 3 decimals by the geocoder."
         },
         "state": {
           "type": "string",
@@ -77,7 +79,8 @@
           "description": "US alias of region_code: the two-letter state. Written on every US brief."
         },
         "county": {
-          "type": "string"
+          "type": "string",
+          "description": "US: the county. Ireland: the planning authority (Fingal, South Dublin, Dublin City…)."
         },
         "zip": {
           "type": "string",
@@ -90,17 +93,18 @@
         },
         "region_code": {
           "type": "string",
-          "description": "The first-level division prices and tariffs are keyed by: a US state, an Irish county."
+          "description": "The first-level division: a US state; for Ireland the ISO 3166-2 county code (IE-D). Irish prices and tariffs are keyed by country, not by this field."
         },
         "postal_code": {
-          "type": "string"
+          "type": "string",
+          "description": "US: the five-digit ZIP. Ireland: the Eircode routing key (D15)."
         },
         "utility": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Serving utility from HIFLD service territories, when known."
+          "description": "Serving utility from the region's utility map (HIFLD service territories in the US), when known."
         }
       }
     },
@@ -147,7 +151,7 @@
             "number",
             "null"
           ],
-          "description": "Change in a typical household's monthly bill over the trend window, in USD. Modeled: state average price times typical household usage. Null when the state price series is unavailable."
+          "description": "Change in a typical household's monthly bill over the trend window, in `locale.currency` (legacy key name; USD in the US). Modeled: average price times typical household usage. Null when the price series is unavailable."
         },
         "ai_rent_range_usd_per_month": {
           "type": [
@@ -168,7 +172,7 @@
           ],
           "minimum": 0,
           "maximum": 100,
-          "description": "Population-weighted percentile across US states. Label it as such."
+          "description": "Population-weighted percentile across US states. Label it as such. US only; null elsewhere."
         },
         "band": {
           "enum": [
@@ -413,7 +417,7 @@
           "$ref": "#/$defs/hearing"
         },
         "beyond_ring": {
-          "description": "On your grid only: the nearest facility with a known operator past the five-mile ring, within ten miles. Never counted among the facilities within the ring.",
+          "description": "On your grid only: the nearest facility with a known operator past the 8 km (five-mile) ring, within 16 km (ten miles). Never counted among the facilities within the ring.",
           "$ref": "#/$defs/facility"
         }
       }
@@ -665,6 +669,13 @@
             "string",
             "null"
           ]
+        },
+        "kind": {
+          "enum": [
+            "tariff",
+            "connection_policy"
+          ],
+          "description": "tariff: a rate or rule that sets what large loads pay. connection_policy: a rule for connecting large loads to the network, not a rate. Absent: tariff. Engine-owned: never in the model's draft schema."
         }
       }
     },

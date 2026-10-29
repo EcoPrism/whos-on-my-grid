@@ -1,0 +1,42 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "Blanchardstown Centre, Blanchardstown, Dublin 15"
+ },
+ "response": [
+  {
+   "place_id": 273797463,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 9357416,
+   "lat": "53.3932751",
+   "lon": "-6.3920415",
+   "category": "landuse",
+   "type": "retail",
+   "place_rank": 24,
+   "importance": 0.0800801594567788,
+   "addresstype": "retail",
+   "name": "Blanchardstown Centre",
+   "display_name": "Blanchardstown Centre, Blanchardstown-Coolmine DED 1986, Blanchardstown, Fingal, County Dublin, Leinster, Éire / Ireland",
+   "address": {
+    "retail": "Blanchardstown Centre",
+    "city_district": "Blanchardstown-Coolmine DED 1986",
+    "town": "Blanchardstown",
+    "municipality": "Fingal",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.3897127",
+    "53.3967676",
+    "-6.3976548",
+    "-6.3854281"
+   ]
+  }
+ ]
+}

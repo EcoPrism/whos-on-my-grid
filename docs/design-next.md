@@ -585,6 +585,15 @@ country_header, default)` takes the registry; the header counts only when
 `GRID_DEFAULT_REGION` (default `us`) names the region a request without one gets. The US test
 set stays at `eval/addresses.json` until step 6 adds `eval/ie/`.
 
+As built in step 6: Ireland is region `ie` (label `Ireland`, countries `{IE}`), not `eu`: a
+`Region` holds one `Locale`, so the UK (GBP) and any later EU country get their own region and
+`region_of(brief)` can stay `country.lower()`. `Region` gains `scenarios` (US only),
+`places_country`, `pulse_countries`, `brief_ttl_days`, `placeholder`, `address_label`,
+`geocoder_attribution` and `sources_line`; `/api/health` lists each region with them.
+`_make_ground_ie` imports the Irish providers inside the function, so a US-only process never
+loads them. Ireland is off by default (`GRID_REGIONS=us`). The test sets moved to
+`eval/us/` and `eval/ie/`.
+
 #### D.2 Protocol changes in `app/ground`
 
 | Protocol | Today | Change |
@@ -600,6 +609,19 @@ self-hosted instance (the public instance's policy rules out production use),
 `GoogleGeocoder(key)` with a server key separate from the browser key, `PinCentroids` for
 India Post PIN input in the what-if panel.
 
+As built in step 6: `NominatimGeocoder` only (`app/geocode.py`), with `countrycodes=ie`,
+`accept-language=en`, a process-wide 1 request/s throttle, an in-memory LRU, one retry with the
+routing key when a full Eircode finds nothing, and one `/reverse` when a hit lacks county or ISO
+code. Coordinates are snapped to 3 decimals inside the geocoder. `GoogleGeocoder` is deferred
+(no server key; Irish components unverified; storage terms vs the brief cache), and production
+Ireland waits on a hosted Nominatim. `Ground` gains `jurisdiction` (IE: the country, so prices
+and tariffs key on `IE`) and `decisions_scope` (`radius` for Ireland: every body's planning
+decisions, filtered by the existing 25 km radius, so a grant across an authority line shows).
+New providers: `GeoJsonUtility` (pure Python point-in-polygon, ESB Networks) and
+`EurostatPrices` (`nrg_pc_204`, band DC, all taxes, same semester 24 months apart; figures,
+labels and quote from one compact response). **Deferred**: the indexer `--source`/`--provider`
+flags and per-provider `min_roof_acres` (no Irish imagery or meeting indexed yet).
+
 #### D.3 Curated data layout
 
 ```
@@ -612,6 +634,14 @@ Every curated row keeps the `url`, `title`, `quote` triple. `_ENGINE_GLOBS` adds
 `data/regions/**`. `.dockerignore` adds `!data/regions` and excludes imagery binaries as today.
 As built, the globs name only JSON and GeoJSON under `data/regions/`, so audio and imagery
 tiles that exist locally but not in the image never make the two fingerprints differ.
+
+As built in step 6: `data/regions/ie/` holds `constants.json` (CRU typical consumption, CSO
+data-centre share), `tariffs.json` (one CRU connection-policy row, `kind: connection_policy`,
+`protects_households: false`), `facilities.json`, `hearings/sources.json` (South Dublin with the
+ACP 320852 Google decision; Fingal empty) and `utilities/ie.geojson` (Tailte Éireann provinces,
+CC BY 4.0, built by `services/api/scripts/build_ie_boundary.py`; attribution in its README).
+The engine fingerprint is per region: `engine_fingerprint(region_id)` hashes the code plus
+`data/regions/{region_id}/`, so an Irish data edit never regenerates US briefs or cards.
 
 #### D.4 Schema
 
@@ -634,6 +664,13 @@ tiles that exist locally but not in the image never make the two fingerprints di
 - `/api/pulse?region=eu` filters the PeeringDB snapshot by the region's country list; the
   equivalence lines use the region's constants.
 
+As built in step 6: pulse calls `summary(countries=region.pulse_countries)` (`["IE"]`), and
+returns its `countries`; Irish briefs read PeeringDB for IE and GB with the distance filter, so
+a border address keeps Northern Ireland facilities on the same all-island grid. The Irish
+pulse shows a homes line from `ie_home_kwh_per_year` and the CSO share line, no football-field
+line, and `constants: {}` (no what-if). `POST /api/scenario` with a region lacking the what-if
+is 422 `scenarios_not_in_region`.
+
 #### D.6 Web
 
 - `Shell.tsx`: a region switch (flag-free text: "US · Europe · India"), stored in `localStorage`
@@ -645,6 +682,14 @@ tiles that exist locally but not in the image never make the two fingerprints di
 - `About.tsx`: a privacy paragraph per region (GDPR lawful basis and retention for the EU, DPDP
   for India). New setting `brief_ttl_days` (0 = keep) applied by `BriefCache.get` for non-US
   regions.
+
+As built in step 6: **the switch ("US · Ireland") sits in `Home.tsx` next to sign-in, not in
+`Shell.tsx`, so `BriefPage` and `About` have no switch**; a brief page takes its locale from the
+brief itself. `lib/region.ts` keeps the choice in `localStorage` (`grid.region`) and validates a
+stored id against `/api/health` before using it. The TTL is enforced twice: `BriefCache.get`
+treats an expired non-US brief as missing, and `BriefCache.sweep` (at startup and every
+`GRID_BRIEF_SWEEP_HOURS`) deletes expired briefs and their card PNGs. The About privacy text
+for Ireland is a draft for review.
 
 #### D.7 Deployment
 
@@ -664,6 +709,12 @@ in Bicep changes for the first EU rollout.
   still validates after the address and locale changes.
 - Ireland fixture brief (Dublin 15, ESB Networks, CRU connection policy) under `fixtures/`.
 
+As built in step 6: `eval/run_eval.py --region ie --name <run>` reads `eval/ie/`, writes to
+`eval/runs/ie/<run>`, skips Census resolution and scores Irish rows in km and EUR with a
+`us_units_leak` signature. `tests/test_us_golden.py` pins US prompts, briefs, health, pulse,
+cards and static meta to digests recorded at the step-5 commit. The fixture is
+`fixtures/briefs/blanchardstown.json` (id `ffefa78202dceea9`).
+
 ---
 
 ## Build order and size
@@ -675,5 +726,5 @@ in Bicep changes for the first EU rollout.
 | 3 | C: what-if panel, scenario page, map refactor, counters, timeline | 2 to 3 days |
 | 4 | B interpret endpoint behind the gate; C2PA signing | 1 day |
 | 5 | D.1 to D.5 with the US as the only region; no behaviour change; schema compat tests | 2 days |
-| 6 | Ireland: geocoder, ESB GeoJSON, Eurostat prices, CRU tariff row, one planning hearing, fixture, eval rows | 3 to 4 days |
+| 6 | Ireland: geocoder, ESB GeoJSON, Eurostat prices, CRU tariff row, one planning hearing, fixture, eval rows. **Done 2026-10-29** (a planning decision, no hearing transcript yet; production waits on a hosted geocoder) | 3 to 4 days |
 | 7 | UK, Netherlands, Germany; then Mumbai, Hyderabad, Chennai with DISCOM and tariff-order rows | per region |

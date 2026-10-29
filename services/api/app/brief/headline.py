@@ -5,16 +5,19 @@ nothing here can introduce a causal claim."""
 from typing import Any
 from urllib.parse import urlparse
 
+from app.brief import units as u
 from app.brief.draft import DraftResult, SectionFailure
+from app.brief.vocab import vocab_for
 from app.geocode import GeocodeResult
 from app.ground.types import GroundTruth
+from app.regions.locale import US_LOCALE, Locale
 from app.scenario.model import noise_at
 from app.schema import SECTION_IDS
 
 Drafts = dict[str, DraftResult | SectionFailure]
 Sections = dict[str, dict[str, Any]]
 
-KM_TO_MI = 0.621371
+KM_TO_MI = u.KM_TO_MI
 
 
 def band_from_rent(rent: float) -> str:
@@ -68,10 +71,20 @@ def _price(sections: Sections) -> dict[str, Any] | None:
     return bill.get("price") if bill.get("status") != "unavailable" else None
 
 
+def half_year(year: int, month: int) -> str:
+    """'the first half of 2026' for a semester ending in June."""
+    return f"the {'first' if month <= 6 else 'second'} half of {year}"
+
+
 def period_words(price: dict[str, Any]) -> tuple[str, str]:
-    """('in 2024', 'in 2022') for annual utility data; ('', 'two years ago')
-    for a series that runs to the present."""
+    """('in 2024', 'in 2022') for annual utility data; ('in the first half of
+    2026', 'in the first half of 2024') for a semiannual series (Eurostat);
+    ('', 'two years ago') for a series that runs to the present."""
     as_of = price.get("as_of") or ""
+    if price.get("granularity") == "semiannual" and len(as_of) == 7:
+        year, month = int(as_of[:4]), int(as_of[5:7])
+        then = year - max(1, int(price.get("window_months", 24)) // 12)
+        return f"in {half_year(year, month)}", f"in {half_year(then, month)}"
     if as_of.endswith("-12") and len(as_of) == 7:
         year = int(as_of[:4])
         then = year - max(1, int(price.get("window_months", 24)) // 12)
@@ -85,35 +98,54 @@ def facility_count(sections: Sections) -> tuple[int, int]:
     return len(facilities), sum(1 for f in facilities if f.get("status") == "live")
 
 
-def grid_sentence(sections: Sections, geo: GeocodeResult, truth: GroundTruth) -> str:
+def grid_sentence(
+    sections: Sections, geo: GeocodeResult, truth: GroundTruth, *, locale: Locale = US_LOCALE
+) -> str:
     """The first sentence of the hero when the facility list is the engine's."""
+    v = vocab_for(locale)
+    radius = u.radius_words(locale.units)
     total, live = facility_count(sections)
     served = f", served by {truth.utility.name}" if truth.utility else ""
     if total == 0:
         return (
-            "No data-center facility within five miles of this address is listed in "
-            f"PeeringDB or OpenStreetMap{served}."
+            f"No {v.dc_noun.replace(' ', '-')} facility within {radius} of this address is "
+            f"listed in PeeringDB or OpenStreetMap{served}."
         )
     building = total - live
-    what = "data center" if total == 1 else "data centers"
+    what = v.dc_noun if total == 1 else v.dc_plural
     tail = f" ({building} under construction)" if building else ""
-    return f"{total} {what} within five miles are on your local grid{served}{tail}."
+    return f"{total} {what} within {radius} are on your local grid{served}{tail}."
+
+
+def is_national(geo: GeocodeResult, truth: GroundTruth | None) -> bool:
+    """A price that is the same at every address in the country (Eurostat), or
+    any address outside the US: the rent bands are calibrated on US state prices,
+    so the rent does not set the band (plan 0.9)."""
+    country_price = truth is not None and truth.price is not None and truth.price.scope == "country"
+    return country_price or geo.country != "US"
 
 
 def derive_headline(
-    sections: Sections, geo: GeocodeResult, truth: GroundTruth | None = None
+    sections: Sections,
+    geo: GeocodeResult,
+    truth: GroundTruth | None = None,
+    *,
+    locale: Locale = US_LOCALE,
 ) -> dict[str, Any]:
     price = _price(sections)
     rent = monthly_change(price) if price else None
     total, live = facility_count(sections)
     grounded = truth is not None and truth.facilities is not None
 
-    band = band_from_rent(rent) if rent is not None else band_from_facilities(live)
+    if rent is not None and not is_national(geo, truth):
+        band = band_from_rent(rent)
+    else:
+        band = band_from_facilities(live)
     if grounded:
         band = cap_band(band, total)
 
     if grounded:
-        one = grid_sentence(sections, geo, truth)  # type: ignore[arg-type]
+        one = grid_sentence(sections, geo, truth, locale=locale)  # type: ignore[arg-type]
     else:
         lead = next(
             (
@@ -130,12 +162,12 @@ def derive_headline(
         who = (
             f"A typical {truth.utility.name} home"
             if truth is not None and truth.utility and truth.utility_price
-            else f"A typical home in {geo.state}"
+            else f"A typical home in {_where(geo, truth, locale)}"
         )
         verb = "paid" if now else "pays"
+        cost = u.money_abs(rent, str(price.get("currency") or locale.currency))
         one = (
-            f"{one} {who} {verb} about ${abs(rent):.0f} {word} a month"
-            f"{' ' + now if now else ''} than {then}."
+            f"{one} {who} {verb} about {cost} {word} a month{' ' + now if now else ''} than {then}."
         ).strip()
 
     return {
@@ -147,26 +179,39 @@ def derive_headline(
     }
 
 
-def bill_house_line(sections: Sections) -> dict[str, Any] | None:
+def _where(geo: GeocodeResult, truth: GroundTruth | None, locale: Locale) -> str:
+    """Where a typical home's price applies: the state in the US, the country
+    for a national series."""
+    if geo.country == "US" and locale.country == "US":
+        return geo.state
+    p = truth.price if truth is not None else None
+    return (p.label if p is not None and p.label else "") or vocab_for(locale).country_name
+
+
+def bill_house_line(sections: Sections, *, locale: Locale = US_LOCALE) -> dict[str, Any] | None:
     """The first sentence of the strip, from the price block alone. Modeled:
     the state's average price times a typical home's usage. No model writes it."""
     price = _price(sections)
     if not price:
         return None
+    v = vocab_for(locale)
+    cur = str(price.get("currency") or locale.currency)
     bill = sections["your_bill"]
     rent = monthly_change(price)
     lo, hi = monthly_range(price)
     word = "higher" if rent >= 0 else "lower"
     now, then = period_words(price)
     text = (
-        f"Your power bill {'was' if now else 'is'} about ${abs(rent):.0f} a month {word}"
-        f"{' ' + now if now else ''} than {then}, somewhere between ${abs(lo):.0f} and "
-        f"${abs(hi):.0f} depending on how much electricity you use."
+        f"Your power bill {'was' if now else 'is'} about {u.money_abs(rent, cur)} a month {word}"
+        f"{' ' + now if now else ''} than {then}, somewhere between {u.money_abs(lo, cur)} and "
+        f"{u.money_abs(hi, cur)} depending on how much electricity you use."
     )
     if price.get("attribution"):
-        text += " The people who set the rates say part of that is data-center load."
-    else:
-        text += " No regulator has tied any of that to data centers."
+        text += (
+            f" The people who set the rates say part of that is {v.dc_noun.replace(' ', '-')} load."
+        )
+    elif v.no_dc_headline:
+        text += v.no_dc_headline
     return {
         "text": text,
         "topic": "bill",
@@ -176,26 +221,32 @@ def bill_house_line(sections: Sections) -> dict[str, Any] | None:
     }
 
 
-def noise_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
+def noise_house_line(
+    truth: GroundTruth, now_iso: str, *, locale: Locale = US_LOCALE
+) -> dict[str, Any] | None:
     """Noise, modeled from distance to the nearest building in the facility
     database. Low confidence by design: nobody has measured it."""
     if truth.facilities is None:
         return None
+    adj = vocab_for(locale).dc_noun.replace(" ", "-")
     nearest = truth.nearest
     if nearest is None:
         return {
-            "text": "No data-center building within five miles of your house is listed in "
-            "PeeringDB or OpenStreetMap, so there is nothing nearby to hear.",
+            "text": f"No {adj} building within {u.radius_words(locale.units)} of your house is "
+            "listed in PeeringDB or OpenStreetMap, so there is nothing nearby to hear.",
             "topic": "noise",
             "status": "measured",
             "confidence": 0.8,
             "sources": [],
         }
-    miles = nearest.distance_km * KM_TO_MI
     heard = noise_at(nearest.distance_km)
+    basis = heard.basis
+    if locale.units != "us":
+        basis = basis.replace("neighborhood", "neighbourhood")
     text = (
-        f"The nearest data-center building, {nearest.name}, is {miles:.1f} miles from your house."
-        f" {heard.basis}"
+        f"The nearest {adj} building, {nearest.name}, is "
+        f"{u.dist(nearest.distance_km, locale.units)} from your house."
+        f" {basis}"
     )
     return {
         "text": text,
@@ -216,12 +267,16 @@ def noise_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
 FOOTBALL_FIELD_ACRES = 1.32
 
 
-def land_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
+def land_house_line(
+    truth: GroundTruth, now_iso: str, *, locale: Locale = US_LOCALE
+) -> dict[str, Any] | None:
     """Land, measured: what SAM 3.1 found between two imagery vintages. Only
     roofs beside listed data centers count; the sentence says what it saw."""
     img = truth.imagery
     if img is None:
         return None
+    adj = vocab_for(locale).dc_noun.replace(" ", "-")
+    radius = u.radius_words(locale.units)
     then, now = img.vintages
     sources = [
         {"title": item.title, "url": item.url, "retrieved_at": now_iso, "quote": item.id}
@@ -231,8 +286,8 @@ def land_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
     counted = img.counted
     if not counted:
         return {
-            "text": f"Comparing the {then} and {now} aerial photos, no new large data-center roof "
-            "appeared within five miles of your house.",
+            "text": f"Comparing the {then} and {now} aerial photos, no new large {adj} roof "
+            f"appeared within {radius} of your house.",
             "topic": "land",
             "status": "measured",
             "confidence": 0.7,
@@ -241,10 +296,15 @@ def land_house_line(truth: GroundTruth, now_iso: str) -> dict[str, Any] | None:
     acres = img.new_acres
     fields = acres / FOOTBALL_FIELD_ACRES
     nearest = counted[0]
+    if locale.units == "us":
+        size = f"{acres:.0f} acres of new {adj} roof went up within {radius} of your house, "
+        size += f"roughly {fields:.0f} football fields"
+    else:
+        size = f"{u.area(acres, locale.units)} of new {adj} roof went up within {radius} of your "
+        size += "house"
     text = (
-        f"Comparing the {then} and {now} aerial photos, about {acres:.0f} acres of new data-center "
-        f"roof went up within five miles of your house, roughly {fields:.0f} football fields. "
-        f"The closest, {nearest.label}, is {nearest.distance_km * KM_TO_MI:.1f} miles away."
+        f"Comparing the {then} and {now} aerial photos, about {size}. "
+        f"The closest, {nearest.label}, is {u.dist(nearest.distance_km, locale.units)} away."
     )
     return {
         "text": text,
@@ -291,6 +351,10 @@ def derive_card(
 ) -> dict[str, Any]:
     parts = [p.strip() for p in geo.display.split(",")]
     city = parts[-2] if len(parts) >= 2 else parts[0]
+    title = f"{city}, {geo.state}"
+    if geo.country != "US":
+        # "Blanchardstown, Co. Dublin": the place and its county, never a house number.
+        title = f"{parts[0]}, Co. {geo.admin_county}" if geo.admin_county else parts[0]
     lines = [line.strip()[:80] for line in card_lines if line and line.strip()]
     lines = lines[:4] or ["Not enough public information yet"]
     hosts: list[str] = []
@@ -307,7 +371,7 @@ def derive_card(
     )
     tail = "" if grounded else " Not verified against ground-truth data."
     return {
-        "title": f"Who's on my grid: {city}, {geo.state}",
+        "title": f"Who's on my grid: {title}",
         "lines": lines,
         "footer": f"Sources: {sources}. {drafted}, {checked}.{tail}",
         "disclosure": disclosure_line(

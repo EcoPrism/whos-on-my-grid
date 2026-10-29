@@ -1,22 +1,31 @@
-"""Run the 30-address test set against a running API and score the briefs.
+"""Run a region's test set against a running API and score the briefs.
 
     python eval/run_eval.py --api http://localhost:8010 --out eval/runs/baseline
     python eval/run_eval.py --out eval/runs/baseline --score-only
     python eval/run_eval.py --api ... --out ... --only bellevue,quincy
     python eval/run_eval.py --api ... --out eval/runs/whatif --scenarios
+    python eval/run_eval.py --region ie --name first        # -> eval/runs/ie/first
 
-Resolution: the test set gives street-level pins without house numbers, which the
-Census geocoder rejects. Each pin is reverse-geocoded once (Nominatim, 1 req/s) to
-a numbered address, checked against the Census geocoder, and the result is cached
-in eval/resolved.json so later runs hit the same address.
+Each region's test set sits in eval/<region>/addresses.json (`--region`, default us:
+the 30 US addresses; ie: the 10 Irish ones). `--out DIR` writes to DIR; `--name N`
+writes to eval/runs/<region>/N. Every request is POST /api/brief {address, region}.
+
+Resolution (US only): the test set gives street-level pins without house numbers,
+which the Census geocoder rejects. Each pin is reverse-geocoded once (Nominatim,
+1 req/s) to a numbered address, checked against the Census geocoder, and the result
+is cached in eval/us/resolved.json so later runs hit the same address. Other regions
+send each row's `address` as typed (named public places, no house numbers); nothing
+is resolved and no resolved.json is written.
 
 Scoring is per dimension (grid, bill, protection, strip, signatures, hearing) from
-`expect` in eval/addresses.json. Hearing is scored where a hook is expected and the county
-is indexed (step 4), informational elsewhere. A row passes when every
-other dimension passes. The report is written to <out>/report.md and
+`expect` in eval/<region>/addresses.json. Outside the US the grid notes speak of the
+8 km ring, the bill range is in the brief's currency (locale.currency), and the
+signatures include the region file's `us_units_leak` pattern. Hearing is scored where
+a hook is expected and the county is indexed (step 4), informational elsewhere. A row
+passes when every other dimension passes. The report is written to <out>/report.md and
 <out>/summary.json; raw briefs to <out>/briefs/<id>.json.
 
---scenarios runs the what-if set in eval/scenarios.json instead: one POST /api/scenario
+--scenarios runs the what-if set in eval/us/scenarios.json instead: one POST /api/scenario
 per row (no sign-in, no model tokens), scored on the baseline (facility count, utility,
 tariff, bill kind, households) and on the rules every scenario keeps (disclosure, every
 line modelled, every claim quoted). Written to <out>/scenarios.md and
@@ -37,10 +46,31 @@ from typing import Any
 import httpx
 
 HERE = Path(__file__).resolve().parent
-ADDRESSES = HERE / "addresses.json"
-SCENARIOS = HERE / "scenarios.json"
+# Each region's test set sits in eval/<region>/ (--region; default the US one).
+REGION_DIR = HERE / "us"
+ADDRESSES = REGION_DIR / "addresses.json"
+SCENARIOS = REGION_DIR / "scenarios.json"
 DISCLOSURE = "Hypothetical. Modelled, not measured."
-RESOLVED = HERE / "resolved.json"
+RESOLVED = REGION_DIR / "resolved.json"
+SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹"}
+
+
+def region_paths(region: str) -> tuple[Path, Path, Path]:
+    """(addresses, scenarios, resolved) for eval/<region>/."""
+    d = HERE / region
+    return d / "addresses.json", d / "scenarios.json", d / "resolved.json"
+
+
+def currency_symbol(brief: dict[str, Any]) -> str:
+    """The brief's currency symbol (no locale: a pre-region US brief, so $)."""
+    locale = brief.get("locale") if isinstance(brief.get("locale"), dict) else {}
+    code = (locale.get("currency") or "USD").upper()
+    return SYMBOLS.get(code, code + " ")
+
+
+def is_us(brief: dict[str, Any]) -> bool:
+    locale = brief.get("locale") if isinstance(brief.get("locale"), dict) else {}
+    return (locale.get("country") or "US").upper() == "US"
 CENSUS = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
 NOMINATIM = "https://nominatim.openstreetmap.org/reverse"
 UA = "whos-on-my-grid-eval/0.1 (dev harness)"
@@ -111,8 +141,8 @@ PROBES = [(0.0, 0.0)] + [
 ]
 
 
-async def resolve_all(rows: list[dict[str, Any]]) -> dict[str, str]:
-    cache: dict[str, str] = json.loads(RESOLVED.read_text("utf-8")) if RESOLVED.exists() else {}
+async def resolve_all(rows: list[dict[str, Any]], resolved_path: Path = RESOLVED) -> dict[str, str]:
+    cache: dict[str, str] = json.loads(resolved_path.read_text("utf-8")) if resolved_path.exists() else {}
     async with httpx.AsyncClient() as client:
         for row in rows:
             if row["id"] in cache:
@@ -143,7 +173,7 @@ async def resolve_all(rows: list[dict[str, Any]]) -> dict[str, str]:
                     print(f"  ! {row['id']}: could not resolve {row['address']!r}")
                     continue
             print(f"  {row['id']}: {cache[row['id']]}")
-            RESOLVED.write_text(json.dumps(cache, indent=2), "utf-8")
+            resolved_path.write_text(json.dumps(cache, indent=2), "utf-8")
     return cache
 
 
@@ -151,7 +181,12 @@ async def resolve_all(rows: list[dict[str, Any]]) -> dict[str, str]:
 
 
 async def run_all(
-    api: str, rows: list[dict[str, Any]], resolved: dict[str, str], out: Path, concurrency: int
+    api: str,
+    rows: list[dict[str, Any]],
+    resolved: dict[str, str],
+    out: Path,
+    concurrency: int,
+    region: str = "us",
 ) -> None:
     (out / "briefs").mkdir(parents=True, exist_ok=True)
     sem = asyncio.Semaphore(concurrency)
@@ -164,7 +199,7 @@ async def run_all(
             async with sem:
                 started = time.monotonic()
                 try:
-                    r = await client.post(f"{api}/api/brief", json={"address": resolved[rid]})
+                    r = await client.post(f"{api}/api/brief", json={"address": resolved[rid], "region": region})
                     ms = int((time.monotonic() - started) * 1000)
                     body: Any = r.json() if r.headers.get("content-type", "").startswith("application/json") else r.text
                     (out / "briefs" / f"{rid}.json").write_text(
@@ -216,9 +251,10 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
     ok = True
     lo, hi = exp["facilities"]
     n = len(facs)
+    ring = "" if is_us(b) else " within 8 km"
     if n < lo or (hi is not None and n > hi):
         ok = False
-        notes.append(f"{n} facilities, expected {lo}..{hi if hi is not None else '∞'}")
+        notes.append(f"{n} facilities{ring}, expected {lo}..{hi if hi is not None else '∞'}")
     if "live" in exp:
         llo, lhi = exp["live"]
         if len(live) < llo or (lhi is not None and len(live) > lhi):
@@ -239,11 +275,13 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
     if b["sections"]["on_your_grid"]["status"] == "unavailable" and lo > 0:
         ok = False
         notes.append("On your grid unavailable")
-    dims["grid"] = {"pass": ok, "note": "; ".join(notes) or f"{n} facilities ({len(live)} live), named {hits}"}
+    dims["grid"] = {"pass": ok, "note": "; ".join(notes) or f"{n} facilities{ring} ({len(live)} live), named {hits}"}
 
     # bill: direction, hero size, attribution, serving utility
     notes, ok = [], True
     h = b["headline"]
+    sym = currency_symbol(b)
+    # Legacy key name: the figure is in the brief's currency (locale.currency).
     rent = h.get("ai_rent_usd_per_month")
     bill = exp["bill"]
     if rent is None:
@@ -253,7 +291,7 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
         rlo, rhi = bill["range"]
         if not (rlo <= rent <= rhi):
             ok = False
-            notes.append(f"hero ${rent:+.0f}/mo outside {rlo}..{rhi}")
+            notes.append(f"hero {'+' if rent >= 0 else '-'}{sym}{abs(rent):.0f}/mo outside {rlo}..{rhi}")
         if bill["direction"] == "up" and rent <= 0:
             ok = False
             notes.append("direction not up")
@@ -272,7 +310,7 @@ def score_row(row: dict[str, Any], result: dict[str, Any], global_forbid: dict[s
         notes.append(f"serving utility {util or 'not named'}; expected /{exp['utility']}/")
     elif not rx(exp["utility"], util):
         notes.append("utility only in prose, not in address.utility")
-    dims["bill"] = {"pass": ok, "note": "; ".join(notes) or f"${rent:+.0f}/mo, utility {util or '(prose)'}"}
+    dims["bill"] = {"pass": ok, "note": "; ".join(notes) or f"{'+' if rent >= 0 else '-'}{sym}{abs(rent):.0f}/mo, utility {util or '(prose)'}"}
 
     # protection
     notes, ok = [], True
@@ -557,20 +595,31 @@ def render_scenarios(summary: dict[str, Any], rows: list[dict[str, Any]]) -> str
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--api", default="http://localhost:8010")
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--region", default="us", help="test set: eval/<region>/addresses.json")
+    out_arg = ap.add_mutually_exclusive_group(required=True)
+    out_arg.add_argument("--out", help="output directory")
+    out_arg.add_argument("--name", help="run name: output to eval/runs/<region>/<name>")
     ap.add_argument("--only", default="")
     ap.add_argument("--concurrency", type=int, default=3)
     ap.add_argument("--score-only", action="store_true")
     ap.add_argument("--resolve-only", action="store_true")
     ap.add_argument("--scenarios", action="store_true", help="run the what-if set instead")
     args = ap.parse_args()
+    region = args.region.strip().lower()
+    if not re.fullmatch(r"[a-z]{2}", region):
+        sys.exit(f"--region takes a region id such as us or ie, not {args.region!r}")
+    addresses_path, scenarios_path, resolved_path = region_paths(region)
+    if not addresses_path.exists():
+        sys.exit(f"no test set for region {region!r}: {addresses_path} is missing")
+    out = Path(args.out) if args.out else HERE / "runs" / region / args.name
 
     if args.scenarios:
-        srows = json.loads(SCENARIOS.read_text("utf-8"))["scenarios"]
+        if not scenarios_path.exists():
+            sys.exit(f"no what-if set for region {region!r} (the what-if is US-only)")
+        srows = json.loads(scenarios_path.read_text("utf-8"))["scenarios"]
         if args.only:
             keep = set(args.only.split(","))
             srows = [r for r in srows if r["id"] in keep]
-        out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
         if not args.score_only:
             print(f"Running {len(srows)} scenarios against {args.api}…")
@@ -579,21 +628,24 @@ async def main() -> int:
         print(f"\n{summary['passed']} / {summary['scenarios']} pass. Report: {out / 'scenarios.md'}")
         return 0
 
-    data = json.loads(ADDRESSES.read_text("utf-8"))
+    data = json.loads(addresses_path.read_text("utf-8"))
     rows = data["addresses"]
     if args.only:
         keep = set(args.only.split(","))
         rows = [r for r in rows if r["id"] in keep]
-    out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
     if not args.score_only:
-        print("Resolving addresses…")
-        resolved = await resolve_all(rows)
+        if region == "us":
+            print("Resolving addresses…")
+            resolved = await resolve_all(rows, resolved_path)
+        else:
+            # Named public places, sent as typed: no Census step, no resolved.json.
+            resolved = {r["id"]: r["address"] for r in rows}
         if args.resolve_only:
             return 0
-        print(f"Running {len(rows)} briefs against {args.api} (concurrency {args.concurrency})…")
-        await run_all(args.api, rows, resolved, out, args.concurrency)
+        print(f"Running {len(rows)} {region} briefs against {args.api} (concurrency {args.concurrency})…")
+        await run_all(args.api, rows, resolved, out, args.concurrency, region)
 
     summary = score_all(rows, out, data.get("global_forbid", {}))
     print(f"\n{summary['passed']} / {summary['addresses']} pass. Report: {out / 'report.md'}")

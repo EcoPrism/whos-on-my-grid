@@ -1,0 +1,32 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29, saved in condensed form and expanded back to the jsonv2 hit shape.",
+ "request": {
+  "path": "search",
+  "q": "Wood Quay, Dublin 8"
+ },
+ "response": [
+  {
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "lat": "53.3449614",
+   "lon": "-6.2702957",
+   "category": "tourism",
+   "type": "artwork",
+   "place_rank": 30,
+   "addresstype": "tourism",
+   "name": "Wood Quay",
+   "address": {
+    "tourism": "Wood Quay",
+    "road": "Wood Quay",
+    "city_district": "Wood Quay A Ward 1986",
+    "city": "Dublin",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "postcode": "D08 RF3F",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   }
+  }
+ ]
+}

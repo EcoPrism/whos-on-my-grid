@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 
-from app.brief.cache import engine_fingerprint
+from app.brief.cache import engine_fingerprint, region_of
 from app.card import ID, CardCache, base_url, brief_version, find_brief, find_scenario, make_png
 from app.card.spec import CardSpec, share_text, spec_from_brief, spec_from_scenario
 
@@ -64,21 +64,25 @@ async def _png(request: Request, kind: str, id: str) -> Response:
     # from the request, so the cached file is keyed by it: one Host never
     # fixes the link every later viewer gets.
     version = brief_version(doc) + hashlib.sha256(base.encode()).hexdigest()[:8]
+    # The engine of the region that made the brief: an edit to that region's
+    # curated data re-renders its cards; another region's edit does not.
+    # What-ifs run on US constants.
+    region_id = region_of(doc) if kind == "brief" else "us"
     cards = _cards(request)
-    png = cards.get(kind, id, version)
+    png = cards.get(kind, id, version, region_id)
     if png is None:
         spec = _spec(request, kind, doc)
         link = f"{base}/{page}/{id}"
         png = await asyncio.to_thread(
             make_png, spec, link=link, settings=request.app.state.settings
         )
-        await asyncio.to_thread(cards.put, kind, id, png, version)
+        await asyncio.to_thread(cards.put, kind, id, png, version, region_id)
     return Response(
         png,
         media_type="image/png",
         headers={
             "Cache-Control": "public, max-age=86400",
-            "ETag": f'"{engine_fingerprint()}-{id}-{version}"',
+            "ETag": f'"{engine_fingerprint(region_id)}-{id}-{version}"',
         },
     )
 

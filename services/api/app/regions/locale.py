@@ -17,3 +17,4 @@ class Locale:
 
 
 US_LOCALE = Locale(country="US", currency="USD", units="us", language="en-US")
+IE_LOCALE = Locale(country="IE", currency="EUR", units="metric", language="en-IE")

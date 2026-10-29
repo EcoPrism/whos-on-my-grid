@@ -1,0 +1,44 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "Clondalkin Civic Offices"
+ },
+ "response": [
+  {
+   "place_id": 275946432,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 175042963,
+   "lat": "53.3240804",
+   "lon": "-6.3952435",
+   "category": "building",
+   "type": "public",
+   "place_rank": 30,
+   "importance": 8.015945677877496e-05,
+   "addresstype": "building",
+   "name": "Clondalkin Civic Offices",
+   "display_name": "Clondalkin Civic Offices, 9th Lock Road, Clondalkin-Monastery DED 1986, Clondalkin, South Dublin, County Dublin, Leinster, D22 E9X5, Éire / Ireland",
+   "address": {
+    "building": "Clondalkin Civic Offices",
+    "road": "9th Lock Road",
+    "city_district": "Clondalkin-Monastery DED 1986",
+    "town": "Clondalkin",
+    "municipality": "South Dublin",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "postcode": "D22 E9X5",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.3235275",
+    "53.3245168",
+    "-6.3953957",
+    "-6.3946400"
+   ]
+  }
+ ]
+}

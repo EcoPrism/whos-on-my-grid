@@ -3,25 +3,29 @@ the only region; moving its files there, and routing every request through a
 region, must not change what a brief reads or what the API answers."""
 
 import dataclasses
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
 
-# The module, not its functions: pytest would collect a test_* name.
-from app.auth import gate
-from app.brief.cache import _ENGINE_GLOBS
 from app.config import REPO_ROOT, Settings
-from app.ground import US_DATA_DIR, Ground, get_ground
-from app.ground.facilities import FakeFacilityDatabase, load_overrides
+from app.geocode import CensusGeocoder, FakeGeocoder, NominatimGeocoder
+from app.ground import IE_DATA_DIR, US_DATA_DIR, Ground, get_ground
+from app.ground.facilities import load_overrides
 from app.ground.hearings import HearingIndex
 from app.ground.prices import FakeUtilityPrices
 from app.ground.tariffs import TariffTable
 from app.ground.utility import HifldUtility, disambiguate
-from app.main import create_app
-from app.pulse import cited_constants
-from app.regions import US_LOCALE, Region, UnknownRegion, region_for, registry
+from app.regions import (
+    IE_LOCALE,
+    KNOWN,
+    US_LOCALE,
+    Region,
+    UnknownRegion,
+    region_for,
+    registry,
+)
 from app.regions.locale import Locale
 from app.scenario import constants
 from tests import fakes
@@ -115,44 +119,6 @@ def test_other_dirs_are_not_remapped(tmp_path: Path) -> None:
     assert s.perception_path == REPO_ROOT / "elsewhere"
 
 
-def _fingerprinted(rel: str) -> bool:
-    return any(Path(rel).full_match(g) for g in _ENGINE_GLOBS)
-
-
-def test_engine_fingerprint_covers_region_json_only() -> None:
-    """Every curated JSON file is hashed; recordings and imagery tiles are not,
-    since .dockerignore keeps them out of the image and the container's
-    fingerprint must equal the machine's that built it."""
-    region_files = [
-        p.relative_to(REPO_ROOT).as_posix()
-        for p in (REPO_ROOT / "data" / "regions").rglob("*")
-        if p.is_file()
-    ]
-    json_files = [r for r in region_files if r.endswith(".json")]
-    assert len(json_files) >= len(US_FILES)
-    assert all(_fingerprinted(r) for r in json_files)
-    assert not any(_fingerprinted(r) for r in region_files if not r.endswith((".json", ".geojson")))
-    for rel in (
-        "data/regions/us/hearings/audio/x.mp3",
-        "data/regions/us/perception/tiles/a.png",
-        "data/regions/us/perception/a.tif",
-    ):
-        assert not _fingerprinted(rel), rel
-    assert _fingerprinted("data/regions/ie/utilities/ie.geojson")
-    assert _fingerprinted("data/equivalences.json")
-    assert not any(
-        g.startswith(("data/tariffs", "data/hearings", "data/perception")) for g in _ENGINE_GLOBS
-    )
-    hashed = {
-        p.relative_to(REPO_ROOT).as_posix()
-        for g in _ENGINE_GLOBS
-        if g.startswith("data/regions/")
-        for p in REPO_ROOT.glob(g)
-        if p.is_file()
-    }
-    assert hashed == set(json_files)
-
-
 # --- registry -----------------------------------------------------------------
 
 
@@ -164,8 +130,8 @@ def test_registry_is_the_us_by_default(tmp_path: Path) -> None:
     assert us.locale == US_LOCALE == Locale("US", "USD", "us", "en-US")
     assert us.countries == {"US"}
     assert us.data_dir == US_DATA_DIR
-    assert us.test_set == REPO_ROOT / "eval" / "addresses.json"
-    assert us.resolved == REPO_ROOT / "eval" / "resolved.json"
+    assert us.test_set == REPO_ROOT / "eval" / "us" / "addresses.json"
+    assert us.resolved == REPO_ROOT / "eval" / "us" / "resolved.json"
     assert us.constants.keys() == constants.default().keys()
 
 
@@ -243,6 +209,141 @@ def test_registry_env_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.region_ids == ("us",) and s.default_region_id == "us"
 
 
+# --- Ireland ------------------------------------------------------------------
+
+
+def test_ireland_is_known_but_off_by_default(tmp_path: Path) -> None:
+    assert set(KNOWN) == {"us", "ie"}
+    assert list(registry(fakes.settings(tmp_path))) == ["us"]
+    assert Settings(_env_file=None).ie_geocoder == "nominatim"  # type: ignore[call-arg]
+
+
+def test_us_and_ireland_build_together(tmp_path: Path) -> None:
+    regions = registry(fakes.settings(tmp_path, regions="us,ie", ie_geocoder="fake"))
+    assert list(regions) == ["us", "ie"]
+    assert regions["us"].locale == US_LOCALE and regions["ie"].locale == IE_LOCALE
+
+
+def test_ireland_fields(tmp_path: Path) -> None:
+    """Plan 0.3, field by field."""
+    s = fakes.settings(tmp_path, regions="us,ie", brief_ttl_days=30)
+    ie = registry(s)["ie"]
+    assert (ie.id, ie.label) == ("ie", "Ireland")
+    assert ie.locale == IE_LOCALE == Locale("IE", "EUR", "metric", "en-IE")
+    assert ie.countries == {"IE"}
+    assert ie.coverage == {"on_your_grid", "your_bill", "protection"}
+    assert ie.data_dir == IE_DATA_DIR == REPO_ROOT / "data" / "regions" / "ie"
+    assert ie.test_set == REPO_ROOT / "eval" / "ie" / "addresses.json"
+    assert ie.resolved is None
+    assert ie.scenarios is False
+    assert ie.places_country == ("ie",) and ie.pulse_countries == ("IE",)
+    assert ie.brief_ttl_days == 30
+    assert ie.placeholder == "Blanchardstown Centre, Dublin 15"
+    assert ie.address_label == "Street address, town, county or Eircode"
+    assert ie.geocoder_attribution == "© OpenStreetMap contributors"
+    assert ie.sources_line == (
+        "PeeringDB, OpenStreetMap, ESB Networks, Eurostat, CRU, An Coimisiún Pleanála"
+    )
+    shared = constants.load((constants.EQUIVALENCES_PATH,))
+    assert shared.keys() <= ie.constants.keys()
+    assert not hasattr(ie, "ground")
+
+
+def test_ireland_postal_pattern_is_the_eircode(tmp_path: Path) -> None:
+    pattern = registry(fakes.settings(tmp_path, regions="us,ie"))["ie"].postal_pattern
+    assert pattern.match("D15 T1FD") and pattern.match("d15t1fd")
+    assert not pattern.match("20147") and not pattern.match("D15")
+
+
+def test_us_new_fields_are_todays_strings(tmp_path: Path) -> None:
+    us = registry(fakes.settings(tmp_path, regions="us,ie", brief_ttl_days=30))["us"]
+    assert us.scenarios is True
+    assert us.places_country == ("us",) and us.pulse_countries == ("US",)
+    assert us.brief_ttl_days == 0  # the US keeps briefs whatever the setting
+    assert us.placeholder == "21715 Filigree Ct, Ashburn, VA"
+    assert us.address_label == "Street address, city, state"
+    assert us.geocoder_attribution is None
+    assert us.sources_line == "PeeringDB, OpenStreetMap, EIA"
+    assert isinstance(us.geocoder, CensusGeocoder)
+
+
+def test_ireland_geocoder_is_nominatim_from_settings(tmp_path: Path) -> None:
+    s = fakes.settings(
+        tmp_path,
+        regions="us,ie",
+        nominatim_url="https://nominatim.example.org/",
+        nominatim_email="ops@example.org",
+        nominatim_min_interval_seconds=2.5,
+        geocode_timeout_seconds=7.0,
+    )
+    g = registry(s)["ie"].geocoder
+    assert isinstance(g, NominatimGeocoder)
+    assert g.base_url == "https://nominatim.example.org"
+    assert (g.email, g.min_interval, g.timeout) == ("ops@example.org", 2.5, 7.0)
+
+
+async def test_grid_ie_geocoder_fake_answers_the_test_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GRID_REGIONS", "us,ie")
+    monkeypatch.setenv("GRID_IE_GEOCODER", "fake")
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    g = registry(s)["ie"].geocoder
+    assert isinstance(g, FakeGeocoder)
+    r = await g.geocode("Galway City Hall, College Road, Galway")
+    assert r is not None and r.county == "Galway City" and r.country == "IE"
+
+
+def test_unknown_ie_geocoder_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="GRID_IE_GEOCODER"):
+        registry(fakes.settings(tmp_path, regions="us,ie", ie_geocoder="google"))
+
+
+def test_ireland_ground_is_built_lazily(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The registry never builds ground; make_ground reaches get_ground_ie only
+    when called, and imports it then."""
+    import app.ground
+
+    seen: list[Path] = []
+
+    def fake_get_ground_ie(settings: Settings, data_dir: Path = IE_DATA_DIR) -> Ground:
+        seen.append(data_dir)
+        return Ground()
+
+    monkeypatch.setattr(app.ground, "get_ground_ie", fake_get_ground_ie)
+    s = fakes.settings(tmp_path, regions="us,ie")
+    ie = registry(s)["ie"]
+    assert seen == []
+    assert isinstance(ie.make_ground(s), Ground)
+    assert seen == [IE_DATA_DIR]
+
+
+def test_importing_regions_does_not_import_irish_providers() -> None:
+    code = (
+        "import sys, app.regions, app.regions.locale;"
+        "bad = [m for m in ('app.ground.eurostat', 'app.ground.geojson_utility')"
+        " if m in sys.modules];"
+        "print(','.join(bad))"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert out.stdout.strip() == ""
+
+
+def test_fake_region_ie_matches_the_real_one(tmp_path: Path) -> None:
+    s = fakes.settings(tmp_path, regions="us,ie", brief_ttl_days=14)
+    real, fake = registry(s)["ie"], fakes.region_ie(s)
+    skip = {"geocoder", "make_ground", "constants"}
+    for f in dataclasses.fields(real):
+        if f.name not in skip:
+            assert getattr(fake, f.name) == getattr(real, f.name), f.name
+
+
 # --- region_for ---------------------------------------------------------------
 
 
@@ -298,171 +399,3 @@ def test_region_for_disabled_region_raises(tmp_path: Path) -> None:
     with pytest.raises(UnknownRegion):
         _pick(regions, "ie", None)
     assert _pick(regions, None, "IE") == "us"
-
-
-# --- wiring: services, router, health, gate, pulse ----------------------------
-
-HDR = {"x-requested-with": "grid"}
-ADDR = "21715 Filigree Ct, Ashburn, VA"
-ASHBURN_ID = "4fb253585fde1c93"
-TEST_SET_ADDR = "Filigree Ct, Ashburn, VA 20147"  # first row of eval/addresses.json
-RESOLVED_ADDR = "21721 Filigree Court, Ashburn, VA 20147"  # its eval/resolved.json form
-
-
-def _client(app: FastAPI) -> AsyncClient:
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
-
-
-@pytest.mark.parametrize("over", [{"regions": "us,zz"}, {"default_region": "eu"}])
-def test_create_app_refuses_unknown_regions(tmp_path: Path, over: dict[str, str]) -> None:
-    with pytest.raises(RuntimeError, match="GRID_REGIONS"):
-        create_app(fakes.service(tmp_path, **over))
-
-
-def test_create_app_needs_a_service_per_region(tmp_path: Path) -> None:
-    svc = fakes.service(tmp_path)
-    with pytest.raises(RuntimeError, match="brief services cover"):
-        create_app(services={"us": svc, "zz": fakes.service(tmp_path)})
-    app = create_app(services={"us": svc})
-    assert app.state.services == {"us": svc} and app.state.service is svc
-    assert list(app.state.regions) == ["us"]
-
-
-def test_create_app_injected_service_is_the_default_region(tmp_path: Path) -> None:
-    svc = fakes.service(tmp_path)
-    app = create_app(svc)
-    assert app.state.services == {"us": svc} and app.state.service is svc
-
-
-async def test_region_service_keeps_the_us_brief_id_and_locale(tmp_path: Path) -> None:
-    svc = fakes.service(tmp_path)
-    us = registry(svc.settings)["us"]
-    svc.region = us
-    assert svc.locale == US_LOCALE
-    async with _client(create_app(svc)) as c:
-        r = await c.post("/api/brief", json={"address": ADDR, "region": "us"})
-    assert r.status_code == 200
-    brief = r.json()
-    assert brief["brief_id"] == ASHBURN_ID
-    assert brief["locale"] == dataclasses.asdict(US_LOCALE)
-
-
-async def test_explicit_us_is_the_same_brief(tmp_path: Path) -> None:
-    svc = fakes.service(tmp_path)
-    async with _client(create_app(svc)) as c:
-        plain = await c.post("/api/brief", json={"address": ADDR})
-        assert plain.status_code == 200 and plain.json()["brief_id"] == ASHBURN_ID
-        calls = len(svc.draft_provider.calls)  # type: ignore[attr-defined]
-        for region in ("us", "US", "", "  "):
-            r = await c.post("/api/brief", json={"address": ADDR, "region": region})
-            assert r.status_code == 200 and r.json() == plain.json()
-        # Each repeat was a cache hit: nothing more was drafted.
-        assert len(svc.draft_provider.calls) == calls  # type: ignore[attr-defined]
-
-
-@pytest.mark.parametrize("route", ["/api/brief", "/api/brief/stream"])
-@pytest.mark.parametrize("region", ["zz", "eu", "ie"])
-async def test_unknown_region_is_refused_before_anything_is_spent(
-    tmp_path: Path, route: str, region: str
-) -> None:
-    svc = fakes.service(
-        tmp_path, auth_provider="fake", session_secret="s" * 40, cookie_secure=False
-    )
-    app = create_app(svc)
-    async with _client(app) as c:
-        r = await c.post(route, json={"address": TEST_SET_ADDR, "region": region}, headers=HDR)
-    assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
-    assert svc.geocoder.calls == 0  # type: ignore[attr-defined]
-    assert svc.draft_provider.calls == []  # type: ignore[attr-defined]
-    assert await app.state.gate.usage.count_global_today() == 0
-
-
-@pytest.mark.parametrize("route", ["/api/brief", "/api/brief/stream"])
-async def test_unknown_region_is_refused_in_fixtures_mode(tmp_path: Path, route: str) -> None:
-    async with _client(create_app(fakes.service(tmp_path, brief_source="fixtures"))) as c:
-        r = await c.post(route, json={"address": "Filigree Ct, Ashburn", "region": "zz"})
-        assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
-        r = await c.post(route, json={"address": "Filigree Ct, Ashburn", "region": "us"})
-        assert r.status_code == 200
-
-
-async def test_region_field_is_bounded(tmp_path: Path) -> None:
-    async with _client(create_app(fakes.service(tmp_path))) as c:
-        r = await c.post("/api/brief", json={"address": ADDR, "region": "x" * 17})
-    assert r.status_code == 422
-
-
-@pytest.mark.parametrize("mode", ["fixtures", "agent"])
-async def test_health_names_the_region(tmp_path: Path, mode: str) -> None:
-    async with _client(create_app(fakes.service(tmp_path, brief_source=mode))) as c:
-        body = (await c.get("/api/health")).json()
-        assert body["region"] == "us"
-        assert body["regions"] == [{"id": "us", "label": "US"}]
-        expected = [] if mode == "fixtures" else [r["address"] for r in gate.test_set_rows()]
-        assert body["test_addresses"] == expected
-        assert (await c.get("/api/health?region=US")).json() == body
-        r = await c.get("/api/health?region=zz")
-        assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
-
-
-async def test_pulse_per_region(tmp_path: Path) -> None:
-    svc = fakes.service(tmp_path, brief_source="full")
-    svc.ground = Ground(facilities=FakeFacilityDatabase([]))
-    app = create_app(svc)
-    async with _client(app) as c:
-        plain = (await c.get("/api/pulse")).json()
-        assert plain["peeringdb"]["total"] == 2
-        assert (await c.get("/api/pulse?region=us")).json() == plain
-        r = await c.get("/api/pulse?region=zz")
-        assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
-    assert list(app.state.pulses) == ["us"]
-    # The region's constants give the same slider rows as the committed table.
-    assert plain["constants"] == cited_constants()
-
-
-async def test_pulse_region_is_checked_in_fixtures_mode(tmp_path: Path) -> None:
-    async with _client(create_app(fakes.service(tmp_path, brief_source="fixtures"))) as c:
-        assert (await c.get("/api/pulse?region=us")).json() == {
-            "peeringdb": None,
-            "equivalences": [],
-        }
-        assert (await c.get("/api/pulse?region=zz")).status_code == 422
-
-
-def test_gate_allow_list_is_the_us_test_set(tmp_path: Path) -> None:
-    app = create_app(fakes.service(tmp_path))
-    allowed = app.state.gate.allowed
-    assert allowed and allowed == gate.test_set_addresses()
-    us = app.state.regions["us"]
-    assert allowed == gate.test_set_addresses((us.test_set, us.resolved))
-
-
-@pytest.mark.parametrize("address", [TEST_SET_ADDR, RESOLVED_ADDR])
-@pytest.mark.parametrize("region", [None, "us"])
-async def test_test_set_needs_no_sign_in_with_or_without_region(
-    tmp_path: Path, address: str, region: str | None
-) -> None:
-    svc = fakes.service(
-        tmp_path, auth_provider="fake", session_secret="s" * 40, cookie_secure=False
-    )
-    body: dict[str, str] = {"address": address}
-    if region is not None:
-        body["region"] = region
-    async with _client(create_app(svc)) as c:
-        r = await c.post("/api/brief", json=body, headers=HDR)
-    assert r.status_code == 200, r.json().get("detail")
-
-
-async def test_country_gate_runs_before_the_region(tmp_path: Path) -> None:
-    """The edge's country gate answers first; an allowed visitor naming an
-    unknown region then gets the region's 422."""
-    app = create_app(fakes.service(tmp_path, allowed_countries="US", country_header="cf-ipcountry"))
-    async with _client(app) as c:
-        body = {"address": ADDR, "region": "zz"}
-        r = await c.post("/api/brief", json=body, headers={"cf-ipcountry": "DE"})
-        assert r.status_code == 403 and r.json()["detail"] == "not_available_in_region"
-        r = await c.post("/api/brief", json=body, headers={"cf-ipcountry": "US"})
-        assert r.status_code == 422 and r.json()["detail"] == "unknown_region"
-        r = await c.post("/api/brief", json={"address": ADDR}, headers={"cf-ipcountry": "US"})
-        assert r.status_code == 200 and r.json()["brief_id"] == ASHBURN_ID
-        assert (await c.get("/api/health", headers={"cf-ipcountry": "US"})).json()["region"] == "us"

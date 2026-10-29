@@ -1,4 +1,4 @@
-import type { Brief, CardInfo, Scenario, ScenarioInputs } from '../types'
+import type { Brief, CardInfo, Locale, Scenario, ScenarioInputs } from '../types'
 
 // The UI is a client of the brief service. In dev, Vite proxies /api to it.
 
@@ -6,7 +6,31 @@ export interface Example {
   key: string
   brief_id: string
   display: string
+  // In `currency` (the key name is the legacy one).
   ai_rent_usd_per_month: number | null
+  currency?: string
+  language?: string
+}
+
+// One region this deployment serves (/api/health `regions[]`). Every field past
+// id and label is optional so an older API still reads as the US.
+export interface RegionInfo {
+  id: string
+  label: string
+  countries?: string[]
+  // Countries the Places autocomplete is restricted to (lower case).
+  places_country?: string[]
+  locale?: Locale
+  // Whether the what-if runs for this region.
+  scenarios?: boolean
+  placeholder?: string
+  address_label?: string
+  // Shown on a brief whose address this region's geocoder found.
+  geocoder_attribution?: string | null
+  // The footer's data line.
+  sources_line?: string
+  // 0: briefs are kept; otherwise they are deleted that many days after they are made.
+  brief_ttl_days?: number
 }
 
 // Who is signed in, and how many new briefs they have left today.
@@ -28,7 +52,12 @@ export interface Health {
   quota_per_user_day: number
   // The region new briefs are made for, and the ones this deployment serves.
   region?: string
-  regions?: { id: string; label: string }[]
+  regions?: RegionInfo[]
+  // The requested region's settings, repeated at the top level.
+  locale?: Locale
+  scenarios?: boolean
+  places_country?: string[]
+  brief_ttl_days?: number
 }
 
 export interface PulsePeeringDB {
@@ -37,6 +66,8 @@ export interface PulsePeeringDB {
   days: number
   source_url: string
   source_title: string
+  // The countries counted, e.g. ["IE"]; absent on an older API (the US).
+  countries?: string[]
 }
 
 export interface Equivalence {
@@ -116,19 +147,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return r.json() as Promise<T>
 }
 
-export function getHealth(): Promise<Health> {
-  return request<Health>('/api/health')
+// With no region the API picks one (the country header, then its default)
+// and says which in `region`.
+export function getHealth(region?: string): Promise<Health> {
+  return request<Health>(region ? `/api/health?region=${encodeURIComponent(region)}` : '/api/health')
 }
 
-// One request per page load, shared by every caller (the home page's pulse
-// strip and the MW slider's homes label). A failure lets a later call retry.
-let pulseOnce: Promise<Pulse> | null = null
-export function getPulse(): Promise<Pulse> {
-  pulseOnce ??= request<Pulse>('/api/pulse').catch((e: unknown) => {
-    pulseOnce = null
-    throw e
-  })
-  return pulseOnce
+// The API's answer when a region id is not one it serves.
+export function isUnknownRegion(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 422 && e.detail === 'unknown_region'
+}
+
+// One request per region per page load, shared by every caller (the home
+// page's pulse strip and the MW slider's homes label). A failure lets a later
+// call retry. The region defaults to 'us' because the what-if, which is
+// US-only, calls this bare (MwSlider, Interpretation) and needs US constants.
+const pulses = new Map<string, Promise<Pulse>>()
+export function getPulse(region = 'us'): Promise<Pulse> {
+  let p = pulses.get(region)
+  if (!p) {
+    p = request<Pulse>(`/api/pulse?region=${encodeURIComponent(region)}`).catch((e: unknown) => {
+      pulses.delete(region)
+      throw e
+    })
+    pulses.set(region, p)
+  }
+  return p
 }
 
 export function signInWithGoogle(credential: string): Promise<Me> {
@@ -144,11 +188,12 @@ export function signOut(): Promise<{ ok: boolean }> {
 }
 
 // Generation can take a minute or two in agent mode; no client-side timeout.
-export function createBrief(address: string): Promise<Brief> {
+// No region lets the API pick, as for health.
+export function createBrief(address: string, region?: string): Promise<Brief> {
   return request<Brief>('/api/brief', {
     method: 'POST',
     headers: POST_HEADERS,
-    body: JSON.stringify({ address }),
+    body: JSON.stringify(region ? { address, region } : { address }),
   })
 }
 
@@ -183,11 +228,11 @@ export async function readNdjson<T>(r: Response, onLine: (line: T) => void): Pro
 // The streaming twin of createBrief: `onEvent` sees the brief take shape, the
 // promise resolves with the finished brief. Errors reported on the stream
 // become ApiErrors like the plain endpoint's.
-export async function streamBrief(address: string, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
+export async function streamBrief(address: string, region: string | undefined, onEvent: (ev: BriefEvent) => void): Promise<Brief> {
   const r = await fetch('/api/brief/stream', {
     method: 'POST',
     headers: POST_HEADERS,
-    body: JSON.stringify({ address }),
+    body: JSON.stringify(region ? { address, region } : { address }),
   })
   let final = null as Brief | null
   await readNdjson<BriefEvent>(r, (ev) => {

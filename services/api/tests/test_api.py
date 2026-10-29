@@ -3,6 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
 from tests import fakes
+from tests.test_health_regions import enable_ie
 
 
 @pytest.fixture
@@ -89,3 +90,35 @@ async def test_country_gate_blocks_non_us_and_missing_header(tmp_path) -> None:
         assert r.status_code == 403 and r.json()["detail"] == "not_available_in_region"
         r = await c.post("/api/brief", json={"address": "x y z"}, headers={"CF-IPCountry": "us"})
         assert r.status_code != 403
+
+
+async def test_ireland_fixture_by_its_own_region(tmp_path, monkeypatch) -> None:
+    """In fixtures mode an Irish address opens the Irish fixture, and only with
+    the Irish region; Irish text never resolves to a US fixture, nor US text to
+    the Irish one."""
+    enable_ie(monkeypatch)
+    app = create_app(services=fakes.services(tmp_path, brief_source="fixtures"))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/brief", json={"address": "Blanchardstown Centre, Dublin 15", "region": "ie"}
+        )
+        assert r.status_code == 200
+        brief = r.json()
+        assert brief["brief_id"] == fakes.IE_BRIEF_ID and brief["locale"]["country"] == "IE"
+        stream = await c.post(
+            "/api/brief/stream", json={"address": "Blanchardstown, D15", "region": "ie"}
+        )
+        assert stream.status_code == 200 and fakes.IE_BRIEF_ID in stream.text
+        # Irish text matches among the Irish fixtures only...
+        r = await c.post("/api/brief", json={"address": "County Dublin Avenue", "region": "ie"})
+        assert r.status_code == 200 and r.json()["brief_id"] == fakes.IE_BRIEF_ID
+        r = await c.post("/api/brief", json={"address": "Filigree Ct, Ashburn", "region": "ie"})
+        assert r.status_code == 404 and r.json()["detail"] == "fixture_not_matched"
+        # ...and Irish text never opens a US brief, nor US text the Irish one.
+        r = await c.post("/api/brief", json={"address": "Blanchardstown Centre, Dublin 15"})
+        assert r.status_code == 404
+        r = await c.post("/api/brief", json={"address": "Filigree Ct, Ashburn", "region": "us"})
+        assert r.status_code == 200 and r.json()["brief_id"] != fakes.IE_BRIEF_ID
+        # By id and by key it opens whichever region made it.
+        assert (await c.get(f"/api/brief/{fakes.IE_BRIEF_ID}")).json() == brief
+        assert (await c.get("/api/brief/blanchardstown")).json() == brief

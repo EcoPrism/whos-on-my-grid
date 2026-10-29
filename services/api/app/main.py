@@ -1,7 +1,10 @@
+import asyncio
+import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,9 +50,12 @@ def default_service(settings: Settings, region: Region, cache: BriefCache) -> Br
     )
 
 
-def default_scenarios(settings: Settings, brief_service: BriefService) -> ScenarioService:
-    """Beside the brief service and sharing its ground, fetcher and models. In
-    fixtures mode nothing is verified: the page checks would be live fetches."""
+def default_scenarios(
+    settings: Settings, brief_service: BriefService, region: Region | None = None
+) -> ScenarioService:
+    """Beside the brief service and sharing its ground, fetcher and models, on
+    the region's constants (the US's). In fixtures mode nothing is verified:
+    the page checks would be live fetches."""
     return ScenarioService(
         settings=settings,
         zips=ZctaCentroids(settings.ground_path),
@@ -61,7 +67,20 @@ def default_scenarios(settings: Settings, brief_service: BriefService) -> Scenar
         verify_provider=None
         if settings.brief_source == "fixtures"
         else brief_service.verify_provider,
+        constants=region.constants if region is not None else None,
     )
+
+
+async def sweep_loop(cache: BriefCache, cards_dir: Path, every_s: float) -> None:
+    """Remove expired non-US briefs and their cards now and every `every_s`
+    seconds, off the event loop. A failed sweep is logged (kind only) and the
+    loop goes on: retention must not stop because one file was locked."""
+    while True:
+        try:
+            await asyncio.to_thread(cache.sweep, cards_dir)
+        except Exception as exc:  # noqa: BLE001
+            log_event("brief_sweep_failed", kind=type(exc).__name__)
+        await asyncio.sleep(every_s)
 
 
 def create_app(
@@ -104,7 +123,7 @@ def create_app(
         if service is not None:
             services = {default_region: service}
         else:
-            cache = BriefCache(settings.data_path)
+            cache = BriefCache(settings.data_path, ttl_days=max(0, settings.brief_ttl_days))
             services = {rid: default_service(settings, r, cache) for rid, r in regions.items()}
     if set(services) != set(regions):
         # A request for an enabled region must find its service, never a KeyError.
@@ -137,7 +156,24 @@ def create_app(
             web=web_mounted,
             regions=",".join(regions),
         )
-        yield
+        # Retention (plan 0.11): whenever the shared brief cache ages briefs out
+        # (GRID_BRIEF_TTL_DAYS > 0), sweep it at startup and every
+        # GRID_BRIEF_SWEEP_HOURS. Keyed on the cache, not the enabled regions:
+        # Irish briefs left on disk after Ireland is switched off still age out.
+        sweeper: asyncio.Task[None] | None = None
+        if getattr(app.state.service.cache, "ttl_days", 0) > 0:
+            hours = settings.brief_sweep_hours if settings.brief_sweep_hours > 0 else 6.0
+            sweeper = asyncio.create_task(
+                sweep_loop(app.state.service.cache, settings.cards_path, hours * 3600)
+            )
+        app.state.sweeper = sweeper
+        try:
+            yield
+        finally:
+            if sweeper is not None:
+                sweeper.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await sweeper
 
     app = FastAPI(title="Who's On My Grid API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
@@ -148,7 +184,7 @@ def create_app(
     app.state.service = services[default_region]
     # What-ifs run on US ZIPs and US constants, so they sit beside the US service.
     app.state.scenarios = scenarios or (
-        default_scenarios(settings, services["us"]) if "us" in services else None
+        default_scenarios(settings, services["us"], regions["us"]) if "us" in services else None
     )
     app.state.pulses = {}
     app.state.verifier = verifier

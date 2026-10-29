@@ -12,8 +12,8 @@ data/regions/*/hearings/audio
 data/regions/**/*.png
 data/regions/**/*.tif
 !fixtures
-!eval/addresses.json
-!eval/resolved.json
+!eval/*/addresses.json
+!eval/*/resolved.json
 !web
 web/node_modules
 web/dist

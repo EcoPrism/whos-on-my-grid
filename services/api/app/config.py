@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     # Country gate for brief routes. Empty = off. Only meaningful behind an edge that
     # sets the header from the client IP (Cloudflare: cf-ipcountry, Front Door: x-azure-
     # clientip-country); the app trusts the header, so never enable it without one.
+    # With Ireland on (regions "us,ie") it must list US,IE, or Irish visitors get 403.
     allowed_countries: str = ""
     country_header: str = "cf-ipcountry"
     # Regions this process serves (app/regions), comma-separated ids: "us,ie" enables
@@ -109,6 +110,19 @@ class Settings(BaseSettings):
     # picks one (only when the gate above is on), or it gets the default.
     regions: str = "us"
     default_region: str = "us"
+    # Ireland's geocoder: nominatim | fake. fake answers only the test set
+    # (eval/ie/addresses.json `geocode` blocks), for fixtures mode and tests.
+    # The public OSMF instance allows one request a second from one machine: fine for
+    # dev and eval, not for production (point nominatim_url at a hosted instance).
+    ie_geocoder: str = "nominatim"
+    nominatim_url: str = "https://nominatim.openstreetmap.org"
+    # Sent as `email` on each request when set, as the OSMF usage policy asks.
+    nominatim_email: str = ""
+    nominatim_min_interval_seconds: float = 1.0
+    # Days a non-US brief is kept (0 = until the engine changes). The US always keeps.
+    brief_ttl_days: int = 0
+    # How often the retention sweep runs when any enabled region has a TTL.
+    brief_sweep_hours: float = 6.0
 
     # Sign-in gate for *new* briefs. off = anyone can generate (local dev); google =
     # Google Identity Services id_tokens; fake = "fake:<sub>:<email>" tokens (tests only).

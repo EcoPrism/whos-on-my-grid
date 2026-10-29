@@ -5,13 +5,16 @@ cap holds for everyone. Fake verifier, memory usage store, no network."""
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.auth import gate as gate_mod
+from app.geocode import normalise
 from app.main import create_app
 from tests import fakes
+from tests.test_health_regions import enable_ie
 
 HDR = {"x-requested-with": "grid"}
 ADDR = "21715 Filigree Ct, Ashburn, VA"
-TEST_SET_ADDR = "Filigree Ct, Ashburn, VA 20147"  # first row of eval/addresses.json
-RESOLVED_ADDR = "21721 Filigree Court, Ashburn, VA 20147"  # its eval/resolved.json form
+TEST_SET_ADDR = "Filigree Ct, Ashburn, VA 20147"  # first row of eval/us/addresses.json
+RESOLVED_ADDR = "21721 Filigree Court, Ashburn, VA 20147"  # its eval/us/resolved.json form
 SECRET = "s" * 40
 
 
@@ -141,3 +144,21 @@ def test_half_configured_gate_fails_fast(tmp_path) -> None:
         create_app(fakes.service(tmp_path, usage_store="table"))
     with pytest.raises(RuntimeError, match="GRID_AUTH_PROVIDER"):
         create_app(fakes.service(tmp_path, auth_provider="maybe"))
+
+
+def test_allow_list_includes_the_irish_test_set_only_when_enabled(tmp_path, monkeypatch) -> None:
+    """eval/ie/addresses.json rows run without an account once Ireland is
+    enabled; a US-only deploy's allow-list is the US set alone."""
+    ie_rows = gate_mod.test_set_rows(gate_mod.REPO_ROOT / "eval" / "ie" / "addresses.json", None)
+    assert len(ie_rows) == 10
+    irish = {normalise(r["raw"]) for r in ie_rows}
+    _, us_only = gated(tmp_path)
+    assert not irish & us_only.state.gate.allowed
+    enable_ie(monkeypatch)
+    app = create_app(
+        services=fakes.services(
+            tmp_path, auth_provider="fake", session_secret=SECRET, cookie_secure=False
+        )
+    )
+    allowed = app.state.gate.allowed
+    assert irish <= allowed and us_only.state.gate.allowed <= allowed

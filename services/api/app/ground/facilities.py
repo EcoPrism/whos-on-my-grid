@@ -32,6 +32,9 @@ PEERINGDB_URL = (
     "&fields=id,name,org_name,address1,city,state,latitude,longitude,created"
 )
 PEERINGDB_PAGE = "https://www.peeringdb.com/"
+# Outside the US each record must carry its country, so `summary(countries=)` can
+# count one country of a multi-country snapshot (IE and GB for Ireland).
+_PEERINGDB_FIELDS = "id,name,org_name,address1,city,state,country,latitude,longitude,created"
 PEERINGDB_MAX_AGE_S = 7 * 86_400
 
 OVERPASS_ENDPOINTS = [
@@ -74,6 +77,9 @@ class RawSite:
     lon: float
     url: str
     is_building: bool = True
+    # The name shown is the record's org_name, not its own name (load_name_fixes):
+    # the page does not list a facility by this name, so no claim may say it does.
+    name_from_org: bool = False
 
 
 class FacilitySource(Protocol):
@@ -85,13 +91,58 @@ class FacilitySource(Protocol):
 # --- PeeringDB ---------------------------------------------------------------
 
 
+def peeringdb_url(countries: tuple[str, ...]) -> str:
+    """The facility list for these ISO countries. The US alone is PEERINGDB_URL,
+    byte for byte (its cached snapshot predates the country field); any other set
+    asks for `country` too, one country by `country=`, several by `country__in=`."""
+    codes = tuple(c.strip().upper() for c in countries if c.strip())
+    if codes == ("US",):
+        return PEERINGDB_URL
+    if not codes:
+        raise ValueError("peeringdb_url needs at least one country")
+    where = f"country={codes[0]}" if len(codes) == 1 else f"country__in={','.join(codes)}"
+    return (
+        f"https://www.peeringdb.com/api/fac?{where}&status=ok&limit=5000&fields={_PEERINGDB_FIELDS}"
+    )
+
+
+def _peeringdb_cache_name(countries: tuple[str, ...]) -> str:
+    """peeringdb_fac.json for the US (unchanged); peeringdb_fac_ie_gb.json for (IE, GB)."""
+    codes = tuple(c.strip().lower() for c in countries if c.strip())
+    if codes == ("us",):
+        return "peeringdb_fac.json"
+    return f"peeringdb_fac_{'_'.join(codes)}.json"
+
+
+def load_name_fixes(path: Path) -> frozenset[int]:
+    """PeeringDB facility ids whose `name` must not be shown (a person's name, say):
+    the facilities file's "peeringdb_use_org_name" list. Absent file or key: none."""
+    if not path.exists():
+        return frozenset()
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    ids = raw.get("peeringdb_use_org_name") if isinstance(raw, dict) else None
+    return frozenset(int(i) for i in ids or [])
+
+
 class PeeringDBSource:
     name = "PeeringDB"
 
-    def __init__(self, cache_dir: Path, *, url: str = PEERINGDB_URL, timeout: float = 25.0) -> None:
-        self.path = cache_dir / "peeringdb_fac.json"
-        self.url = url
+    def __init__(
+        self,
+        cache_dir: Path,
+        *,
+        countries: tuple[str, ...] = ("US",),
+        url: str | None = None,
+        timeout: float = 25.0,
+        name_fixes: frozenset[int] = frozenset(),
+    ) -> None:
+        self.countries = tuple(c.strip().upper() for c in countries if c.strip())
+        self.path = cache_dir / _peeringdb_cache_name(self.countries)
+        self.url = url if url is not None else peeringdb_url(self.countries)
         self.timeout = timeout
+        # Facility ids shown by their org_name, never their own name.
+        self.name_fixes = name_fixes
         self._lock = asyncio.Lock()
         self._data: list[dict[str, Any]] | None = None
         self._loaded_at = 0.0
@@ -132,11 +183,25 @@ class PeeringDBSource:
             self._data, self._loaded_at = data, time.time()
             return data
 
-    async def summary(self, *, days: int = 30) -> dict[str, Any]:
-        """What the snapshot holds: every US facility PeeringDB lists, and how
-        many were added in the last `days`. Engine arithmetic over the data;
-        `added` is None for a snapshot made before `created` was asked for."""
+    def _country(self, f: dict[str, Any]) -> str | None:
+        """A record's country; a single-country snapshot made without the field
+        (the US one) is that country."""
+        c = f.get("country")
+        if isinstance(c, str) and c:
+            return c.upper()
+        return self.countries[0] if len(self.countries) == 1 else None
+
+    async def summary(
+        self, countries: tuple[str, ...] | None = None, *, days: int = 30
+    ) -> dict[str, Any]:
+        """What the snapshot holds: every facility PeeringDB lists in `countries`
+        (default: the source's own), and how many were added in the last `days`.
+        Engine arithmetic over the data; `added` is None for a snapshot made
+        before `created` was asked for."""
         data = await self._snapshot()
+        wanted = tuple(c.upper() for c in countries) if countries else self.countries
+        if countries:
+            data = [f for f in data if self._country(f) in wanted]
         since = time.time() - days * 86_400
         added = 0
         dated = 0
@@ -158,6 +223,7 @@ class PeeringDBSource:
             "fetched_at": self._loaded_at,
             "source_url": PEERINGDB_PAGE,
             "source_title": "PeeringDB",
+            "countries": list(wanted),
         }
 
     async def near(self, lat: float, lon: float, radius_km: float) -> list[RawSite]:
@@ -172,12 +238,17 @@ class PeeringDBSource:
                 RawSite(
                     provider="peeringdb",
                     key=f"fac/{f['id']}",
-                    name=f.get("name") or None,
+                    name=(
+                        f.get("org_name") or None
+                        if f.get("id") in self.name_fixes
+                        else f.get("name") or None
+                    ),
                     operator=f.get("org_name") or None,
                     status="live",
                     lat=float(flat),
                     lon=float(flon),
                     url=f"https://www.peeringdb.com/fac/{f['id']}",
+                    name_from_org=f.get("id") in self.name_fixes,
                 )
             )
         return out
@@ -251,6 +322,18 @@ _ALIASES = {
     "equinix inc": "equinix",
     "ntt data": "ntt",
     "ntt global data centers": "ntt",
+    # Irish spellings (step 6); each holds "ireland" or an Irish name, so no US
+    # operator string changes.
+    "facebook ireland": "meta",
+    "meta platforms ireland": "meta",
+    "google ireland": "google",
+    "microsoft ireland operations": "microsoft",
+    "amazon data services ireland": "amazon",
+    "interxion": "digital realty",
+    "interxion ireland": "digital realty",
+    "keppel data centres": "keppel",
+    "eircom": "eir",
+    "cork internet exchange": "cix",
 }
 _SUFFIX = re.compile(r"\b(inc|llc|corp|corporation|co|ltd|limited|lp|plc)\b\.?")
 _PUNCT = re.compile(r"[^a-z0-9 ]+")
@@ -266,10 +349,23 @@ _OPERATOR_VOCAB = [
     "Cologix", "DataBank", "Lumen", "Level 3", "Centersquare", "PowerHouse", "Yahoo", "Apple",
     "Oracle", "Vantage", "Stream", "T5", "Cyxtera", "Evoque", "Lightedge", "Colocation Northwest",
     "Centeris", "Intergate", "Westin", "Zayo", "Telx", "365", "Expedient", "TierPoint",
+    # Ireland (step 6). Appended, never inserted: matching is first prefix wins,
+    # so a name the list above matched still matches the same operator.
+    "Interxion", "Keppel", "Servecentric", "euNetworks", "Cork Internet Exchange",
+    "CIX", "Echelon", "K2 Strategic", "Eircom",
 ]  # fmt: skip
 
 
-_VOCAB_ALIASES = {"Facebook": "Meta", "AWS": "Amazon", "RagingWire": "NTT", "Intergate": "Sabey"}
+_VOCAB_ALIASES = {
+    "Facebook": "Meta",
+    "AWS": "Amazon",
+    "RagingWire": "NTT",
+    "Intergate": "Sabey",
+    "Interxion": "Digital Realty",
+    "Cork Internet Exchange": "CIX",
+    "K2 Strategic": "K2",
+    "Eircom": "Eir",
+}
 
 
 def operator_from_name(name: str | None) -> str | None:
@@ -529,6 +625,7 @@ def _facility(members: list[RawSite], lat: float, lon: float) -> GroundFacility:
         source_title=source_title,
         buildings=buildings,
         providers=tuple(sorted({m.provider for m in members})),
+        name_from_org=anchor.provider == "peeringdb" and anchor.name_from_org,
     )
 
 
@@ -558,12 +655,13 @@ class FacilityDatabase:
         found = await self.lookup(lat, lon, radius_km)
         return found.facilities, found.notes
 
-    async def summary(self) -> dict[str, Any] | None:
-        """The PeeringDB source's summary, if there is one and it answers."""
+    async def summary(self, countries: tuple[str, ...] | None = None) -> dict[str, Any] | None:
+        """The PeeringDB source's summary, if there is one and it answers; counted
+        over `countries` when given (the pulse's own country, not the brief's set)."""
         for src in self.sources:
             if isinstance(src, PeeringDBSource):
                 try:
-                    return await src.summary()
+                    return await src.summary(countries)
                 except GroundError as exc:
                     log_event("ground_failed", provider=src.name, reason=str(exc)[:160])
                     return None
@@ -614,9 +712,12 @@ class FakeFacilityDatabase:
             "fetched_at": 0.0,
             "source_url": PEERINGDB_PAGE,
             "source_title": "PeeringDB",
+            "countries": ["US"],
         }
+        self.summary_calls: list[tuple[str, ...] | None] = []
 
-    async def summary(self) -> dict[str, Any] | None:
+    async def summary(self, countries: tuple[str, ...] | None = None) -> dict[str, Any] | None:
+        self.summary_calls.append(countries)
         return self.summary_value
 
     async def lookup(self, lat: float, lon: float, radius_km: float = FIVE_MILES_KM) -> Lookup:

@@ -1,4 +1,4 @@
-// The addresses that run without a sign-in: the eval set (eval/addresses.json).
+// The addresses that run without a sign-in: the region's eval set (eval/<region>/addresses.json).
 // The API serves the list (`health.test_addresses`), spelled exactly as the
 // gate admits them; four of them are offered as one-tap chips, the rest sit in
 // a select. Picking one fills the address box, it does not submit: a run
@@ -30,21 +30,45 @@ export const TEST_ADDRESSES: TestAddress[] = [
   { address: '998 Mililani Street, Honolulu, HI 96813', expect: 'null result, Hawaiian Electric' },
 ]
 
-// Four places that tell four different stories, shown as chips.
-const FEATURED = ['Ashburn, VA', 'Quincy, WA', 'New Albany, OH', 'Key West, FL']
+// Ireland's set (eval/ie/addresses.json): named public places, never a home.
+export const TEST_ADDRESSES_IE: TestAddress[] = [
+  { address: 'Blanchardstown Centre, Blanchardstown, Dublin 15', expect: 'Fingal cluster, Grange Castle decision' },
+  { address: 'M3 Parkway railway station, County Meath', expect: 'Clonee campus, Meath' },
+  { address: 'Clondalkin Civic Offices, Clondalkin, Dublin 22', expect: 'Grange Castle, South Dublin' },
+  { address: 'Citywest Shopping Centre, Citywest, County Dublin', expect: 'Citywest cluster' },
+  { address: 'Belgard Square North, Tallaght, Dublin 24', expect: 'Tallaght cluster' },
+  { address: "IKEA Ballymun, Saint Margaret's Road, Dublin 11", expect: 'north Dublin colocation' },
+  { address: 'Wood Quay, Dublin 8', expect: 'city centre' },
+  { address: 'Galway City Hall, College Road, Galway', expect: 'few or none nearby' },
+  { address: 'Anglesea Street, Cork', expect: 'Cork Internet Exchange' },
+  { address: 'Merchants Quay, Limerick', expect: 'null result' },
+]
+
+// Notes by region; a region with none gets an empty fallback.
+const NOTES: Record<string, TestAddress[]> = { us: TEST_ADDRESSES, ie: TEST_ADDRESSES_IE }
+
+// Places that tell different stories, shown as chips: four in the US, three in Ireland.
+const FEATURED: Record<string, string[]> = {
+  us: ['Ashburn, VA', 'Quincy, WA', 'New Albany, OH', 'Key West, FL'],
+  ie: ['Blanchardstown', 'Clondalkin', 'Galway'],
+}
 
 interface Props {
   items?: string[]
   onPick: (address: string) => void
   disabled?: boolean
+  // The region the list is for; the US when absent.
+  region?: string
 }
 
-export default function TestAddresses({ items, onPick, disabled }: Props) {
-  const notes = new Map(TEST_ADDRESSES.map((t) => [t.address, t.expect]))
+export default function TestAddresses({ items, onPick, disabled, region = 'us' }: Props) {
+  const known = NOTES[region] ?? []
+  const notes = new Map(known.map((t) => [t.address, t.expect]))
   const list: TestAddress[] = items && items.length > 0
     ? items.map((address) => ({ address, expect: notes.get(address) ?? '' }))
-    : TEST_ADDRESSES
-  const chips = FEATURED.flatMap((place) => {
+    : known
+  if (list.length === 0) return null
+  const chips = (FEATURED[region] ?? []).flatMap((place) => {
     const hit = list.find((t) => t.address.includes(place))
     return hit ? [{ place, address: hit.address }] : []
   })

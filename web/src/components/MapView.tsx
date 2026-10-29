@@ -1,10 +1,11 @@
 import type { Brief } from '../types'
+import { fmtArea, localeOf, ringWords } from '../lib/format'
 import GridMap, {
-  FIVE_MILES_M,
   facilityLine,
   facilityMarker,
   hasPoint,
   headlineBoundsOptions,
+  ringRadiusM,
   type GridMarker,
   type GridPolygon,
   type LatLon,
@@ -15,9 +16,11 @@ interface Props {
   className?: string
 }
 
-// The five-mile ring is the product's unit of concern. Each facility is tied
-// to the address by a line that flows toward it: the grid you share, drawn.
+// The ring (five miles in the US, 8 km in metric regions) is the product's
+// unit of concern. Each facility is tied to the address by a line that flows
+// toward it: the grid you share, drawn.
 export function BriefMap({ brief, className }: Props) {
+  const { units } = localeOf(brief)
   const { lat, lon } = brief.address
   const here: LatLon = [lat, lon]
   // Live and under-construction sites live on "On your grid"; announced
@@ -29,7 +32,7 @@ export function BriefMap({ brief, className }: Props) {
   const construction = brief.sections.coming.construction ?? []
 
   // Frame the address and everything tied to it, so the lines have length.
-  // With nothing nearby, show the five-mile ring instead.
+  // With nothing nearby, show the ring instead.
   const frame: LatLon[] = [
     here,
     ...placed.map((f): LatLon => [f.lat, f.lon]),
@@ -45,7 +48,7 @@ export function BriefMap({ brief, className }: Props) {
       popup: (
         <>
           <strong>{c.label}</strong><br />
-          {c.footprint_acres_then} → {c.footprint_acres_now} acres ({c.vintages[0]} → {c.vintages[1]})<br />
+          {fmtArea(c.footprint_acres_then, units)} → {fmtArea(c.footprint_acres_now, units)} ({c.vintages[0]} → {c.vintages[1]})<br />
           {c.in_database ? 'listed in a facility database' : 'in no facility database'}
         </>
       ),
@@ -63,7 +66,7 @@ export function BriefMap({ brief, className }: Props) {
       center={here}
       frame={frame}
       boundsOptions={headlineBoundsOptions()}
-      rings={[{ key: 'ring', center: here, radiusM: FIVE_MILES_M, pathOptions: { color: '#15202b', weight: 1.5, dashArray: '6 6', fill: false } }]}
+      rings={[{ key: 'ring', label: `The ${ringWords(units)}`, center: here, radiusM: ringRadiusM(units), pathOptions: { color: '#15202b', weight: 1.5, dashArray: '6 6', fill: false } }]}
       lines={placed.map((f, i) => facilityLine(f, here, `line-${i}-${f.name}`))}
       polygons={polygons}
       markers={markers}

@@ -1,12 +1,25 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useCurrentRegion } from '../lib/region'
+
+// DRAFT privacy text for Irish addresses (plan 0.11): for the user's review,
+// not legal advice. The EEA transfer mechanism (EU-US Data Privacy Framework or
+// SCCs under the Azure terms) is still to be confirmed before it ships on.
+function irishRetention(days: number | undefined): string {
+  return days && days > 0
+    ? `Irish briefs are deleted ${days} days after they are made.`
+    : 'Irish briefs are kept until the engine changes.'
+}
 
 export default function About() {
   const { hash } = useLocation()
+  // Hash links (#data) wait for the region list, which can lengthen the page.
+  const { regions } = useCurrentRegion()
   useEffect(() => {
     if (!hash) return
     document.getElementById(hash.slice(1))?.scrollIntoView()
-  }, [hash])
+  }, [hash, regions.length])
+  const ie = regions.find((r) => r.id === 'ie')
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-24 pt-10 sm:pt-16">
@@ -17,7 +30,7 @@ export default function About() {
 
       <section className="mt-8 max-w-[64ch] space-y-4">
         <p>
-          Type a US address and get one brief: which data centers are on your local grid, what is being
+          {ie ? 'Type an address in the US or Ireland' : 'Type a US address'} and get one brief: which data centers are on your local grid, what is being
           built near you, what your bill has done, whether your state's large-load tariff shields
           households, and what was said at the last hearing.
         </p>
@@ -30,6 +43,16 @@ export default function About() {
           <b className="tag-modelled">Modeled</b> is arithmetic over a measured number, shown as a range.{' '}
           <b className="tag-unavailable">Unavailable</b> means the brief does not know, and says so.
         </p>
+        {ie && (
+          <p>
+            For an Irish address the measured sources are PeeringDB and OpenStreetMap for facilities,
+            the ESB Networks service area for the network operator, Eurostat for the national household
+            electricity price (the same half-year two years apart), the CRU's connection policy for new
+            data centres, and An Coimisiún Pleanála's published decisions for what has been granted
+            nearby. Distances are in kilometres and prices in euro. The CRU policy is shown for what it
+            requires and what it says its aim is; keeping costs off household bills is not that aim.
+          </p>
+        )}
         <p>
           The brief never claims that a data center caused a bill increase. It shows the numbers and
           cites who attributes what.
@@ -47,8 +70,29 @@ export default function About() {
           Making a new brief costs model time, so it needs a Google sign-in. For a signed-in user we
           keep the email address, when it was first and last seen, and the ids of the briefs it
           generated, with a daily limit per person and overall. Opening a brief, and running one of the
-          example addresses, needs no sign-in and stores nothing about you. Nothing is sold or shared.
+          example addresses, needs no sign-in and stores nothing about you. Nothing is sold. The
+          address goes only to the services named here.
         </p>
+        <p>
+          For a US address: as you type, Google Places suggests addresses (Google receives what you
+          type). When you ask for a brief, the address is sent to the US Census Bureau's geocoder to
+          find its location, and the street and city line and the location go to the language-model
+          providers that write and check the brief.
+        </p>
+        {ie && (
+          <p>
+            For an Irish address: as you type, Google Places suggests addresses (Google receives what
+            you type). When you ask for a brief, the address is sent to the OpenStreetMap Foundation's
+            Nominatim service (UK) to find its location, which is then rounded to about 100 metres.
+            The brief keeps the town, planning authority, Eircode routing key and that rounded point,
+            never the house number or full Eircode. The rounded point and the town line are sent to
+            the language-model providers that write and check the brief. Briefs and sign-in records
+            are stored on Microsoft Azure in the United States, outside the EEA.{' '}
+            {irishRetention(ie.brief_ttl_days)} Lawful basis: legitimate interest (GDPR Art. 6(1)(f))
+            in answering your request; the sign-in email is processed to provide the account (Art.
+            6(1)(b)). Geocoding {ie.geocoder_attribution ?? '© OpenStreetMap contributors'}.
+          </p>
+        )}
       </section>
 
       <section className="mt-12 max-w-[64ch] space-y-4">

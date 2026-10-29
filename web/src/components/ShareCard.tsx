@@ -1,5 +1,10 @@
 import type { Brief } from '../types'
-import { fmtMoney, fmtRange } from '../lib/format'
+import { fmtMoney, fmtRange, localeOf, periodLabel } from '../lib/format'
+
+// A card line that is the bill figure, which the big number already shows.
+// Copied from app/card/spec.py _BILL_LINE; schema/card_bill_cases.json holds
+// the shared cases ("+$12/mo", "+€45/mo", "−€3/mo", not "CRU data-centre…").
+const BILL_LINE = /^[+−-][$€£₹]/
 
 // The line app/brief/headline.py::disclosure_line makes, which the PNG prints
 // (app/card/spec.py builds it anew from the id, the date and the base). Used
@@ -23,6 +28,12 @@ function disclosure(brief: Brief): string {
 // hypothetical band on top.
 export default function ShareCard({ brief, hypothetical = false }: { brief: Brief; hypothetical?: boolean }) {
   const h = brief.headline
+  const { currency } = localeOf(brief)
+  const price = brief.sections.your_bill.price
+  const half = periodLabel(price)
+  const period = half
+    ? half.both
+    : price?.as_of?.endsWith('-12') ? `${price.as_of.slice(0, 4)} vs ${Number(price.as_of.slice(0, 4)) - 2}` : 'vs two years ago'
   return (
     <div className="flex w-full flex-col overflow-hidden" style={{ aspectRatio: '1200 / 630', containerType: 'inline-size' }}>
       {hypothetical && (
@@ -38,14 +49,14 @@ export default function ShareCard({ brief, hypothetical = false }: { brief: Brie
 
         <div className="flex items-end justify-between gap-6">
           <ul className="max-w-[62%] space-y-[0.8cqw] text-[2.9cqw] leading-tight">
-            {brief.card.lines.filter((l) => h.ai_rent_usd_per_month === null || !/^[+−-]\$/.test(l)).map((l) => <li key={l}>{l}</li>)}
+            {brief.card.lines.filter((l) => h.ai_rent_usd_per_month === null || !BILL_LINE.test(l)).map((l) => <li key={l}>{l}</li>)}
           </ul>
           {h.ai_rent_usd_per_month !== null && (
             <p className="num shrink-0 text-right">
               <span className="block text-[8.5cqw] font-extrabold leading-none text-[var(--signal)]">
-                {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
+                {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month, currency) : `about ${fmtMoney(h.ai_rent_usd_per_month, currency)}`}
               </span>
-              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, {brief.sections.your_bill.price?.as_of?.endsWith('-12') ? `${brief.sections.your_bill.price.as_of.slice(0, 4)} vs ${Number(brief.sections.your_bill.price.as_of.slice(0, 4)) - 2}` : 'vs two years ago'} · modeled</span>
+              <span className="block text-[2.4cqw] opacity-80">a month for a typical home, {period} · {currency === 'USD' ? 'modeled' : 'modelled'}</span>
             </p>
           )}
         </div>

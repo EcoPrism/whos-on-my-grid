@@ -1,0 +1,49 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Alpha Networks",
+        "raw_name": "Alpha Networks DAC",
+        "kind": "DSO",
+        "customers": 1000,
+        "holding": "Alpha Group",
+        "website": "https://example.org/alpha",
+        "source_url": "https://example.org/alpha/about",
+        "source_title": "Alpha Networks, About",
+        "quote": "Alpha Networks DAC is the licensed operator for the test square.",
+        "claim": "Alpha Networks DAC is the licensed operator for the test square."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
+          [[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Beta Grid",
+        "raw_name": "Beta Grid Ltd",
+        "kind": "DSO",
+        "customers": 5000,
+        "holding": null,
+        "website": null,
+        "source_url": "https://example.org/beta/about",
+        "source_title": "Beta Grid, About",
+        "quote": "Beta Grid Ltd operates the overlap and the island.",
+        "claim": "Beta Grid Ltd operates the overlap and the island."
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [[[8, 8], [12, 8], [12, 12], [8, 12], [8, 8]]],
+          [[[20, 0], [22, 0], [22, 2], [20, 2], [20, 0]]]
+        ]
+      }
+    }
+  ]
+}

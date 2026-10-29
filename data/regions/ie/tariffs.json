@@ -1,0 +1,20 @@
+{
+  "_about": "Rules on large loads the engine knows about in Ireland, keyed by `jurisdiction` (the ISO country code IE: Irish prices and tariffs are national, not by county) and utility (`*`: every network operator). Curated by hand on 2026-10-29 from the regulator's own page; the verifier fetches each `url` and judges the claim like any other, and `quote` is verbatim from that page, so a stale or wrong entry shows as contradicted or unverifiable rather than as fact. `status`: in_force | proposed | none_found. `kind`: tariff | connection_policy (a rule on connecting to the network, not a rate). `protects_households`: whether the rule's stated purpose is to keep large-load build-out costs off other customers; the CRU states this policy's purpose as grid constraints, security of supply and renewable targets, so false, and nothing more is claimed. The decision's docket CRU2025236 appears on https://www.cru.ie/publications/28573, not on the cited news page, so the row does not state it; the PDF decision paper is not cited because the verifier does not fetch PDFs. `min_mw`: none stated.",
+  "entries": [
+    {
+      "jurisdiction": "IE",
+      "utility_match": "*",
+      "name": "CRU connection policy for new data centres (December 2025)",
+      "kind": "connection_policy",
+      "status": "in_force",
+      "protects_households": false,
+      "docket": null,
+      "summary": "The Commission for Regulation of Utilities' December 2025 decision requires new data centres connecting to the electricity network to provide generation and/or storage capacity, onsite or local in proximity, to match their requested maximum import demand capacity, with that generation participating in the wholesale electricity market, and to meet at least 80% of their annual demand with additional renewable electricity projects generating in the Republic of Ireland. Its stated objective is a pathway to connect that takes into account grid constraints, security of supply and generation adequacy, and national renewable energy targets.",
+      "url": "https://www.cru.ie/about-us/news/the-cru-publishes-its-decision-on-new-electricity-connection-policy-for-data-centres/",
+      "title": "CRU, The CRU Publishes its Decision on New Electricity Connection Policy for Data Centres (12 December 2025)",
+      "quote": "New data centres connecting to the electricity network will continue to be required to provide generation and/or storage capacity, either onsite or local in proximity to match the requested data centre maximum import demand capacity.",
+      "min_mw": null,
+      "min_mw_inclusive": true
+    }
+  ]
+}

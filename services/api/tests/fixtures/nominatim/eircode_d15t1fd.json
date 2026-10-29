@@ -1,0 +1,42 @@
+{
+ "_note": "Live response, captured 2026-10-29 from nominatim.openstreetmap.org with the app's User-Agent and accept-language=en (countrycodes=ie, limit=1 on search). q=D15 T1FD: a postcode hit (rank 25); Blanchardstown Centre is a shopping centre, no house number.",
+ "request": {
+  "path": "search",
+  "q": "D15 T1FD"
+ },
+ "response": [
+  {
+   "place_id": 380378114,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "postcode_id": "Pie:D15_T1FD",
+   "lat": "53.3957840",
+   "lon": "-6.3902944",
+   "category": "place",
+   "type": "postcode",
+   "place_rank": 25,
+   "importance": 0.06667666666666666,
+   "addresstype": "postcode",
+   "name": "D15 T1FD",
+   "display_name": "D15 T1FD, Blanchardstown Centre, Blanchardstown-Coolmine DED 1986, Blanchardstown, Fingal, County Dublin, Leinster, Ireland",
+   "address": {
+    "postcode": "D15 T1FD",
+    "retail": "Blanchardstown Centre",
+    "city_district": "Blanchardstown-Coolmine DED 1986",
+    "town": "Blanchardstown",
+    "municipality": "Fingal",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.3953350",
+    "53.3962330",
+    "-6.3910456",
+    "-6.3895432"
+   ]
+  }
+ ]
+}

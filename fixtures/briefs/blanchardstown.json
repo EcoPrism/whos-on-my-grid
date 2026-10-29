@@ -1,0 +1,369 @@
+{
+  "brief_id": "ffefa78202dceea9",
+  "generated_at": "2026-10-27T09:00:00Z",
+  "source_mode": "fixtures",
+  "fixture": true,
+  "address": {
+    "display": "Blanchardstown, Fingal, Co. Dublin, D15",
+    "lat": 53.393,
+    "lon": -6.392,
+    "country": "IE",
+    "region_code": "IE-D",
+    "county": "Fingal",
+    "postal_code": "D15",
+    "utility": "ESB Networks"
+  },
+  "locale": {
+    "country": "IE",
+    "currency": "EUR",
+    "units": "metric",
+    "language": "en-IE"
+  },
+  "headline": {
+    "ai_rent_usd_per_month": 44.8,
+    "ai_rent_range_usd_per_month": [
+      36.0,
+      54.0
+    ],
+    "percentile": null,
+    "band": "high",
+    "one_liner": "Six data centres sit within 8 km of you, in ESB Networks' area. A typical Irish home pays about \u20ac45 more a month than two years ago."
+  },
+  "sections": {
+    "on_your_grid": {
+      "status": "measured",
+      "confidence": 0.9,
+      "model": null,
+      "summary": "Six data-centre facilities sit within 8 km, five running and one under construction. ESB Networks is the distribution operator for Ireland, your street included.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/d15",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        },
+        {
+          "title": "Network operator page (fictional)",
+          "url": "https://example.org/esb/about",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "ESB Networks DAC is the licensed distribution system operator for Ireland (fictional quote)"
+        }
+      ],
+      "facilities": [
+        {
+          "name": "Corduff Data Campus A",
+          "codename": null,
+          "operator": "Liffey Compute (fictional)",
+          "operator_confidence": 0.97,
+          "distance_km": 1.2,
+          "status": "live",
+          "estimated_mw": 40,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 53.4,
+          "lon": -6.405
+        },
+        {
+          "name": "Corduff Data Campus B",
+          "codename": null,
+          "operator": "Liffey Compute (fictional)",
+          "operator_confidence": 0.97,
+          "distance_km": 1.4,
+          "status": "live",
+          "estimated_mw": 40,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 53.405,
+          "lon": -6.398
+        },
+        {
+          "name": "Ballycoolin Hall 1",
+          "codename": null,
+          "operator": "Meridian Realty Trust (fictional)",
+          "operator_confidence": 0.95,
+          "distance_km": 2.1,
+          "status": "live",
+          "estimated_mw": 24,
+          "mw_basis": "reported",
+          "shares_substation": null,
+          "lat": 53.41,
+          "lon": -6.38
+        },
+        {
+          "name": "Damastown Colo",
+          "codename": null,
+          "operator": "Pinefield Networks (fictional)",
+          "operator_confidence": 0.9,
+          "distance_km": 2.1,
+          "status": "live",
+          "estimated_mw": 10,
+          "mw_basis": "class_estimate",
+          "shares_substation": null,
+          "lat": 53.385,
+          "lon": -6.42
+        },
+        {
+          "name": "Coolmine Edge",
+          "codename": null,
+          "operator": "Pinefield Networks (fictional)",
+          "operator_confidence": 0.9,
+          "distance_km": 2.2,
+          "status": "live",
+          "estimated_mw": 6,
+          "mw_basis": "class_estimate",
+          "shares_substation": null,
+          "lat": 53.398,
+          "lon": -6.36
+        },
+        {
+          "name": "Mulhuddart Cloud Park",
+          "codename": null,
+          "operator": "Orrin Cloud Services (fictional)",
+          "operator_confidence": 0.85,
+          "distance_km": 3.2,
+          "status": "under_construction",
+          "estimated_mw": 120,
+          "mw_basis": "filed",
+          "shares_substation": null,
+          "lat": 53.42,
+          "lon": -6.41
+        }
+      ]
+    },
+    "coming": {
+      "status": "reported",
+      "confidence": 0.8,
+      "model": null,
+      "summary": "An Coimisi\u00fan Plean\u00e1la granted permission with conditions for the Grange Castle data storage expansion, 9.4 km south of you, in September 2026.",
+      "gap": "No aerial imagery is indexed for Ireland, so new roofs are not measured.",
+      "sources": [
+        {
+          "title": "Planning appeal decision (fictional)",
+          "url": "https://example.org/acp/case-320852",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Grant Permissions with Conditions"
+        }
+      ],
+      "facilities": [
+        {
+          "name": "Google Ireland Grange Castle expansion (SD24A/0164W)",
+          "codename": null,
+          "operator": "Google Ireland Limited",
+          "operator_confidence": 0.9,
+          "distance_km": 9.4,
+          "status": "announced",
+          "estimated_mw": null,
+          "mw_basis": null,
+          "shares_substation": null,
+          "lat": 53.3144,
+          "lon": -6.4443
+        }
+      ],
+      "construction": []
+    },
+    "your_bill": {
+      "status": "modelled",
+      "confidence": 0.8,
+      "model": "muse-spark-1.3",
+      "summary": "Ireland's average household electricity price rose 49.5% between the first half of 2024 and the first half of 2026. For a home using 350 kWh a month that is about \u20ac45 more per month, between \u20ac36 and \u20ac54 depending on how much you use.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "National household price series, semiannual (fictional)",
+          "url": "https://example.org/eurostat/IE",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "IE, band DC, all taxes and levies included: 2026-S1 0.3871 EUR/kWh; 2024-S1 0.2590 EUR/kWh (fictional)"
+        },
+        {
+          "title": "Regulator typical consumption paper (fictional)",
+          "url": "https://example.org/cru/typical-consumption",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Typical annual domestic electricity consumption: 4,200 kWh (fictional)"
+        }
+      ],
+      "price": {
+        "currency": "EUR",
+        "rate_now": 0.3871,
+        "rate_then": 0.259,
+        "trend_pct": 49.5,
+        "window_months": 24,
+        "typical_household_kwh_month": 350,
+        "attribution": null,
+        "as_of": "2026-06",
+        "granularity": "semiannual"
+      }
+    },
+    "protection": {
+      "status": "reported",
+      "confidence": 0.85,
+      "model": "muse-spark-1.3",
+      "summary": "No. A CRU connection policy for new data centres is in force: they must bring generation or storage to match the capacity they ask for. Its stated aim is grid constraints, security of supply and renewable targets, not household costs.",
+      "gap": null,
+      "sources": [
+        {
+          "title": "Regulator decision, data-centre connection policy (fictional)",
+          "url": "https://example.org/cru/dc-connection-policy",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "New data centres must provide generation or storage to match their requested import capacity (fictional)"
+        }
+      ],
+      "tariff": {
+        "large_load_tariff": "in_force",
+        "name": "CRU connection policy for new data centres (December 2025)",
+        "protects_households": false,
+        "docket": null,
+        "kind": "connection_policy"
+      }
+    },
+    "hearing": {
+      "status": "unavailable",
+      "confidence": 0.0,
+      "model": null,
+      "summary": "Meetings of this planning authority are not yet indexed.",
+      "gap": "Fingal County Council is not in the indexed set.",
+      "sources": [],
+      "hearing": {
+        "next_date": null,
+        "body": null
+      }
+    }
+  },
+  "claims": [
+    {
+      "id": "c1",
+      "section": "on_your_grid",
+      "text": "ESB Networks DAC is the licensed distribution system operator for Ireland.",
+      "source": {
+        "title": "Network operator page (fictional)",
+        "url": "https://example.org/esb/about",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "ESB Networks DAC is the licensed distribution system operator for Ireland (fictional quote)"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    },
+    {
+      "id": "c2",
+      "section": "your_bill",
+      "text": "Ireland's household electricity price, band DC with all taxes, was 0.3871 EUR per kWh in 2026-S1 and 0.2590 EUR per kWh in 2024-S1.",
+      "source": {
+        "title": "National household price series, semiannual (fictional)",
+        "url": "https://example.org/eurostat/IE",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "IE, band DC, all taxes and levies included: 2026-S1 0.3871 EUR/kWh; 2024-S1 0.2590 EUR/kWh (fictional)"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    },
+    {
+      "id": "c3",
+      "section": "your_bill",
+      "text": "The regulator's typical annual domestic electricity consumption figure is 4,200 kWh.",
+      "source": {
+        "title": "Regulator typical consumption paper (fictional)",
+        "url": "https://example.org/cru/typical-consumption",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Typical annual domestic electricity consumption: 4,200 kWh (fictional)"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    },
+    {
+      "id": "c4",
+      "section": "protection",
+      "text": "New data centres must provide generation or storage to match their requested import capacity.",
+      "source": {
+        "title": "Regulator decision, data-centre connection policy (fictional)",
+        "url": "https://example.org/cru/dc-connection-policy",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "New data centres must provide generation or storage to match their requested import capacity (fictional)"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    },
+    {
+      "id": "c5",
+      "section": "coming",
+      "text": "An Coimisi\u00fan Plean\u00e1la decided the Grange Castle appeal with the decision Grant Permissions with Conditions.",
+      "source": {
+        "title": "Planning appeal decision (fictional)",
+        "url": "https://example.org/acp/case-320852",
+        "retrieved_at": "2026-10-27T09:00:00Z",
+        "page": null,
+        "quote": "Grant Permissions with Conditions"
+      },
+      "drafted_by": "muse-spark-1.3",
+      "verdict": "supported",
+      "verified_by": "meta-models/muse-spark-open",
+      "verifier_note": null
+    }
+  ],
+  "at_your_house": [
+    {
+      "text": "Your electricity bill is about \u20ac45 a month higher than two years ago, between \u20ac36 and \u20ac54 depending on how much you use.",
+      "topic": "bill",
+      "status": "modelled",
+      "confidence": 0.8,
+      "sources": [
+        {
+          "title": "National household price series, semiannual (fictional)",
+          "url": "https://example.org/eurostat/IE",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "IE, band DC, all taxes and levies included: 2026-S1 0.3871 EUR/kWh; 2024-S1 0.2590 EUR/kWh (fictional)"
+        },
+        {
+          "title": "Regulator typical consumption paper (fictional)",
+          "url": "https://example.org/cru/typical-consumption",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": "Typical annual domestic electricity consumption: 4,200 kWh (fictional)"
+        }
+      ]
+    },
+    {
+      "text": "Six data centres sit within 8 km, the nearest about a kilometre away.",
+      "topic": "grid",
+      "status": "measured",
+      "confidence": 0.9,
+      "sources": [
+        {
+          "title": "Facility registry (fictional)",
+          "url": "https://example.org/registry/d15",
+          "retrieved_at": "2026-10-27T09:00:00Z",
+          "page": null,
+          "quote": ""
+        }
+      ]
+    }
+  ],
+  "card": {
+    "title": "Who's on my grid: Blanchardstown, Co. Dublin",
+    "lines": [
+      "6 data centres within 8 km",
+      "+\u20ac45/mo for a typical home vs 2 yrs ago",
+      "CRU data-centre connection policy in force; household bills not its stated aim",
+      "Grange Castle expansion granted 9.4 km away"
+    ],
+    "footer": "Sources: facility registry, network operator, national price series, regulator decision, planning appeal. Fictional fixture."
+  }
+}

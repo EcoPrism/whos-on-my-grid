@@ -1,6 +1,7 @@
-"""BRIEF_SOURCE=fixtures: the five briefs at the repo root are the whole
+"""BRIEF_SOURCE=fixtures: the briefs under fixtures/briefs are the whole
 universe. Served by key (`ashburn`) or by brief id, and matched from a typed
-address the same way the UI used to do it."""
+address the same way the UI used to do it. A fixture's country is its
+`locale.country` (none: the US); a region sees only its own country's."""
 
 import json
 from functools import lru_cache
@@ -31,13 +32,27 @@ def by_id(brief_id: str) -> dict[str, Any] | None:
     return None
 
 
-def resolve_address(text: str) -> str | None:
-    """Match a typed address to a fixture key: any token of the fixture's
-    display line or key appearing in the input. Port of the old TS matcher."""
+def country_of(b: dict[str, Any]) -> str:
+    """A fixture's ISO country: its locale's, else the US (made before locales)."""
+    locale = b.get("locale")
+    country = locale.get("country") if isinstance(locale, dict) else None
+    return country.upper() if isinstance(country, str) and country else "US"
+
+
+def _of(country: str) -> dict[str, dict[str, Any]]:
+    want = country.upper()
+    return {k: b for k, b in all_fixtures().items() if country_of(b) == want}
+
+
+def resolve_address(text: str, *, country: str = "US") -> str | None:
+    """Match a typed address to a fixture key of that country: any token of the
+    fixture's display line or key appearing in the input. Port of the old TS
+    matcher. Only fixtures whose country is `country` are candidates, so Irish
+    text never opens a US brief."""
     q = text.lower()
     if not q.strip():
         return None
-    for key, b in all_fixtures().items():
+    for key, b in _of(country).items():
         tokens = [
             key,
             *b["address"]["display"].lower().replace(",", " ").split(),
@@ -48,13 +63,20 @@ def resolve_address(text: str) -> str | None:
     return None
 
 
-def examples() -> list[dict[str, Any]]:
-    return [
-        {
-            "key": key,
-            "brief_id": b["brief_id"],
-            "display": b["address"]["display"],
-            "ai_rent_usd_per_month": b["headline"]["ai_rent_usd_per_month"],
-        }
-        for key, b in all_fixtures().items()
-    ]
+def examples(*, country: str = "US") -> list[dict[str, Any]]:
+    """The home page's example cards for one country. `ai_rent_usd_per_month`
+    keeps its legacy key and is in `currency`."""
+    out = []
+    for key, b in _of(country).items():
+        locale = b.get("locale") if isinstance(b.get("locale"), dict) else {}
+        out.append(
+            {
+                "key": key,
+                "brief_id": b["brief_id"],
+                "display": b["address"]["display"],
+                "ai_rent_usd_per_month": b["headline"]["ai_rent_usd_per_month"],
+                "currency": locale.get("currency") or "USD",
+                "language": locale.get("language") or "en-US",
+            }
+        )
+    return out

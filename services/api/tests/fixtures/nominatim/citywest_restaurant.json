@@ -1,0 +1,33 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29, saved by the research run in condensed form (lat, lon, rank, type, address) and expanded back to the jsonv2 hit shape. The hit is a restaurant in the shopping centre; the display line must not name it.",
+ "request": {
+  "path": "search",
+  "q": "Citywest Shopping Centre, Citywest, County Dublin"
+ },
+ "response": [
+  {
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "lat": "53.2829253",
+   "lon": "-6.4220266",
+   "category": "amenity",
+   "type": "fast_food",
+   "place_rank": 30,
+   "addresstype": "amenity",
+   "name": "Eddie Rocket's",
+   "address": {
+    "amenity": "Eddie Rocket's",
+    "road": "Fortunestown Lane",
+    "suburb": "Fortunestown",
+    "city_district": "Tallaght-Jobstown DED 1986",
+    "village": "Saggart",
+    "municipality": "South Dublin",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   }
+  }
+ ]
+}

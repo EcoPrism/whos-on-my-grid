@@ -10,7 +10,13 @@ a page. The ZIP stays inside the scenario: the card names the county."""
 from typing import Any
 from urllib.parse import urlparse
 
-from app.brief.assemble import ENGINE_CLAIM_FACILITIES, _engine_claim, _facility, _facility_claim
+from app.brief.assemble import (
+    ENGINE_CLAIM_FACILITIES,
+    _engine_claim,
+    _facility,
+    _facility_claim,
+    _facility_quote,
+)
 from app.card.spec import fmt_range, scenario_disclosure_line
 from app.geocode import GeocodeResult
 from app.ground.census import Households
@@ -125,7 +131,13 @@ def assemble_scenario(
         if f.name:
             claims.append(
                 _engine_claim(
-                    SECTION, _facility_claim(f), f.source_url, f.source_title, f.name, 0, now_iso
+                    SECTION,
+                    _facility_claim(f),
+                    f.source_url,
+                    f.source_title,
+                    _facility_quote(f),
+                    0,
+                    now_iso,
                 )
             )
     u = truth.utility

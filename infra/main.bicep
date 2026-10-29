@@ -39,6 +39,18 @@ param quotaGlobalDay int = 40
 @description('Scheme and host the share links and cards print, no trailing slash. Empty = the app\'s own FQDN; set it to the custom domain once one is bound.')
 param publicBaseUrl string = ''
 
+@description('Regions the app serves, comma-separated ids (GRID_REGIONS). "us,ie" waits on a production geocoder for Ireland (docs/build-log.md, step 6).')
+param regions string = 'us'
+
+@description('The region a request without one gets (GRID_DEFAULT_REGION). Must be listed in regions.')
+param defaultRegion string = 'us'
+
+@description('Days a non-US brief is kept before the sweep removes it and its cards (GRID_BRIEF_TTL_DAYS). 0 keeps briefs; US briefs are never aged out.')
+param briefTtlDays int = 30
+
+@description('Hours between retention sweeps (GRID_BRIEF_SWEEP_HOURS).')
+param briefSweepHours int = 6
+
 @description('Custom domains already on the app (name, bindingType, certificateId). ARM replaces the whole ingress block, so the deploy script passes the current list and a redeploy keeps the domains and their certificates.')
 param customDomains array = []
 
@@ -274,6 +286,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (deployApi) {
             { name: 'GRID_STORAGE_ACCOUNT', value: storage.name }
             { name: 'GRID_QUOTA_PER_USER_DAY', value: string(quotaPerUserDay) }
             { name: 'GRID_QUOTA_GLOBAL_DAY', value: string(quotaGlobalDay) }
+            { name: 'GRID_REGIONS', value: regions }
+            { name: 'GRID_DEFAULT_REGION', value: defaultRegion }
+            { name: 'GRID_BRIEF_TTL_DAYS', value: string(briefTtlDays) }
+            { name: 'GRID_BRIEF_SWEEP_HOURS', value: string(briefSweepHours) }
             { name: 'AZURE_CLIENT_ID', value: appIdentity.properties.clientId }
           ]
           probes: [

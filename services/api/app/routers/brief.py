@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 from collections.abc import AsyncIterator
 
@@ -71,6 +72,24 @@ async def _who(request: Request) -> dict | None:
     return {"email": user.email, "remaining": await _gate(request).remaining(user)}
 
 
+def _region_info(r: Region) -> dict:
+    """What the web needs to show a region: its switch label, locale, address
+    box, footer sources and retention (C7)."""
+    return {
+        "id": r.id,
+        "label": r.label,
+        "countries": sorted(r.countries),
+        "places_country": list(r.places_country),
+        "locale": dataclasses.asdict(r.locale),
+        "scenarios": r.scenarios,
+        "placeholder": r.placeholder,
+        "address_label": r.address_label,
+        "geocoder_attribution": r.geocoder_attribution,
+        "sources_line": r.sources_line,
+        "brief_ttl_days": r.brief_ttl_days,
+    }
+
+
 @router.get("/health")
 async def health(request: Request, region: str | None = None) -> dict:
     r = _region(request, region)
@@ -81,8 +100,13 @@ async def health(request: Request, region: str | None = None) -> dict:
         "ok": True,
         "mode": mode,
         "region": r.id,
-        "regions": [{"id": rid, "label": reg.label} for rid, reg in regions.items()],
-        "examples": fixtures.examples() if mode == "fixtures" else [],
+        "regions": [_region_info(reg) for reg in regions.values()],
+        # The asked-for region's settings, at the top level for the page in view.
+        "locale": dataclasses.asdict(r.locale),
+        "scenarios": r.scenarios,
+        "places_country": list(r.places_country),
+        "brief_ttl_days": r.brief_ttl_days,
+        "examples": fixtures.examples(country=r.locale.country) if mode == "fixtures" else [],
         # The dropdown of free addresses; the gate admits exactly these strings.
         "test_addresses": []
         if mode == "fixtures"
@@ -99,14 +123,23 @@ async def health(request: Request, region: str | None = None) -> dict:
 @router.get("/pulse")
 async def pulse(request: Request, region: str | None = None) -> dict:
     """What PeeringDB lists today and the house-terms lines. Measured, free.
-    One per region, each cached on its own."""
+    One per region, each cached on its own: PeeringDB counted over the region's
+    own countries, its house-terms lines, and the what-if slider's constants
+    only where the what-if runs."""
     r = _region(request, region)
     if _mode(request) == "fixtures":
         return {"peeringdb": None, "equivalences": []}
     pulses: dict[str, Pulse] = request.app.state.pulses
     p = pulses.get(r.id)
     if p is None:
-        p = pulses[r.id] = Pulse(_service(request, r).ground, constants=r.constants)
+        p = pulses[r.id] = Pulse(
+            _service(request, r).ground,
+            constants=r.constants,
+            region_id=r.id,
+            label=r.label,
+            countries=r.pulse_countries,
+            scenarios=r.scenarios,
+        )
     return await p.get()
 
 
@@ -136,7 +169,7 @@ async def _admit(body: BriefRequest, request: Request, region: Region) -> Resolv
 async def create_brief(body: BriefRequest, request: Request) -> dict:
     region = _region(request, body.region)
     if _mode(request) == "fixtures":
-        key = fixtures.resolve_address(body.address)
+        key = fixtures.resolve_address(body.address, country=region.locale.country)
         if key is None:
             raise HTTPException(404, "fixture_not_matched")
         return fixtures.by_key(key) or {}
@@ -168,7 +201,7 @@ async def stream_brief(body: BriefRequest, request: Request) -> StreamingRespons
     "status":...,"detail":...} on a 200 transport, since the headers are long gone."""
     region = _region(request, body.region)
     if _mode(request) == "fixtures":
-        key = fixtures.resolve_address(body.address)
+        key = fixtures.resolve_address(body.address, country=region.locale.country)
         if key is None:
             raise HTTPException(404, "fixture_not_matched")
         brief = fixtures.by_key(key) or {}

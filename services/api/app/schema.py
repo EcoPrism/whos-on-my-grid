@@ -82,6 +82,20 @@ HOUSE_DRAFT = {
     },
 }
 
+
+def _metric_house_draft() -> dict[str, Any]:
+    """HOUSE_DRAFT for a metric region: the same shape, numbers compared to
+    kilometres and pitches instead of miles and fields."""
+    out = copy.deepcopy(HOUSE_DRAFT)
+    text = out["properties"]["lines"]["items"]["properties"]["text"]
+    text["description"] = text["description"].replace(
+        "(homes, miles, fields)", "(homes, kilometres, pitches)"
+    )
+    return out
+
+
+HOUSE_DRAFT_METRIC = _metric_house_draft()
+
 VERDICT_SCHEMA = {
     "type": "object",
     "required": ["verdict", "note"],
@@ -158,7 +172,7 @@ def scenario_errors(scenario: dict[str, Any]) -> list[str]:
 
 # Keys the engine owns and a model never fills: pruned from the draft schemas,
 # so the prompts and strict schemas stay as they were before the key existed.
-_ENGINE_ONLY: dict[str, tuple[str, ...]] = {"price": ("granularity",)}
+_ENGINE_ONLY: dict[str, tuple[str, ...]] = {"price": ("granularity",), "tariff": ("kind",)}
 
 
 def _defs() -> dict[str, Any]:
@@ -318,13 +332,15 @@ def _allows_null(schema: dict[str, Any]) -> bool:
 
 
 @lru_cache
-def house_schemas() -> tuple[dict[str, Any], dict[str, Any]]:
-    """(original, strict) schemas for the at-your-house draft."""
-    return HOUSE_DRAFT, strictify(copy.deepcopy(HOUSE_DRAFT))
+def house_schemas(units: str = "us") -> tuple[dict[str, Any], dict[str, Any]]:
+    """(original, strict) schemas for the at-your-house draft; `units` is the
+    region's locale.units ("us" or "metric")."""
+    base = HOUSE_DRAFT if units == "us" else HOUSE_DRAFT_METRIC
+    return base, strictify(copy.deepcopy(base))
 
 
-def validate_house_draft(draft: dict[str, Any]) -> dict[str, Any]:
-    original, _ = house_schemas()
+def validate_house_draft(draft: dict[str, Any], units: str = "us") -> dict[str, Any]:
+    original, _ = house_schemas(units)
     pruned = prune_nulls(draft, original)
     Draft202012Validator(original, format_checker=FormatChecker()).validate(pruned)
     return pruned
@@ -341,6 +357,7 @@ def validate_draft(section_id: str, draft: dict[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "HOUSE_DRAFT",
+    "HOUSE_DRAFT_METRIC",
     "HOUSE_TOPICS",
     "SECTION_EXTRA",
     "SECTION_IDS",

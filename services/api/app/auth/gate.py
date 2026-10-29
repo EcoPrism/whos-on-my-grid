@@ -1,6 +1,6 @@
 """Who may spend model tokens. A cached brief, or one already being made, is
 served to anyone. A new brief is made for: a signed-in user with quota left
-today, or anyone for an address in the test set (eval/addresses.json), so
+today, or anyone for an address in a region's test set (eval/<region>/addresses.json), so
 the demo dropdown works without an account. Both count toward the global
 daily cap, which is the gateway budget's belt. A what-if's interpretation
 (`admit_scenario`) needs a signed-in user with quota left; it is charged as
@@ -17,11 +17,11 @@ from app.config import REPO_ROOT, Settings
 from app.geocode import normalise
 from app.telemetry import log_event
 
-TEST_SET = REPO_ROOT / "eval" / "addresses.json"
+TEST_SET = REPO_ROOT / "eval" / "us" / "addresses.json"
 # run_eval.py resolves each test address to a numbered one through the Census geocoder
 # and keeps the result here. The web dropdown shows the numbered form, so both spellings
 # are on the allow-list and the dropdown is served from this same file.
-RESOLVED = REPO_ROOT / "eval" / "resolved.json"
+RESOLVED = REPO_ROOT / "eval" / "us" / "resolved.json"
 
 
 def _load(path) -> dict:

@@ -32,7 +32,9 @@ COPY schema /app/schema
 COPY data/equivalences.json /app/data/
 COPY data/regions /app/data/regions
 COPY fixtures /app/fixtures
-COPY eval/addresses.json eval/resolved.json /app/eval/
+# Each region's test set (eval/<region>/addresses.json and resolved.json): the
+# .dockerignore allow-list keeps runs and scripts out.
+COPY eval /app/eval
 COPY --from=web /web/dist /app/web/dist
 
 # Briefs and downloaded datasets go to a mounted share in production

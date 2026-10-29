@@ -8,6 +8,7 @@ from app.brief.prompts import house_prompt, house_system_prompt, section_prompt,
 from app.geocode import GeocodeResult
 from app.ground.types import GroundTruth
 from app.llm.base import LLMError, LLMProvider
+from app.regions.locale import US_LOCALE, Locale
 from app.schema import (
     SECTION_EXTRA,
     ValidationError,
@@ -45,11 +46,13 @@ async def draft_section(
     geo: GeocodeResult,
     now_iso: str,
     truth: GroundTruth | None = None,
+    *,
+    locale: Locale = US_LOCALE,
 ) -> DraftResult | SectionFailure:
     _, strict = draft_schemas(section_id)
     messages = [
-        {"role": "system", "content": system_prompt(now_iso)},
-        {"role": "user", "content": section_prompt(section_id, geo, truth)},
+        {"role": "system", "content": system_prompt(now_iso, locale=locale)},
+        {"role": "user", "content": section_prompt(section_id, geo, truth, locale=locale)},
     ]
     last: Exception | None = None
     for attempt in range(1, ATTEMPTS + 1):
@@ -87,19 +90,21 @@ async def draft_house_lines(
     now_iso: str,
     summaries: dict[str, str],
     truth: GroundTruth | None = None,
+    *,
+    locale: Locale = US_LOCALE,
 ) -> list[dict[str, Any]]:
     """The model's part of the at-your-house strip: two or three lines, each
     with its claims. Drafted after the sections, from their summaries. A
     failure leaves the strip to the bill sentence alone; nothing else breaks."""
-    _, strict = house_schemas()
+    _, strict = house_schemas(locale.units)
     messages = [
-        {"role": "system", "content": house_system_prompt(now_iso)},
-        {"role": "user", "content": house_prompt(geo, summaries, truth)},
+        {"role": "system", "content": house_system_prompt(now_iso, locale=locale)},
+        {"role": "user", "content": house_prompt(geo, summaries, truth, locale=locale)},
     ]
     for attempt in range(1, ATTEMPTS + 1):
         try:
             raw = await provider.complete_structured(messages, strict, "draft_at_your_house")
-            return list(validate_house_draft(raw)["lines"])
+            return list(validate_house_draft(raw, locale.units)["lines"])
         except (LLMError, ValidationError) as exc:
             log_event(
                 "draft_failed",

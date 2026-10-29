@@ -1,0 +1,37 @@
+{
+ "_note": "Live response, captured 2026-10-29 from nominatim.openstreetmap.org with the app's User-Agent and accept-language=en (countrycodes=ie, limit=1 on search). q=Dublin 15: a postal_district hit with no county and no ISO code, so the geocoder asks /reverse.",
+ "request": {
+  "path": "search",
+  "q": "Dublin 15"
+ },
+ "response": [
+  {
+   "place_id": 275824611,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1177895,
+   "lat": "53.3949346",
+   "lon": "-6.3892085",
+   "category": "boundary",
+   "type": "postal_district",
+   "place_rank": 12,
+   "importance": 0.2400801594567788,
+   "addresstype": "postal_district",
+   "name": "Dublin 15",
+   "display_name": "Dublin 15, Leinster, Ireland",
+   "address": {
+    "postal_district": "Dublin 15",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.3534895",
+    "53.4363461",
+    "-6.4544440",
+    "-6.3198370"
+   ]
+  }
+ ]
+}

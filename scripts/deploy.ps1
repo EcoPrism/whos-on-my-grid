@@ -112,6 +112,12 @@ function Invoke-Deploy([bool] $DeployApi, [string] $Image) {
       }
     }
   }
+  # Region settings, with fallbacks for a deploy.json written before step 6:
+  # the US alone, non-US briefs kept 30 days, a sweep every 6 hours.
+  $regions = if ($cfg.regions) { [string]$cfg.regions } else { 'us' }
+  $defaultRegion = if ($cfg.defaultRegion) { [string]$cfg.defaultRegion } else { 'us' }
+  $briefTtlDays = if ($null -ne $cfg.briefTtlDays) { [int]$cfg.briefTtlDays } else { 30 }
+  $briefSweepHours = if ($cfg.briefSweepHours) { [int]$cfg.briefSweepHours } else { 6 }
   $params = @{
     '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
     contentVersion = '1.0.0.0'
@@ -123,6 +129,10 @@ function Invoke-Deploy([bool] $DeployApi, [string] $Image) {
       quotaPerUserDay  = @{ value = [int]$cfg.quotaPerUserDay }
       quotaGlobalDay   = @{ value = [int]$cfg.quotaGlobalDay }
       publicBaseUrl    = @{ value = [string]$cfg.publicBaseUrl }
+      regions          = @{ value = $regions }
+      defaultRegion    = @{ value = $defaultRegion }
+      briefTtlDays     = @{ value = $briefTtlDays }
+      briefSweepHours  = @{ value = $briefSweepHours }
       customDomains    = @{ value = @($domains) }
       containerImage   = @{ value = $Image }
       deployApi        = @{ value = $DeployApi }

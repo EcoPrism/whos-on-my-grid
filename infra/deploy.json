@@ -8,5 +8,9 @@
   "verifyModel": "meta-models/muse-spark-open-1026",
   "quotaPerUserDay": 5,
   "quotaGlobalDay": 40,
-  "publicBaseUrl": "https://whoisonmygrid.com"
+  "publicBaseUrl": "https://mygrid.ai",
+  "regions": "us",
+  "defaultRegion": "us",
+  "briefTtlDays": 30,
+  "briefSweepHours": 6
 }

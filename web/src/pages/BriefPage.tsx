@@ -8,9 +8,10 @@ import ShareCard from '../components/ShareCard'
 import ShareMenu from '../components/ShareMenu'
 import { ApiError, getBrief } from '../lib/api'
 import { useLive } from '../lib/live'
-import type { Brief, Section, SectionId, Status } from '../types'
+import type { Brief, Locale, Section, SectionId, Status } from '../types'
 import type { Live } from '../lib/live'
-import { fmtMoney, fmtRange } from '../lib/format'
+import { fmtMoney, fmtRange, localeOf, nearKm, nearWords, periodLabel, ringRadius } from '../lib/format'
+import { publishRegion, regionOfBrief, useCurrentRegion } from '../lib/region'
 
 const ORDER: SectionId[] = ['on_your_grid', 'coming', 'your_bill', 'protection', 'hearing']
 
@@ -78,6 +79,16 @@ export default function BriefPage() {
 function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; open: SectionId | null; setOpen: (id: SectionId | null) => void }) {
   const a = brief.address
   const h = brief.headline
+  const locale = localeOf(brief)
+  const us = locale.country === 'US'
+  // The brief's own region (found by its locale's country) names the footer's
+  // sources and the geocoder's attribution line.
+  const { regions } = useCurrentRegion()
+  const region = regionOfBrief(regions, brief)
+  const regionId = region?.id ?? null
+  useEffect(() => {
+    if (regionId) publishRegion(undefined, regionId)
+  }, [regionId])
   // While the stream runs, facts are final but every sentence a model wrote
   // is a draft until the second model has checked its claims.
   const inProgress = live !== undefined && live.stage !== 'done'
@@ -86,7 +97,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
   const bill = brief.sections.your_bill
   const facilities = [...(brief.sections.on_your_grid.facilities ?? []), ...(brief.sections.coming.facilities ?? [])].filter((f) => f.status !== 'rejected')
   const placed = facilities.filter((f) => typeof f.lat === 'number').length
-  const withinMile = facilities.filter((f) => f.distance_km <= 1.61).length
+  const withinMile = facilities.filter((f) => f.distance_km <= nearKm(locale.units)).length
 
   return (
     <main className="pb-16">
@@ -108,13 +119,13 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
           {placed > 0 && (
             <p className="pointer-events-none absolute bottom-6 left-3 z-[1000] border-2 border-[var(--ink)] bg-[var(--paper)]/95 px-2.5 py-1.5 text-sm font-semibold">
               <span className="num">{placed}</span> {placed === 1 ? 'facility' : 'facilities'} plotted
-              {withinMile > 0 && <span className="num font-normal text-[var(--ink-soft)]"> · {withinMile} within a mile</span>}
+              {withinMile > 0 && <span className="num font-normal text-[var(--ink-soft)]"> · {withinMile} {nearWords(locale.units)}</span>}
             </p>
           )}
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] p-3 sm:left-4 sm:right-auto sm:max-w-md sm:p-5">
           <div className="pointer-events-auto border-2 border-[var(--ink)] bg-[var(--paper)]/95 p-4 shadow-[6px_6px_0_var(--ink)] backdrop-blur-sm">
-            <p className="text-sm text-[var(--ink-soft)]">{a.county ? `${a.county} County, ` : ''}{a.state}{a.utility ? ` · served by ${a.utility}` : ''}</p>
+            <p className="text-sm text-[var(--ink-soft)]">{placeLine(a, us)}{a.utility ? ` · served by ${a.utility}` : ''}</p>
             <h1 className="sign mt-1 text-[clamp(1.9rem,5vw,3rem)]">{a.display}</h1>
             <div className="mt-3 flex items-end justify-between gap-4">
               {inProgress && (!h.one_liner || h.one_liner === NO_SUMMARY) ? (
@@ -130,11 +141,11 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
                   {/* A modeled number is shown as a range, in the modeled colour, with the
                       same status tag as its card. Never a solid point estimate. */}
                   <span className="block text-3xl font-extrabold leading-none text-[var(--modelled)]">
-                    {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month) : `about ${fmtMoney(h.ai_rent_usd_per_month)}`}
+                    {h.ai_rent_range_usd_per_month ? fmtRange(h.ai_rent_range_usd_per_month, locale.currency) : `about ${fmtMoney(h.ai_rent_usd_per_month, locale.currency)}`}
                   </span>
-                  <span className="block text-xs text-[var(--ink-soft)]">a month, typical home, {periodWords(bill.price?.as_of, bill.price?.window_months)}</span>
+                  <span className="block text-xs text-[var(--ink-soft)]">a month, typical home, {periodWords(bill.price)}</span>
                   <span className="tag-modelled block text-xs font-semibold">
-                    Modeled{bill.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(bill.confidence * 100)}%</span>}
+                    {modelledWord(locale)}{bill.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(bill.confidence * 100)}%</span>}
                   </span>
                 </p>
               )}
@@ -143,13 +154,13 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
         </div>
         <p className="px-4 pt-2 text-xs text-[var(--ink-soft)] sm:px-0">
           {placed > 0 && <><span className="num">{placed}</span> {placed === 1 ? 'line ties the one facility' : 'lines tie each facility'} to your address and flow toward it: ink live, amber under construction, blue announced; thicker means more load. </>}
-          Dashed ring: five miles. Green outlines: footprints measured from aerial imagery.
+          Dashed ring: {ringRadius(locale.units)}. Green outlines: footprints measured from aerial imagery.
         </p>
       </div>
 
       {/* The plain-language layer. The cards below are for the reporter; this is for everyone. */}
       {brief.at_your_house && brief.at_your_house.length > 0 && (
-        <div className="mt-4"><HouseStrip lines={brief.at_your_house} checking={inProgress} /></div>
+        <div className="mt-4"><HouseStrip lines={brief.at_your_house} checking={inProgress} locale={locale} /></div>
       )}
 
       {/* Five tiles: the whole brief at a glance. One opens at a time. */}
@@ -172,7 +183,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
                 className={`tile tile-${s.status} flex min-h-[7.5rem] flex-col items-start p-3 text-left transition-colors ${pending ? 'breathe' : ''} ${isOpen ? 'bg-[var(--ink)] text-[var(--paper)]' : 'bg-white hover:bg-[var(--paper-deep)]'}`}
               >
                 <span className={`text-xs font-semibold ${isOpen ? 'opacity-80' : soft ? 'text-[var(--ink-soft)]' : `tag-${s.status}`}`}>
-                  {pending ? 'Drafting' : r === 'draft' ? 'Draft' : STATUS_WORD[s.status]}
+                  {pending ? 'Drafting' : r === 'draft' ? 'Draft' : s.status === 'modelled' ? modelledWord(locale) : STATUS_WORD[s.status]}
                   {r === 'final' && s.status !== 'unavailable' && <span className="num font-normal"> · {Math.round(s.confidence * 100)}%</span>}
                   {(r === 'draft' || r === 'engine') && <span className="font-normal"> · not yet checked</span>}
                 </span>
@@ -185,7 +196,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
 
         {open && (
           <div id={`panel-${open}`} role="tabpanel" className="mt-6 border-t-2 border-[var(--ink)] pt-6">
-            <SectionBlock id={open} section={brief.sections[open]} readiness={readiness(brief, open, inProgress)} />
+            <SectionBlock id={open} section={brief.sections[open]} readiness={readiness(brief, open, inProgress)} locale={locale} />
           </div>
         )}
 
@@ -207,7 +218,7 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
           {!inProgress && (
           <details className="mt-2">
             <summary className="cursor-pointer text-sm text-[var(--ink-soft)]">Preview the card</summary>
-            {h.percentile !== null && h.ai_rent_usd_per_month !== null && (
+            {us && h.percentile !== null && h.ai_rent_usd_per_month !== null && (
               <p className="mt-3 max-w-[64ch] text-[15px] text-[var(--ink-soft)]">
                 About {fmtMoney(h.ai_rent_usd_per_month)} a month puts this address above {h.percentile}% of US households, weighted by state population. Modeled from the state's average price and a typical home's usage.
               </p>
@@ -218,7 +229,8 @@ function BriefView({ brief, live, open, setOpen }: { brief: Brief; live?: Live; 
         </div>
 
         <p className="mt-6 text-xs text-[var(--ink-soft)]">
-          Brief {brief.brief_id}, generated {new Date(brief.generated_at).toLocaleString('en-US')}, mode {brief.source_mode}. The address is not stored; the id is a hash of it.
+          Brief {brief.brief_id}, generated {new Date(brief.generated_at).toLocaleString(locale.language)}, mode {brief.source_mode}. The address is not stored; the id is a hash of it.
+          {region?.geocoder_attribution && <> Geocoding {region.geocoder_attribution}.</>}
         </p>
       </div>
     </main>
@@ -286,8 +298,25 @@ function readiness(brief: Brief, id: SectionId, inProgress: boolean): Readiness 
   return claims.length > 0 && claims.every((c) => c.drafted_by === 'engine') ? 'engine' : 'draft'
 }
 
-// Annual utility data is labelled by its years; a series to the present says "vs 2 yrs ago".
-function periodWords(asOf: string | undefined, windowMonths: number | undefined) {
+// "Modeled" in the US, "Modelled" elsewhere.
+function modelledWord(locale: Locale) {
+  return locale.language === 'en-US' ? 'Modeled' : 'Modelled'
+}
+
+// The line over the address: "Loudoun County, VA" in the US; outside it the
+// county field is the planning authority and is printed as it comes.
+function placeLine(a: Brief['address'], us: boolean) {
+  if (us) return `${a.county ? `${a.county} County, ` : ''}${a.state ?? ''}`
+  return a.county ?? ''
+}
+
+// Annual utility data is labelled by its years; a semiannual series by its
+// half-years ("H1 2026 vs H1 2024"); a series to the present says "vs 2 yrs ago".
+function periodWords(price: Section['price']) {
+  const half = periodLabel(price)
+  if (half) return half.both
+  const asOf = price?.as_of
+  const windowMonths = price?.window_months
   if (asOf && asOf.endsWith('-12')) {
     const year = Number(asOf.slice(0, 4))
     return `${year} vs ${year - Math.max(1, Math.floor((windowMonths ?? 24) / 12))}`
@@ -307,6 +336,13 @@ function stateForError(err: unknown): State {
 function tileLine(id: SectionId, s: Section): string {
   if (id === 'protection' && s.tariff && s.status !== 'unavailable') {
     const t = s.tariff
+    if (t.kind === 'connection_policy') {
+      // Said only by its stated aim, never as a finding about bills.
+      const name = t.name ?? 'A connection policy'
+      if (t.protects_households === false) return `No. ${name} is ${t.large_load_tariff === 'in_force' ? 'in force' : 'on record'}; keeping costs off household bills is not its stated aim.`
+      if (t.protects_households === true) return `Yes, in part. ${name} aims to keep some build-out costs off household bills.`
+      return 'Not known whether anything shields household bills.'
+    }
     const name = t.name ?? 'A large-load tariff'
     if (t.protects_households === true) return `Yes, in part. ${name} is in force and keeps some build-out costs off household bills.`
     if (t.protects_households === false) {

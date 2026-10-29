@@ -1,11 +1,17 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { latLngBounds, type FitBoundsOptions, type PathOptions } from 'leaflet'
-import { Circle, CircleMarker, MapContainer, Polygon, Polyline, Popup, TileLayer, ZoomControl, useMap } from 'react-leaflet'
-import type { Facility } from '../types'
+import { Circle, CircleMarker, MapContainer, Polygon, Polyline, Popup, TileLayer, Tooltip, ZoomControl, useMap } from 'react-leaflet'
+import type { Facility, Units } from '../types'
 
 export type LatLon = [number, number]
 
 export const FIVE_MILES_M = 8047
+export const EIGHT_KM_M = 8000
+
+// The brief's ring: five miles in the US, 8 km where the units are metric.
+export function ringRadiusM(units: Units = 'us') {
+  return units === 'us' ? FIVE_MILES_M : EIGHT_KM_M
+}
 
 // Status is the only color on the map, as on the page.
 export const STATUS_COLOR: Record<Facility['status'], string> = {
@@ -54,6 +60,8 @@ export interface GridPolygon {
 
 export interface GridRing {
   key: string
+  // Shown on hover: what the ring measures ("The 8 km ring").
+  label?: string
   center: LatLon
   radiusM: number
   pathOptions: PathOptions
@@ -190,7 +198,9 @@ export default function GridMap({
       <Refit viewKey={viewKey} center={center} frame={frame} zoom={zoom} boundsOptions={boundsOptions} />
 
       {rings.map((r) => (
-        <Circle key={r.key} center={r.center} radius={r.radiusM} pathOptions={r.pathOptions} />
+        <Circle key={r.key} center={r.center} radius={r.radiusM} pathOptions={r.pathOptions}>
+          {r.label && <Tooltip sticky>{r.label}</Tooltip>}
+        </Circle>
       ))}
 
       {lines.map((l) => (

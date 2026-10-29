@@ -7,19 +7,23 @@ import dataclasses
 import re
 from typing import Any
 
+from app.brief import units as u
 from app.brief.draft import DraftResult, SectionFailure
 from app.brief.headline import (
     Drafts,
     bill_house_line,
     derive_card,
     derive_headline,
+    half_year,
     land_house_line,
     monthly_change,
     noise_house_line,
 )
+from app.brief.vocab import CONNECTION_POLICY_AIM, US_VOCAB, Vocab, vocab_for
 from app.config import DRAFT_MODEL_ID
 from app.geocode import GeocodeResult
 from app.ground.facilities import compass, haversine_km
+from app.ground.hearings import DECISION_RADIUS_KM
 from app.ground.prices import EPM_TABLE_TITLE, EPM_TABLE_URL
 from app.ground.types import (
     ConstructionSite,
@@ -31,11 +35,12 @@ from app.ground.types import (
 )
 from app.regions.locale import US_LOCALE, Locale
 from app.schema import SECTION_IDS
+from app.telemetry import log_event
 
-KM_TO_MI = 0.621371
+KM_TO_MI = u.KM_TO_MI
+HIFLD_TITLE = "Electric Retail Service Territories (HIFLD, via EIA Atlas)"
 ENGINE_CLAIM_FACILITIES = 5  # nearest facilities that get their own checkable claim
 BEYOND_MENTION_MAX = 5  # a sparse ring names the campus beyond it; a dense one need not
-DECISION_RADIUS_KM = 25.0  # a campus voted on within 15 miles is this address's news
 MONTHS = [
     "January", "February", "March", "April", "May", "June", "July", "August", "September",
     "October", "November", "December",
@@ -60,13 +65,22 @@ _EMPTY_EXTRA: dict[str, dict[str, Any]] = {
 # Strip lines about impact need a facility to be about. These words mark a
 # line that says there is none to report, which may stay.
 _SAYS_NONE = re.compile(
-    r"not (known|public|published)|no (data[- ]center|facilit|nearby|building)", re.I
+    r"not (known|public|published)|no (data[- ]cent(?:er|re)|facilit|nearby|building)", re.I
 )
 _IMPACT_TOPICS = {"noise", "water", "air", "land"}
 # The order people feel them: the bill, then water, then noise, then the rest.
 _TOPIC_ORDER = {
     t: i for i, t in enumerate(["bill", "water", "noise", "land", "air", "grid", "taxes", "other"])
 }
+
+# Plan 0.6: the card line for a connection policy whose stated purpose is not
+# household costs (CONNECTION_POLICY_AIM is the summary's sentence).
+CONNECTION_POLICY_CARD = (
+    "CRU data-centre connection policy in force; household bills not its stated aim"
+)
+NO_TYPICAL_USE = (
+    "No typical household consumption figure is on record, so the monthly change is not computed."
+)
 
 
 def assemble_brief(
@@ -80,33 +94,43 @@ def assemble_brief(
     truth: GroundTruth | None = None,
     public_base_url: str = "",
     locale: Locale = US_LOCALE,
+    coverage: frozenset[str] | None = None,
 ) -> dict[str, Any]:
+    """`locale` sets the words, units and currency of what the engine writes (the
+    US default is byte-identical to the engine before regions). `coverage` names
+    the sections this region can make `measured`; any other section that came out
+    measured is downgraded to `reported`. None: every section."""
     claims: list[dict[str, Any]] = []
     sections: dict[str, Any] = {}
     card_lines: list[str] = []
+    v = vocab_for(locale)
 
     for sid in SECTION_IDS:
         d = drafts.get(sid)
         section = _from_draft(sid, d, claims, now_iso)
         card_line = d.card_line if isinstance(d, DraftResult) else None
         if truth is not None:
-            section, card_line = _ground(sid, section, d, truth, claims, now_iso, geo, card_line)
+            section, card_line = _ground(
+                sid, section, d, truth, claims, now_iso, geo, card_line, locale
+            )
         sections[sid] = section
         if card_line:
             card_lines.append(card_line)
 
     if truth is not None and truth.utility is not None:
+        utility = truth.utility
         claims.append(
             _engine_claim(
                 "on_your_grid",
-                f"The electric retail service territory at this point is {truth.utility.raw_name} "
-                f"({truth.utility.kind.lower()}) in the HIFLD / EIA service-territory map"
-                + (
-                    f", EIA utility number {truth.utility.eia_id}." if truth.utility.eia_id else "."
+                utility.claim_text
+                or (
+                    f"The electric retail service territory at this point is {utility.raw_name} "
+                    f"({utility.kind.lower()}) in the HIFLD / EIA service-territory map"
+                    + (f", EIA utility number {utility.eia_id}." if utility.eia_id else ".")
                 ),
-                truth.utility.source_url,
-                "Electric Retail Service Territories (HIFLD, via EIA Atlas)",
-                truth.utility.raw_name,
+                utility.source_url,
+                utility.source_title or HIFLD_TITLE,
+                utility.quote if utility.quote is not None else utility.raw_name,
                 len(claims) + 1,
                 now_iso,
             )
@@ -114,28 +138,26 @@ def assemble_brief(
         sections["on_your_grid"]["sources"] = _distinct_sources(
             [c for c in claims if c["section"] == "on_your_grid"]
         )
+    elif truth is not None and v.outside_map and not _utility_failed(truth, v):
+        grid = sections["on_your_grid"]
+        grid["gap"] = " ".join(filter(None, [grid.get("gap"), v.outside_map]))
 
-    at_your_house = _strip(sections, house or [], claims, now_iso, truth)
+    if coverage is not None:
+        for sid in SECTION_IDS:
+            if sid not in coverage and sections[sid].get("status") == "measured":
+                sections[sid]["status"] = "reported"
+                log_event("coverage_downgrade", section=sid)
+
+    at_your_house = _strip(sections, house or [], claims, now_iso, truth, locale)
 
     return {
         "brief_id": brief_id,
         "generated_at": now_iso,
         "source_mode": "full" if truth is not None else "agent",
         "fixture": False,
-        "address": {
-            "display": geo.display,
-            "lat": geo.lat,
-            "lon": geo.lon,
-            "state": geo.state,
-            **({"county": geo.county} if geo.county else {}),
-            "zip": geo.zip,
-            "country": geo.country,
-            "region_code": geo.region_code,
-            "postal_code": geo.postal_code,
-            "utility": truth.utility.name if truth is not None and truth.utility else None,
-        },
+        "address": _address(geo, truth),
         "locale": dataclasses.asdict(locale),
-        "headline": derive_headline(sections, geo, truth),
+        "headline": derive_headline(sections, geo, truth, locale=locale),
         "sections": sections,
         "claims": claims,
         "at_your_house": at_your_house[:5],
@@ -150,6 +172,31 @@ def assemble_brief(
             public_base_url=public_base_url,
         ),
     }
+
+
+def _address(geo: GeocodeResult, truth: GroundTruth | None) -> dict[str, Any]:
+    """The address block. `state` and `zip` are US aliases, written only for a
+    US address; elsewhere country, region_code, county and postal_code."""
+    us = geo.country == "US"
+    return {
+        "display": geo.display,
+        "lat": geo.lat,
+        "lon": geo.lon,
+        **({"state": geo.state} if us else {}),
+        **({"county": geo.county} if geo.county else {}),
+        **({"zip": geo.zip} if us else {}),
+        "country": geo.country,
+        "region_code": geo.region_code,
+        "postal_code": geo.postal_code,
+        "utility": truth.utility.name if truth is not None and truth.utility else None,
+    }
+
+
+def _utility_failed(truth: GroundTruth, v: Vocab) -> bool:
+    """The utility provider raised (its failure note is in `notes`), as opposed
+    to the point lying outside the map, which leaves no note."""
+    marker = f"the serving {v.utility_word} is not known"
+    return any(marker in n for n in truth.notes)
 
 
 # --- drafts -------------------------------------------------------------------
@@ -198,21 +245,30 @@ def _ground(
     now_iso: str,
     geo: GeocodeResult,
     card_line: str | None,
+    locale: Locale = US_LOCALE,
 ) -> tuple[dict[str, Any], str | None]:
     drafted = isinstance(d, DraftResult)
     if sid == "on_your_grid" and truth.facilities is not None:
-        return _grid_section(section, d, truth, claims, now_iso, drafted, card_line, geo)
+        return _grid_section(section, d, truth, claims, now_iso, drafted, card_line, geo, locale)
     if sid == "coming":
-        return _coming_section(section, truth, claims, now_iso, geo, drafted, card_line)
+        return _coming_section(section, truth, claims, now_iso, geo, drafted, card_line, locale)
     if sid == "hearing":
-        return _hearing_section(section, truth, claims, now_iso, geo, card_line)
-    if sid == "your_bill" and truth.best_price is not None:
-        return _bill_section(section, d, truth, claims, now_iso, geo, drafted, card_line)
+        return _hearing_section(section, truth, claims, now_iso, geo, card_line, locale)
+    if sid == "your_bill" and _usable(truth.best_price) is not None:
+        return _bill_section(section, d, truth, claims, now_iso, geo, drafted, card_line, locale)
     if sid == "protection" and truth.tariff is not None:
         return _protection_section(section, truth, claims, now_iso, drafted, card_line)
-    if truth.notes and sid in ("on_your_grid", "your_bill"):
-        section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes]))
+    notes = list(truth.notes)
+    if sid == "your_bill" and truth.best_price is not None:
+        notes.append(NO_TYPICAL_USE)  # a price without a typical home is not a bill change
+    if notes and sid in ("on_your_grid", "your_bill"):
+        section["gap"] = " ".join(filter(None, [section.get("gap"), *notes]))
     return section, card_line
+
+
+def _usable(p: PriceSeries | None) -> PriceSeries | None:
+    """A series the bill can be computed from: it needs a typical home's use."""
+    return p if p is not None and p.typical_kwh_month is not None else None
 
 
 def _grid_section(
@@ -224,7 +280,10 @@ def _grid_section(
     drafted: bool,
     card_line: str | None,
     geo: GeocodeResult,
+    locale: Locale = US_LOCALE,
 ) -> tuple[dict[str, Any], str | None]:
+    v = vocab_for(locale)
+    units = locale.units
     engine = truth.facilities or []
     spark = {_key(f["name"]): f for f in (section.get("facilities") or [])} if drafted else {}
     facilities = [_facility(f, spark.get(_key(f.name))) for f in engine]
@@ -233,10 +292,10 @@ def _grid_section(
     own = [
         _engine_claim(
             "on_your_grid",
-            _facility_claim(f),
+            _facility_claim(f, v),
             f.source_url,
             f.source_title,
-            f.name or "",
+            _facility_quote(f),
             n,
             now_iso,
         )
@@ -268,10 +327,10 @@ def _grid_section(
         claims.append(
             _engine_claim(
                 "on_your_grid",
-                _facility_claim(beyond),
+                _facility_claim(beyond, v),
                 beyond.source_url,
                 beyond.source_title,
-                beyond.name or "",
+                _facility_quote(beyond),
                 len(claims) + 1,
                 now_iso,
             )
@@ -281,13 +340,14 @@ def _grid_section(
     live = sum(1 for f in engine if f.status == "live")
     building = len(engine) - live
     if not drafted:
-        section["summary"] = _grid_summary(engine, live, building, beyond, geo)
+        section["summary"] = _grid_summary(engine, live, building, beyond, geo, locale)
         section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes])) or None
     elif truth.notes:
         section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes]))
     if drafted and beyond is not None and not _mentions(section.get("summary"), beyond):
         section["summary"] = (
-            f"{(section.get('summary') or '').rstrip()} {_beyond_sentence(beyond, geo)}".strip()
+            f"{(section.get('summary') or '').rstrip()} "
+            f"{_beyond_sentence(beyond, geo, units)}".strip()
         )
     section["facilities"] = facilities
     section["status"] = "measured"
@@ -295,22 +355,33 @@ def _grid_section(
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "on_your_grid"])
     # The count is the engine's arithmetic; a drafted card line that disagrees is dropped.
     if truth.facilities is not None or not card_line:
+        ring = u.card_radius(units)
         card_line = (
-            f"{len(engine)} data center{'s' if len(engine) != 1 else ''} within 5 miles"
+            f"{len(engine)} {v.dc_noun if len(engine) == 1 else v.dc_plural} within {ring}"
             if engine
-            else "No data centers listed within 5 miles"
+            else f"No {v.dc_plural} listed within {ring}"
         )
     return section, card_line
 
 
-def _facility_claim(f: GroundFacility) -> str:
+def _facility_quote(f: GroundFacility) -> str:
+    """The verbatim quote for _facility_claim: the organization when the shown
+    name is a stand-in for a hidden PeeringDB record name, else the name."""
+    if f.name_from_org and f.operator_known:
+        return f.operator
+    return f.name or ""
+
+
+def _facility_claim(f: GroundFacility, v: Vocab = US_VOCAB) -> str:
     """Only what the cited page itself shows: the record exists and what it is
     tagged as. Distance is the engine's arithmetic, not the page's."""
     if "peeringdb" in f.providers:
+        if f.name_from_org and f.operator_known:
+            return f"PeeringDB lists a facility under the organization {f.operator}."
         return f"PeeringDB lists a facility named {f.name}" + (
             f" under the organization {f.operator}." if f.operator_known else "."
         )
-    tag = "under construction" if f.status == "under_construction" else "a data center"
+    tag = "under construction" if f.status == "under_construction" else f"a {v.dc_noun}"
     what = f"{f.buildings} buildings" if f.buildings > 1 else "a building"
     name = (
         f" named {f.name}"
@@ -333,11 +404,11 @@ def _mentions(summary: str | None, b: GroundFacility) -> bool:
     return b.name.lower() in text or b.operator.lower() in text
 
 
-def _beyond_sentence(b: GroundFacility, geo: GeocodeResult) -> str:
+def _beyond_sentence(b: GroundFacility, geo: GeocodeResult, units: u.Units = "us") -> str:
     what = b.name if b.operator.lower() in b.name.lower() else f"{b.name} ({b.operator})"
     return (
-        f"The nearest large campus beyond the five-mile ring is {what}, "
-        f"{b.distance_km * KM_TO_MI:.1f} miles to the {compass(geo.lat, geo.lon, b.lat, b.lon)}, "
+        f"The nearest large campus beyond {u.ring_words(units)} is {what}, "
+        f"{u.dist(b.distance_km, units)} to the {compass(geo.lat, geo.lon, b.lat, b.lon)}, "
         "outside the ring this brief measures."
     )
 
@@ -348,11 +419,17 @@ def _grid_summary(
     building: int,
     beyond: GroundFacility | None = None,
     geo: GeocodeResult | None = None,
+    locale: Locale = US_LOCALE,
 ) -> str:
-    tail = f" {_beyond_sentence(beyond, geo)}" if beyond is not None and geo is not None else ""
+    units = locale.units
+    adj = vocab_for(locale).dc_noun.replace(" ", "-")
+    radius = u.radius_words(units)
+    tail = (
+        f" {_beyond_sentence(beyond, geo, units)}" if beyond is not None and geo is not None else ""
+    )
     if not engine:
         return (
-            "No data-center facility within five miles of this address is listed in PeeringDB "
+            f"No {adj} facility within {radius} of this address is listed in PeeringDB "
             "or OpenStreetMap. Small server rooms inside offices are not in either database." + tail
         )
     nearest = engine[0]
@@ -362,12 +439,12 @@ def _grid_summary(
             operators.append(f.operator)
     who = ", ".join(operators[:4]) + (" and others" if len(operators) > 4 else "")
     parts = [
-        f"{len(engine)} data-center {'facility is' if len(engine) == 1 else 'facilities are'} "
-        f"within five miles of this address according to PeeringDB and OpenStreetMap: "
+        f"{len(engine)} {adj} {'facility is' if len(engine) == 1 else 'facilities are'} "
+        f"within {radius} of this address according to PeeringDB and OpenStreetMap: "
         f"{live} operating{f' and {building} under construction' if building else ''}."
     ]
     parts.append(
-        f"The nearest is {nearest.name}, {nearest.distance_km * KM_TO_MI:.1f} miles away"
+        f"The nearest is {nearest.name}, {u.dist(nearest.distance_km, units)} away"
         + (f", operated by {nearest.operator}." if nearest.operator_known else ".")
     )
     if who:
@@ -409,6 +486,7 @@ def _coming_section(
     geo: GeocodeResult,
     drafted: bool,
     card_line: str | None,
+    locale: Locale = US_LOCALE,
 ) -> tuple[dict[str, Any], str | None]:
     """What is coming, from three places: the model's announced campuses
     (kept, minus anything the database already has), the public record of
@@ -427,9 +505,23 @@ def _coming_section(
         ]
     section["facilities"] = [*decided, *facilities]
 
+    v = vocab_for(locale)
+    units = locale.units
     img = truth.imagery
     if img is None:
-        if geo.county:
+        if geo.country != "US":
+            section["gap"] = " ".join(
+                filter(
+                    None,
+                    [
+                        section.get("gap"),
+                        f"Aerial imagery is not indexed for {v.country_name} yet, so new "
+                        "construction here comes only from OpenStreetMap tags, planning "
+                        "decisions and public announcements.",
+                    ],
+                )
+            )
+        elif geo.county:
             section["gap"] = " ".join(
                 filter(
                     None,
@@ -442,7 +534,7 @@ def _coming_section(
                 )
             )
         if decided and not drafted:
-            section["summary"] = _coming_summary(None, section["facilities"])
+            section["summary"] = _coming_summary(None, section["facilities"], locale)
             section["status"] = "reported"
             section["confidence"] = 0.7
             section["sources"] = _distinct_sources([c for c in claims if c["section"] == "coming"])
@@ -463,20 +555,21 @@ def _coming_section(
                     now_iso,
                 )
             )
-    section["summary"] = _coming_summary(img, section["facilities"])
+    section["summary"] = _coming_summary(img, section["facilities"], locale)
     section["status"] = "measured"
     section["model"] = img.model
     section["confidence"] = 0.8 if img.counted else 0.7
     section["gap"] = (
         "Roofs are measured from public aerial imagery; what is inside them is not. A large "
-        "roof in no database is counted only when it adjoins a listed data center."
+        f"roof in no database is counted only when it adjoins a listed {v.dc_noun}."
     )
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "coming"])
     acres = img.new_acres
+    adj = v.dc_noun.replace(" ", "-")
     if acres > 0:
-        card_line = f"{acres:.0f} acres of new data-center roof since {img.then.year}"[:80]
+        card_line = f"{u.area(acres, units)} of new {adj} roof since {img.then.year}"[:80]
     elif not card_line:
-        card_line = f"No new large data-center roof since {img.then.year} imagery"
+        card_line = f"No new large {adj} roof since {img.then.year} imagery"
     return section, card_line
 
 
@@ -494,7 +587,12 @@ def _construction(s: ConstructionSite, img: ImageryResult) -> dict[str, Any]:
     }
 
 
-def _coming_summary(img: ImageryResult | None, facilities: list[dict[str, Any]]) -> str:
+def _coming_summary(
+    img: ImageryResult | None, facilities: list[dict[str, Any]], locale: Locale = US_LOCALE
+) -> str:
+    v = vocab_for(locale)
+    units = locale.units
+    radius = u.radius_words(units)
     parts: list[str] = []
     if img is not None:
         counted = img.counted
@@ -507,29 +605,29 @@ def _coming_summary(img: ImageryResult | None, facilities: list[dict[str, Any]])
             if new:
                 what.append(f"{new} new large roof{'s' if new != 1 else ''}")
             if exp:
-                what.append(f"{exp} expansion{'s' if exp != 1 else ''} of a listed data center")
+                what.append(f"{exp} expansion{'s' if exp != 1 else ''} of a listed {v.dc_noun}")
             nearest = counted[0]
             parts.append(
                 f"Between the {then} and {now} aerial imagery, {' and '.join(what)} appeared "
-                f"within five miles, about {img.new_acres:.0f} acres of roof in all. The nearest "
-                f"is {nearest.label}, {nearest.distance_km * KM_TO_MI:.1f} miles away."
+                f"within {radius}, about {u.area(img.new_acres, units)} of roof in all. The "
+                f"nearest is {nearest.label}, {u.dist(nearest.distance_km, units)} away."
             )
         else:
             parts.append(
                 f"Between the {then} and {now} aerial imagery, no new large roof appeared within "
-                "five miles next to a listed data center."
+                f"{radius} next to a listed {v.dc_noun}."
             )
         if other:
             parts.append(
                 f"{len(other)} other large roof{'s' if len(other) != 1 else ''} went up in that "
-                "time with no data center listed nearby; the imagery cannot say what they are."
+                f"time with no {v.dc_noun} listed nearby; the imagery cannot say what they are."
             )
     rejected = [f for f in facilities if f.get("status") == "rejected"]
     announced = [f for f in facilities if f.get("status") in ("announced", "under_construction")]
     for f in rejected:
         parts.append(
             f"{f['name']}{' (' + f['codename'] + ')' if f.get('codename') else ''}, "
-            f"{f['distance_km'] * KM_TO_MI:.0f} miles away, was voted down or withdrawn."
+            f"{u.dist_whole(f['distance_km'], units)} away, was voted down or withdrawn."
         )
     if announced:
         names = ", ".join(
@@ -589,17 +687,23 @@ def _hearing_section(
     now_iso: str,
     geo: GeocodeResult,
     card_line: str | None,
+    locale: Locale = US_LOCALE,
 ) -> tuple[dict[str, Any], str | None]:
     """The last indexed hearing for this county, quoted verbatim from the
     transcript of the official recording. Without an index the model's
     recollection stands, and the gap says so."""
     h = truth.hearing
+    adj = vocab_for(locale).dc_noun.replace(" ", "-")
     if h is None:
-        why = truth.hearing_note or (
-            f"Hearings for {geo.county} County are not indexed yet (docs/counties.md)"
-            if geo.county
-            else None
-        )
+        if geo.country != "US":
+            fallback = f"Meetings of {geo.county} are not indexed yet" if geo.county else None
+        else:
+            fallback = (
+                f"Hearings for {geo.county} County are not indexed yet (docs/counties.md)"
+                if geo.county
+                else None
+            )
+        why = truth.hearing_note or fallback
         if why:
             section["gap"] = " ".join(
                 filter(
@@ -664,7 +768,7 @@ def _hearing_section(
     text += (
         f" The next listed hearing is {upcoming.subject} on {_date_words(upcoming.date)}."
         if upcoming
-        else " No upcoming data-center hearing is listed for this body."
+        else f" No upcoming {adj} hearing is listed for this body."
     )
     section["summary"] = text
     section["status"] = "measured"
@@ -723,9 +827,11 @@ def _bill_section(
     geo: GeocodeResult,
     drafted: bool,
     card_line: str | None,
+    locale: Locale = US_LOCALE,
 ) -> tuple[dict[str, Any], str | None]:
     p = truth.best_price
     assert p is not None
+    v = vocab_for(locale)
     attribution = (section.get("price") or {}).get("attribution") if drafted else None
     price: dict[str, Any] = {
         "currency": p.currency,
@@ -743,7 +849,7 @@ def _bill_section(
         claims.append(_engine_claim("your_bill", text, url, title, quote, len(claims) + 1, now_iso))
     change = monthly_change(price)
     if not drafted:
-        section["summary"] = _bill_summary(truth, geo, change)
+        section["summary"] = _bill_summary(truth, geo, change, v)
         section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes])) or None
     section["price"] = price
     section["status"] = "modelled"
@@ -751,37 +857,74 @@ def _bill_section(
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "your_bill"])
     if not card_line:
         sign = "+" if change >= 0 else "−"
-        card_line = f"{sign}${abs(change):.0f}/mo for a typical {geo.state} home vs 2 yrs ago"
+        cost = u.money_abs(change, p.currency)
+        if p.scope == "country":
+            home = f"home in {p.label or v.country_name}"
+        else:
+            home = f"{geo.state} home"
+        card_line = f"{sign}{cost}/mo for a typical {home} vs 2 yrs ago"
     return section, card_line
 
 
 def _period(p: PriceSeries) -> tuple[str, str]:
-    """('calendar 2024', 'calendar 2022') or ('the twelve months to August 2026', 'the
-    twelve months ending 24 months earlier')."""
+    """('calendar 2024', 'calendar 2022'), ('the twelve months to August 2026', 'the
+    twelve months ending 24 months earlier') or, for a semiannual series, ('the first
+    half of 2026', 'the first half of 2024') from the source's own labels."""
+    if p.granularity == "semiannual":
+        return _half(p.period_now, p.latest), _half(
+            p.period_then, (p.latest[0] - p.window_months // 12, p.latest[1])
+        )
     if p.scope == "utility":
         return f"calendar {p.latest[0]}", f"calendar {p.latest[0] - p.window_months // 12}"
     month = f"{MONTHS[p.latest[1] - 1]} {p.latest[0]}"
     return f"the twelve months to {month}", "the twelve months ending 24 months earlier"
 
 
-def _price_claims(truth: GroundTruth, geo: GeocodeResult) -> list[tuple[str, str, str, str]]:
-    out = []
-    u = truth.utility_price
-    if u:
-        now, then = _period(u)
+def _half(label: str | None, latest: tuple[int, int]) -> str:
+    """'2026-S1' -> 'the first half of 2026'; without a label, from (year, month)."""
+    if label and len(label) == 7 and label[4:6] == "-S" and label[:4].isdigit():
+        return half_year(int(label[:4]), 6 if label[6] == "1" else 12)
+    return half_year(latest[0], latest[1])
+
+
+def _own_claims(p: PriceSeries) -> list[tuple[str, str, str, str]]:
+    """A provider that writes its own claim (Eurostat): the price claim, then
+    the typical-consumption claim with its own page. Nothing else."""
+    out = [(p.claim_text or "", p.source_url, p.source_title, p.quote or "")]
+    if p.kwh_claim_text and p.kwh_source_url:
         out.append(
             (
-                f"EIA-861 sales to ultimate customers: {u.label} residential revenue over sales in "
-                f"{geo.state} was {u.rate_now * 100:.2f} cents per kWh in {now} and "
-                f"{u.rate_then * 100:.2f} cents in {then}, at {u.typical_kwh_month:.0f} kWh a "
+                p.kwh_claim_text,
+                p.kwh_source_url,
+                p.kwh_source_title or p.kwh_source_url,
+                p.kwh_quote or "",
+            )
+        )
+    return out
+
+
+def _price_claims(truth: GroundTruth, geo: GeocodeResult) -> list[tuple[str, str, str, str]]:
+    out = []
+    up = truth.utility_price
+    if up and up.claim_text:
+        out.extend(_own_claims(up))
+    elif up:
+        now, then = _period(up)
+        out.append(
+            (
+                f"EIA-861 sales to ultimate customers: {up.label} residential revenue over sales "
+                f"in {geo.state} was {up.rate_now * 100:.2f} cents per kWh in {now} and "
+                f"{up.rate_then * 100:.2f} cents in {then}, at {up.typical_kwh_month:.0f} kWh a "
                 "month per customer.",
-                u.source_url,
-                u.source_title,
-                f"Sales_Ult_Cust_{u.latest[0]}",
+                up.source_url,
+                up.source_title,
+                f"Sales_Ult_Cust_{up.latest[0]}",
             )
         )
     s = truth.price
-    if s:
+    if s and s.claim_text:
+        out.extend(_own_claims(s))
+    elif s:
         now, then = _period(s)
         out.append(
             (
@@ -807,30 +950,38 @@ def _price_claims(truth: GroundTruth, geo: GeocodeResult) -> list[tuple[str, str
     return out
 
 
-def _bill_summary(truth: GroundTruth, geo: GeocodeResult, change: float) -> str:
+def _bill_summary(
+    truth: GroundTruth, geo: GeocodeResult, change: float, v: Vocab = US_VOCAB
+) -> str:
     p = truth.best_price
     assert p is not None
     now, then = _period(p)
     word = "more" if change >= 0 else "less"
-    who = (
-        f"{truth.utility.name} customers"
-        if p.scope == "utility" and truth.utility
-        else f"homes in {geo.state}"
-    )
+    if p.scope == "utility" and truth.utility:
+        who = f"{truth.utility.name} customers"
+    elif p.scope == "country":
+        who = f"homes in {p.label or v.country_name}"
+    else:
+        who = f"homes in {geo.state}"
     text = (
-        f"For {who}, the average home electricity price was {p.rate_now * 100:.1f} cents per kWh "
-        f"in {now}, against {p.rate_then * 100:.1f} cents in {then}, a change of "
+        f"For {who}, the average home electricity price was {u.rate_words(p.rate_now, p.currency)} "
+        f"in {now}, against {u.rate_short(p.rate_then, p.currency)} in {then}, a change of "
         f"{p.trend_pct:+.1f}%. For a typical home here using about {p.typical_kwh_month:.0f} kWh "
-        f"a month, that is about ${abs(change):.0f} a month {word}."
+        f"a month, that is about {u.money_abs(change, p.currency)} a month {word}."
     )
     s = truth.price
     if p.scope == "utility" and s is not None:
         s_now, _ = _period(s)
+        where = (
+            f"Nationally, {s.label or v.country_name}"
+            if s.scope == "country"
+            else f"Statewide, {geo.state}"
+        )
         text += (
-            f" Statewide, {geo.state} averaged {s.rate_now * 100:.1f} cents in {s_now}, "
+            f" {where} averaged {u.rate_short(s.rate_now, s.currency)} in {s_now}, "
             f"{s.trend_pct:+.1f}% over two years."
         )
-    return text + " No regulator or utility statement tying the change to data centers was found."
+    return text + (v.no_dc_statement or "")
 
 
 def _protection_section(
@@ -846,7 +997,9 @@ def _protection_section(
     t = truth.tariff
     assert t is not None
     claims.append(
-        _engine_claim("protection", t.summary, t.url, t.title, "", len(claims) + 1, now_iso)
+        _engine_claim(
+            "protection", t.summary, t.url, t.title, t.quote or "", len(claims) + 1, now_iso
+        )
     )
     section["tariff"] = {
         "large_load_tariff": t.status,
@@ -854,11 +1007,18 @@ def _protection_section(
         "protects_households": t.protects_households,
         "docket": t.docket,
     }
-    section["summary"] = f"{t.lead} {t.summary}"
+    # Engine-owned and written only when it is not a tariff: US briefs are unchanged.
+    if t.kind != "tariff":
+        section["tariff"]["kind"] = t.kind
+    stated_aim = t.kind == "connection_policy" and t.protects_households is False
+    lead = f"{t.lead} {CONNECTION_POLICY_AIM}" if stated_aim else t.lead
+    section["summary"] = f"{lead} {t.summary}"
     section["status"] = "reported"
     section["confidence"] = max(float(section.get("confidence") or 0.0), 0.8)
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "protection"])
-    if t.status == "in_force" and t.protects_households:
+    if t.status == "in_force" and stated_aim:
+        card_line = CONNECTION_POLICY_CARD
+    elif t.status == "in_force" and t.protects_households:
         card_line = f"Bill shield: {t.name or 'large-load tariff'} in force"[:80]
     elif t.status == "proposed":
         card_line = "Bill shield: large-load tariff proposed, not approved"
@@ -876,17 +1036,18 @@ def _strip(
     claims: list[dict[str, Any]],
     now_iso: str,
     truth: GroundTruth | None,
+    locale: Locale = US_LOCALE,
 ) -> list[dict[str, Any]]:
     """The bill sentence first, the engine's noise sentence when it has a
     facility list, then the model's lines, each `reported` with its claims."""
     out: list[dict[str, Any]] = []
-    bill = bill_house_line(sections)
+    bill = bill_house_line(sections, locale=locale)
     if bill:
         out.append(bill)
-    engine_noise = noise_house_line(truth, now_iso) if truth is not None else None
+    engine_noise = noise_house_line(truth, now_iso, locale=locale) if truth is not None else None
     if engine_noise:
         out.append(engine_noise)
-    engine_land = land_house_line(truth, now_iso) if truth is not None else None
+    engine_land = land_house_line(truth, now_iso, locale=locale) if truth is not None else None
     if engine_land:
         out.append(engine_land)
     grounded_empty = truth is not None and truth.facilities is not None and not truth.facilities

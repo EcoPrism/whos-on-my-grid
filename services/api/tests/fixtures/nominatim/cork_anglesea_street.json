@@ -1,0 +1,42 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "Anglesea Street, Cork"
+ },
+ "response": [
+  {
+   "place_id": 286094982,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 178631602,
+   "lat": "51.8947939",
+   "lon": "-8.4649477",
+   "category": "highway",
+   "type": "secondary",
+   "place_rank": 26,
+   "importance": 0.0534025795376516,
+   "addresstype": "secondary",
+   "name": "Anglesea Street",
+   "display_name": "Anglesea Street, City Hall A ED, Cork, County Cork, Munster, T12 CXN8, Éire / Ireland",
+   "address": {
+    "road": "Anglesea Street",
+    "city_district": "City Hall A ED",
+    "city": "Cork",
+    "county": "County Cork",
+    "ISO3166-2-lvl6": "IE-CO",
+    "region": "Munster",
+    "ISO3166-2-lvl5": "IE-M",
+    "postcode": "T12 CXN8",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "51.8941289",
+    "51.8954348",
+    "-8.4653324",
+    "-8.4649459"
+   ]
+  }
+ ]
+}

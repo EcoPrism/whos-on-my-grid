@@ -2,6 +2,7 @@
 drafts shaped like Spark's structured output, and the pages the verifier
 fetches. Every operator and URL here is fictional."""
 
+import dataclasses
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from app.brief.pipeline import BriefService
 from app.config import Settings
 from app.geocode import FakeGeocoder, GeocodeResult
 from app.llm.fake_provider import KeyedFakeProvider
+from app.regions import KNOWN, Region
 
 GEO = GeocodeResult(
     display="Filigree Ct, Ashburn, VA 20147",
@@ -21,6 +23,21 @@ GEO = GeocodeResult(
     postal_code="20147",
     matched="21715 FILIGREE CT, ASHBURN, VA, 20147",
 )
+
+# The Blanchardstown fixture's geocode (fixtures/briefs/blanchardstown.json): the
+# display line is also `matched`, so brief_id_for(matched, "IE") == "ffefa78202dceea9".
+GEO_IE = GeocodeResult(
+    display="Blanchardstown, Fingal, Co. Dublin, D15",
+    lat=53.393,
+    lon=-6.392,
+    region_code="IE-D",
+    county="Fingal",
+    postal_code="D15",
+    matched="Blanchardstown, Fingal, Co. Dublin, D15",
+    country="IE",
+    admin_county="Dublin",
+)
+IE_BRIEF_ID = "ffefa78202dceea9"
 
 URL_REG = "https://example.org/registry/ash-01"
 URL_EIA = "https://example.org/prices/VA"
@@ -268,3 +285,58 @@ def service(
         fetcher=FakeFetcher(PAGES if pages is None else pages),
         cache=BriefCache(s.data_path),
     )
+
+
+# --- two regions ------------------------------------------------------------------
+
+
+def region_ie(settings: Settings, geo: GeocodeResult | None = GEO_IE) -> Region:
+    """app.regions._ie (plan 0.3) with a fake geocoder answering `geo` for any
+    text and the fake ground of tests/fakes_ie.py; every other field is the real
+    region's."""
+    from tests import fakes_ie
+
+    return dataclasses.replace(
+        KNOWN["ie"](settings),
+        geocoder=FakeGeocoder(geo),
+        make_ground=lambda s: fakes_ie.ie_ground(),
+    )
+
+
+def services(
+    tmp_path: Path,
+    regions: tuple[str, ...] = ("us", "ie"),
+    *,
+    geo_ie: GeocodeResult | None = GEO_IE,
+    **over: Any,
+) -> dict[str, BriefService]:
+    """One BriefService per region id, sharing one brief cache as in main.py, for
+    create_app(services=...). Settings get GRID_REGIONS from `regions`. The US
+    service is fakes.service's (Ashburn geocode, scripted drafts); the IE one
+    has region_ie() with GEO_IE, and in full mode fakes_ie.ie_ground()."""
+    from tests import fakes_ie
+
+    over.setdefault("regions", ",".join(regions))
+    s = settings(tmp_path, **over)
+    cache = BriefCache(s.data_path)
+    out: dict[str, BriefService] = {}
+    for rid in regions:
+        if rid == "us":
+            region, geocoder, ground = KNOWN["us"](s), FakeGeocoder(GEO), None
+        elif rid == "ie":
+            region = region_ie(s, geo_ie)
+            geocoder = FakeGeocoder(geo_ie)
+            ground = fakes_ie.ie_ground() if s.brief_source == "full" else None
+        else:
+            raise ValueError(f"no fake region {rid!r}")
+        out[rid] = BriefService(
+            settings=s,
+            geocoder=geocoder,
+            draft_provider=KeyedFakeProvider(drafts()),
+            verify_provider=KeyedFakeProvider(SUPPORTED),
+            fetcher=FakeFetcher(PAGES),
+            cache=cache,
+            ground=ground,
+            region=region,
+        )
+    return out

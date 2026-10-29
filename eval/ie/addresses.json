@@ -1,0 +1,481 @@
+{
+  "_about": "Ireland test set, prepared 2026-10-29. Ten named public civic or commercial places (shopping centres, a railway station, council offices, a civic square, a quay, City Hall), no housing street, no residence, no house number and no full Eircode. `expect` is the oracle in ranges, as in eval/us/addresses.json; lower facility bounds stay below the raw counts until the first live run confirms them. Coordinates and the `geocode` blocks come from live Nominatim responses on 2026-10-29 (accept-language=en), snapped to 3 decimals. When the `ie` region is on, these addresses run without a sign-in.",
+  "_fields": {
+    "facilities": "[min, max|null] distinct facilities within 8 km",
+    "operators": "names expected in the facility list (case-insensitive substrings); `operators_min` of them must appear",
+    "utility": "regex the serving network operator must match (address.utility or any section text)",
+    "bill": "{direction: up|flat|any, range: [lo, hi] EUR a month for the headline figure (`ai_rent_usd_per_month` keeps its legacy key; the brief's currency is locale.currency), attribution: null|required|any}",
+    "protection": "acceptable large_load_tariff values",
+    "forbid": "regexes that must not match anywhere in the brief text (hard fails)",
+    "require_text_any": "at least one of these regexes must match somewhere in the brief text",
+    "hearing": "expected | none_ok  (informational: a real hook cannot be checked automatically)",
+    "geocode": "what the fake geocoder returns for this row (stream A loads it; lat/lon snapped to 3 decimals; matched equals display, no house numbers anywhere)"
+  },
+  "addresses": [
+    {
+      "id": "ie_blanchardstown",
+      "group": "A",
+      "address": "Blanchardstown Centre, Blanchardstown, Dublin 15",
+      "lat": 53.393,
+      "lon": -6.392,
+      "tests": "Dublin 15 hyperscale cluster; shopping centre; the Grange Castle grant 9 km away",
+      "expect": {
+        "facilities": [
+          8,
+          null
+        ],
+        "operators": [
+          "Digital Realty",
+          "Equinix",
+          "Meta",
+          "Amazon",
+          "Servecentric",
+          "K2",
+          "Keppel"
+        ],
+        "operators_min": 2,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "require_text_any": [
+          "Grange Castle",
+          "320852"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Blanchardstown, Fingal, Co. Dublin",
+        "lat": 53.393,
+        "lon": -6.392,
+        "region_code": "IE-D",
+        "county": "Fingal",
+        "admin_county": "Dublin",
+        "postal_code": "",
+        "matched": "Blanchardstown, Fingal, Co. Dublin"
+      }
+    },
+    {
+      "id": "ie_clonee",
+      "group": "A",
+      "address": "M3 Parkway railway station, County Meath",
+      "lat": 53.435,
+      "lon": -6.469,
+      "tests": "Meath, outside Dublin; Meta Clonee; railway station",
+      "expect": {
+        "facilities": [
+          4,
+          null
+        ],
+        "operators": [
+          "Meta",
+          "Facebook",
+          "Amazon",
+          "Digital Realty"
+        ],
+        "operators_min": 1,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Pace, Co. Meath",
+        "lat": 53.435,
+        "lon": -6.469,
+        "region_code": "IE-MH",
+        "county": "Meath",
+        "admin_county": "Meath",
+        "postal_code": "",
+        "matched": "Pace, Co. Meath"
+      }
+    },
+    {
+      "id": "ie_clondalkin",
+      "group": "A",
+      "address": "Clondalkin Civic Offices, Clondalkin, Dublin 22",
+      "lat": 53.324,
+      "lon": -6.395,
+      "tests": "Grange Castle and Profile Park; council civic offices",
+      "expect": {
+        "facilities": [
+          8,
+          null
+        ],
+        "operators": [
+          "Microsoft",
+          "Digital Realty",
+          "Equinix",
+          "CyrusOne",
+          "Google",
+          "EdgeConneX",
+          "Amazon"
+        ],
+        "operators_min": 2,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "require_text_any": [
+          "Grange Castle",
+          "320852"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Clondalkin, South Dublin, Co. Dublin, D22",
+        "lat": 53.324,
+        "lon": -6.395,
+        "region_code": "IE-D",
+        "county": "South Dublin",
+        "admin_county": "Dublin",
+        "postal_code": "D22",
+        "matched": "Clondalkin, South Dublin, Co. Dublin, D22"
+      }
+    },
+    {
+      "id": "ie_citywest",
+      "group": "A",
+      "address": "Citywest Shopping Centre, Citywest, County Dublin",
+      "lat": 53.283,
+      "lon": -6.422,
+      "tests": "Citywest campus; shopping-centre hit, display built from components",
+      "expect": {
+        "facilities": [
+          8,
+          null
+        ],
+        "operators": [
+          "Equinix",
+          "Keppel",
+          "Amazon",
+          "euNetworks",
+          "Eir",
+          "Microsoft"
+        ],
+        "operators_min": 2,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Saggart, South Dublin, Co. Dublin",
+        "lat": 53.283,
+        "lon": -6.422,
+        "region_code": "IE-D",
+        "county": "South Dublin",
+        "admin_county": "Dublin",
+        "postal_code": "",
+        "matched": "Saggart, South Dublin, Co. Dublin"
+      }
+    },
+    {
+      "id": "ie_tallaght",
+      "group": "A",
+      "address": "Belgard Square North, Tallaght, Dublin 24",
+      "lat": 53.289,
+      "lon": -6.377,
+      "tests": "Tallaght; Luas-side civic square",
+      "expect": {
+        "facilities": [
+          8,
+          null
+        ],
+        "operators": [
+          "Amazon",
+          "Microsoft",
+          "Equinix",
+          "Digital Realty",
+          "CyrusOne"
+        ],
+        "operators_min": 2,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Tallaght, South Dublin, Co. Dublin",
+        "lat": 53.289,
+        "lon": -6.377,
+        "region_code": "IE-D",
+        "county": "South Dublin",
+        "admin_county": "Dublin",
+        "postal_code": "",
+        "matched": "Tallaght, South Dublin, Co. Dublin"
+      }
+    },
+    {
+      "id": "ie_ballymun",
+      "group": "B",
+      "address": "IKEA Ballymun, Saint Margaret's Road, Dublin 11",
+      "lat": 53.406,
+      "lon": -6.275,
+      "tests": "north Dublin; bus-stop hit, display from the road",
+      "expect": {
+        "facilities": [
+          4,
+          null
+        ],
+        "operators": [
+          "Equinix",
+          "Digital Realty",
+          "Amazon",
+          "Eir",
+          "Vodafone",
+          "Verizon"
+        ],
+        "operators_min": 1,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Saint Margaret's Road, Fingal, Co. Dublin",
+        "lat": 53.406,
+        "lon": -6.275,
+        "region_code": "IE-D",
+        "county": "Fingal",
+        "admin_county": "Dublin",
+        "postal_code": "",
+        "matched": "Saint Margaret's Road, Fingal, Co. Dublin"
+      }
+    },
+    {
+      "id": "ie_dublin_city",
+      "group": "B",
+      "address": "Wood Quay, Dublin 8",
+      "lat": 53.345,
+      "lon": -6.27,
+      "tests": "city centre; riverside civic quay",
+      "expect": {
+        "facilities": [
+          1,
+          null
+        ],
+        "operators": [
+          "Digital Realty",
+          "Amazon",
+          "Eir",
+          "Vodafone",
+          "Verizon"
+        ],
+        "operators_min": 1,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Dublin, Co. Dublin, D08",
+        "lat": 53.345,
+        "lon": -6.27,
+        "region_code": "IE-D",
+        "county": "Dublin City",
+        "admin_county": "Dublin",
+        "postal_code": "D08",
+        "matched": "Dublin, Co. Dublin, D08"
+      },
+      "oracle_confidence": "low"
+    },
+    {
+      "id": "ie_galway",
+      "group": "D",
+      "address": "Galway City Hall, College Road, Galway",
+      "lat": 53.276,
+      "lon": -9.044,
+      "tests": "west of Ireland control; City Hall; Irish-language city name mapped to English",
+      "expect": {
+        "facilities": [
+          0,
+          2
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "forbid": [
+          "band\": \"high",
+          "band\": \"critical"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Galway, Co. Galway, H91",
+        "lat": 53.276,
+        "lon": -9.044,
+        "region_code": "IE-G",
+        "county": "Galway City",
+        "admin_county": "Galway",
+        "postal_code": "H91",
+        "matched": "Galway, Co. Galway, H91"
+      }
+    },
+    {
+      "id": "ie_cork",
+      "group": "D",
+      "address": "Anglesea Street, Cork",
+      "lat": 51.895,
+      "lon": -8.465,
+      "tests": "Cork control; the street outside City Hall",
+      "expect": {
+        "facilities": [
+          0,
+          3
+        ],
+        "operators": [
+          "CIX",
+          "Cork Internet Exchange"
+        ],
+        "operators_min": 0,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "forbid": [
+          "band\": \"critical"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Cork, Co. Cork, T12",
+        "lat": 51.895,
+        "lon": -8.465,
+        "region_code": "IE-CO",
+        "county": "Cork City",
+        "admin_county": "Cork",
+        "postal_code": "T12",
+        "matched": "Cork, Co. Cork, T12"
+      }
+    },
+    {
+      "id": "ie_limerick",
+      "group": "D",
+      "address": "Merchants Quay, Limerick",
+      "lat": 52.668,
+      "lon": -8.624,
+      "tests": "Limerick control; quay beside the civic buildings",
+      "expect": {
+        "facilities": [
+          0,
+          0
+        ],
+        "operators": [],
+        "operators_min": 0,
+        "utility": "ESB Networks|ESB",
+        "bill": {
+          "direction": "any",
+          "range": [
+            0,
+            150
+          ],
+          "attribution": null
+        },
+        "protection": [
+          "in_force"
+        ],
+        "forbid": [
+          "band\": \"high",
+          "band\": \"critical"
+        ],
+        "hearing": "none_ok"
+      },
+      "geocode": {
+        "display": "Limerick, Co. Limerick, V94",
+        "lat": 52.668,
+        "lon": -8.624,
+        "region_code": "IE-LK",
+        "county": "Limerick",
+        "admin_county": "Limerick",
+        "postal_code": "V94",
+        "matched": "Limerick, Co. Limerick, V94"
+      }
+    }
+  ],
+  "global_forbid": {
+    "substation_headline": "shares? your substation",
+    "causal_bill_claim": "data.?cent(?:er|re)s?[^.\"]{0,60}\\b(are |is |have been |has been )?(driving|causing|pushing up|raising|behind|responsible for)\\b[^.\"]{0,40}\\b(bills?|prices?|rates?)",
+    "us_units_leak": "\\$\\s?\\d|\\bmiles?\\b|\\bZIP\\b|\\bacres?\\b|\\bstatewide\\b"
+  }
+}

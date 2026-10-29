@@ -73,3 +73,24 @@ def test_fixture_resolution() -> None:
     assert fixtures.resolve_address("somewhere in ashburn") == "ashburn"
     assert fixtures.resolve_address("53158") == "kenosha"
     assert fixtures.resolve_address("nowhere") is None
+
+
+@pytest.mark.parametrize("sid", SECTION_IDS)
+def test_engine_only_keys_never_reach_a_draft(sid: str) -> None:
+    """`price.granularity` and `tariff.kind` are the engine's: in the brief
+    contract, never in the schema a model fills (so prompts are unchanged)."""
+    from app.schema import load_brief_schema
+
+    defs = load_brief_schema()["$defs"]
+    assert "kind" in defs["tariff"]["properties"]
+    assert defs["tariff"]["properties"]["kind"]["enum"] == ["tariff", "connection_policy"]
+    for schema in draft_schemas(sid):
+        text = str(schema)
+        assert "connection_policy" not in text and "granularity" not in text
+
+
+def test_brief_with_tariff_kind_is_valid() -> None:
+    brief = fixtures.by_key("ashburn")
+    tariff = {**brief["sections"]["protection"]["tariff"], "kind": "connection_policy"}
+    protection = {**brief["sections"]["protection"], "tariff": tariff}
+    validate_brief({**brief, "sections": {**brief["sections"], "protection": protection}})

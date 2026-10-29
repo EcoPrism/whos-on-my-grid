@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { regionDefaults, useCurrentRegion } from '../lib/region'
 
 // Every page sits inside the shell: the page, then one footer. The footer is
 // the fence at the edge of the yard: ink, a signal stripe along the top, and
@@ -12,6 +13,10 @@ const LEGEND = [
 ]
 
 export default function Shell() {
+  // The data line names the sources of the region on screen (the home page's
+  // pick, or the brief's own region); the US line until the list arrives.
+  const { info } = useCurrentRegion()
+  const sources = info?.sources_line || regionDefaults().sources_line
   return (
     <>
       <Outlet />
@@ -49,7 +54,7 @@ export default function Shell() {
             <Link to="/about" className="footlink">About</Link>
             <Link to="/about#data" className="footlink">What is stored</Link>
             <a href="https://github.com/EcoPrism/whos-on-my-grid" rel="noopener" className="footlink">Source on GitHub</a>
-            <a href="https://www.peeringdb.com/" rel="noopener" className="footlink">Data: PeeringDB, OpenStreetMap, EIA</a>
+            <a href="https://www.peeringdb.com/" rel="noopener" className="footlink">Data: {sources}</a>
           </nav>
         </div>
       </footer>

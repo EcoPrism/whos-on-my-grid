@@ -22,7 +22,16 @@ TRANSCRIBE_MODEL_ID = "muse-voice-transcribe-1.0"
 MAX_QUOTES = 3
 MIN_QUOTE_CHARS = 80  # a procedural line ('so moved, seconded') is shorter
 MAX_QUOTE_CHARS = 240
-GENERIC_TERMS = ["data center", "data centers", "substation", "transmission", "noise", "power line"]
+GENERIC_TERMS = [
+    "data center",
+    "data centers",
+    "data centre",  # Irish and British spelling; no US transcript has it
+    "data centres",
+    "substation",
+    "transmission",
+    "noise",
+    "power line",
+]
 OFFICIAL_ROLES = {"chair", "vice chair", "supervisor", "commissioner", "council member", "mayor"}
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
@@ -78,27 +87,12 @@ class HearingIndex:
         ]
 
     def decisions_for(self, state: str, county: str | None) -> list[Decision]:
-        out = []
-        for b in self.bodies_for(state, county):
-            for d in b.get("decisions", []):
-                out.append(
-                    Decision(
-                        project=d["project"],
-                        codename=d.get("codename"),
-                        operator=d.get("operator"),
-                        status=d.get("status", "rejected"),
-                        date=d["date"],
-                        body=b["name"],
-                        text=d["text"],
-                        source_url=d["source_url"],
-                        source_title=d["source_title"],
-                        quote=d.get("quote", ""),
-                        lat=d.get("lat"),
-                        lon=d.get("lon"),
-                        estimated_mw=d.get("estimated_mw"),
-                    )
-                )
-        return out
+        return [d for b in self.bodies_for(state, county) for d in _decisions(b)]
+
+    def all_decisions(self) -> list[Decision]:
+        """Every body's decisions, for a region that matches them by distance
+        (Ground.decisions_scope == "radius") rather than by the address's authority."""
+        return [d for b in self.bodies() for d in _decisions(b)]
 
     def for_place(
         self, state: str, county: str | None, utility: str | None = None
@@ -330,6 +324,33 @@ def select_quotes(
     ]
 
 
+# A campus voted on within 15 miles is this address's news (assemble's Coming
+# list and, under the radius scope, gather_ground's filter both use it).
+DECISION_RADIUS_KM = 25.0
+
+
+def _decisions(b: dict[str, Any]) -> list[Decision]:
+    return [
+        Decision(
+            project=d["project"],
+            codename=d.get("codename"),
+            operator=d.get("operator"),
+            status=d.get("status", "rejected"),
+            date=d["date"],
+            body=b["name"],
+            text=d["text"],
+            source_url=d["source_url"],
+            source_title=d["source_title"],
+            quote=d.get("quote", ""),
+            lat=d.get("lat"),
+            lon=d.get("lon"),
+            estimated_mw=d.get("estimated_mw"),
+            decided_by=d.get("decided_by") or None,
+        )
+        for d in b.get("decisions", [])
+    ]
+
+
 class FakeHearingIndex:
     def __init__(
         self,
@@ -351,6 +372,9 @@ class FakeHearingIndex:
         return self.result
 
     def decisions_for(self, state: str, county: str | None) -> list[Decision]:
+        return list(self.decisions)
+
+    def all_decisions(self) -> list[Decision]:
         return list(self.decisions)
 
     def coverage_note(self, state: str, county: str | None) -> str | None:

@@ -27,9 +27,34 @@ from app.card.spec import SCENARIO_SHARE_TAIL, SHARE_TAIL
 _SHARE_ROUTES = re.compile(r"^(b|what-if)/([0-9a-f]{16})$")
 OG_MARKER = "<!--og-->"
 SITE_NAME = "Who's On My Grid"
-SITE_DESCRIPTION = (
-    "Type any US address. What is on my grid, what is coming, and what has it done to my bill."
+SITE_TAGLINE = "What is on my grid, what is coming, and what has it done to my bill."
+SITE_DESCRIPTION = f"Type any US address. {SITE_TAGLINE}"
+# The built page's own description meta (web/index.html), rewritten only when a
+# region other than the US is enabled.
+_DESCRIPTION_META = re.compile(
+    r'(<meta\s+name="description"\s+content=")[^"]*("\s*/?>)', re.IGNORECASE
 )
+
+
+def site_description(labels: list[str] | tuple[str, ...]) -> str:
+    """The site description for the enabled regions' labels. The US alone (or
+    nothing) is SITE_DESCRIPTION, byte for byte; else "Type an address in the US
+    or Ireland. ..."."""
+    if not labels or list(labels) == ["US"]:
+        return SITE_DESCRIPTION
+    places = ["the US" if label == "US" else label for label in labels]
+    where = places[0] if len(places) == 1 else f"{', '.join(places[:-1])} or {places[-1]}"
+    return f"Type an address in {where}. {SITE_TAGLINE}"
+
+
+def describe(index_html: str, description: str) -> str:
+    """index.html with its <meta name="description"> content set to
+    `description` (escaped). Unchanged for the US-only description, or when
+    the page has no such meta."""
+    if description == SITE_DESCRIPTION:
+        return index_html
+    value = html.escape(description)
+    return _DESCRIPTION_META.sub(lambda m: f"{m[1]}{value}{m[2]}", index_html, count=1)
 
 
 @dataclass(frozen=True)
@@ -89,8 +114,8 @@ def inject(index_html: str, tags: str) -> str:
     return index_html[:at] + tags + index_html[at:]
 
 
-def default_meta(base: str) -> OgMeta:
-    return OgMeta(title=SITE_NAME, description=SITE_DESCRIPTION, url=f"{base}/")
+def default_meta(base: str, description: str = SITE_DESCRIPTION) -> OgMeta:
+    return OgMeta(title=SITE_NAME, description=description, url=f"{base}/")
 
 
 def _sentence(text: str) -> str:
@@ -144,8 +169,11 @@ def mount_web(app: FastAPI, dist: Path) -> bool:
     index = dist / "index.html"
     if not index.is_file():
         return False
-    # Read once at mount: a deploy is a new process.
-    index_html = index.read_text(encoding="utf-8")
+    # Read once at mount: a deploy is a new process. The enabled regions name
+    # the places the description offers (US alone: the page as built).
+    regions = getattr(app.state, "regions", None) or {}
+    description = site_description([r.label for r in regions.values()])
+    index_html = describe(index.read_text(encoding="utf-8"), description)
     dist_root = dist.resolve()
     index_file = index.resolve()
     assets = dist / "assets"
@@ -169,7 +197,7 @@ def mount_web(app: FastAPI, dist: Path) -> bool:
         m = _SHARE_ROUTES.match(path)
         if m:
             meta = app.state.og.lookup(kind=m[1], id=m[2], base=base)
-        page = inject(index_html, og_tags(meta or default_meta(base)))
+        page = inject(index_html, og_tags(meta or default_meta(base, description)))
         return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
     return True

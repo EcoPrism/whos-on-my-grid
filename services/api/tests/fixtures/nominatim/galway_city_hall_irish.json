@@ -1,0 +1,43 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name. Without accept-language the city comes back in Irish (Cathair na Gaillimhe).",
+ "request": {
+  "path": "search",
+  "q": "Galway City Hall"
+ },
+ "response": [
+  {
+   "place_id": 286638351,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 52410902,
+   "lat": "53.2762705",
+   "lon": "-9.0437240",
+   "category": "amenity",
+   "type": "townhall",
+   "place_rank": 30,
+   "importance": 6.588006408784645e-05,
+   "addresstype": "amenity",
+   "name": "Galway City Hall",
+   "display_name": "Galway City Hall, College Road, Eyre Square, Cathair na Gaillimhe, County Galway, Connacht, H91 X4K8, Éire / Ireland",
+   "address": {
+    "amenity": "Galway City Hall",
+    "road": "College Road",
+    "city_district": "Eyre Square",
+    "city": "Cathair na Gaillimhe",
+    "county": "County Galway",
+    "ISO3166-2-lvl6": "IE-G",
+    "region": "Connacht",
+    "ISO3166-2-lvl5": "IE-C",
+    "postcode": "H91 X4K8",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.2759314",
+    "53.2766158",
+    "-9.0440806",
+    "-9.0430253"
+   ]
+  }
+ ]
+}

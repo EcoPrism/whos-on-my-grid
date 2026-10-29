@@ -1,0 +1,43 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "M3 Parkway railway station"
+ },
+ "response": [
+  {
+   "place_id": 277046114,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 3581474993,
+   "lat": "53.4345286",
+   "lon": "-6.4688891",
+   "category": "railway",
+   "type": "station",
+   "place_rank": 30,
+   "importance": 0.32173239253715025,
+   "addresstype": "railway",
+   "name": "M3 Parkway",
+   "display_name": "M3 Parkway, Dunboyne Bypass, Pace, Dunboyne ED, The Municipal District of Ratoath, County Meath, Leinster, Éire / Ireland",
+   "address": {
+    "railway": "M3 Parkway",
+    "road": "Dunboyne Bypass",
+    "suburb": "Pace",
+    "city_district": "Dunboyne ED",
+    "region": "The Municipal District of Ratoath",
+    "county": "County Meath",
+    "ISO3166-2-lvl6": "IE-MH",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.4295286",
+    "53.4395286",
+    "-6.4738891",
+    "-6.4638891"
+   ]
+  }
+ ]
+}

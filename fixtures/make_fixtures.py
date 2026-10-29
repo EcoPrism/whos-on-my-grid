@@ -1,4 +1,6 @@
-"""Generate the fixture briefs. Every operator, source and quote here is fictional.
+"""Generate the fixture briefs. Every operator, source and quote here is fictional,
+except that the Irish fixture's Coming entry names the applicant of a real, public
+planning decision (its source is still a fictional example.org page).
 
 Run: python fixtures/make_fixtures.py
 """
@@ -6,6 +8,7 @@ Run: python fixtures/make_fixtures.py
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 
 OUT = Path(__file__).parent / "briefs"
@@ -25,6 +28,11 @@ ADDRESSES = {
     "tucson": dict(display="S Houghton Rd, Tucson, AZ 85747", lat=32.1240, lon=-110.7689, state="AZ", county="Pima", zip="85747", utility="Tucson Electric Power"),
     "boise": dict(display="W Idaho St, Boise, ID 83702", lat=43.6166, lon=-116.2023, state="ID", county="Ada", zip="83702", utility="Idaho Power"),
     "rural_sd": dict(display="County Rd 12, Faulkton, SD 57438", lat=45.0350, lon=-99.1250, state="SD", county="Faulk", zip="57438", utility="Northern Electric Cooperative"),
+    # Ireland (region `ie`): the region-neutral address keys, no state or zip.
+    "blanchardstown": dict(display="Blanchardstown, Fingal, Co. Dublin, D15", lat=53.393, lon=-6.392, country="IE", region_code="IE-D", county="Fingal", postal_code="D15", utility="ESB Networks"),
+}
+LOCALES = {
+    "blanchardstown": {"country": "IE", "currency": "EUR", "units": "metric", "language": "en-IE"},
 }
 
 
@@ -81,13 +89,23 @@ def claim(cid, sec, text, source, verdict="supported", note=None):
             "verified_by": "meta-models/muse-spark-open", "verifier_note": note}
 
 
+def brief_id(a):
+    """US: sha256 of the lower-cased display (the ids the five US fixtures always had).
+    Elsewhere: app.geocode.brief_id_for(display, country), the country-prefixed key."""
+    country = a.get("country", "US")
+    if country == "US":
+        return hashlib.sha256(a["display"].lower().encode()).hexdigest()[:16]
+    norm = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", a["display"].lower())).strip()
+    return hashlib.sha256(f"{country.lower()}|{norm}".encode()).hexdigest()[:16]
+
+
 def brief(key, headline, sections, claims, card, at_your_house):
     a = ADDRESSES[key]
-    return {
-        "brief_id": hashlib.sha256(a["display"].lower().encode()).hexdigest()[:16],
-        "generated_at": NOW, "source_mode": "fixtures", "fixture": True,
-        "address": a, "headline": headline, "sections": sections, "claims": claims, "at_your_house": at_your_house, "card": card,
-    }
+    out = {"brief_id": brief_id(a), "generated_at": NOW, "source_mode": "fixtures", "fixture": True, "address": a}
+    if key in LOCALES:
+        out["locale"] = LOCALES[key]
+    out.update(headline=headline, sections=sections, claims=claims, at_your_house=at_your_house, card=card)
+    return out
 
 
 BRIEFS = {}
@@ -330,10 +348,74 @@ BRIEFS["rural_sd"] = brief(
     ],
 )
 
+# --------------------------------------------------------- blanchardstown ----
+# Ireland: km, EUR, a semiannual Eurostat series, a connection policy rather than a
+# tariff, a planning decision 9 km away in Coming, no imagery and no indexed meeting.
+# The headline band follows the facility count (step 6 decision 0.9: a national price
+# does not set the band).
+s_reg_ie = SRC("Facility registry (fictional)", "https://example.org/registry/d15")
+s_esb = SRC("Network operator page (fictional)", "https://example.org/esb/about", "ESB Networks DAC is the licensed distribution system operator for Ireland (fictional quote)")
+s_estat = SRC("National household price series, semiannual (fictional)", "https://example.org/eurostat/IE", "IE, band DC, all taxes and levies included: 2026-S1 0.3871 EUR/kWh; 2024-S1 0.2590 EUR/kWh (fictional)")
+s_kwh = SRC("Regulator typical consumption paper (fictional)", "https://example.org/cru/typical-consumption", "Typical annual domestic electricity consumption: 4,200 kWh (fictional)")
+s_cru = SRC("Regulator decision, data-centre connection policy (fictional)", "https://example.org/cru/dc-connection-policy", "New data centres must provide generation or storage to match their requested import capacity (fictional)")
+s_acp = SRC("Planning appeal decision (fictional)", "https://example.org/acp/case-320852", "Grant Permissions with Conditions")
+p_ie = {**price(0.3871, 0.2590, 350), "currency": "EUR", "as_of": "2026-06", "granularity": "semiannual"}
+
+BLANCHARDSTOWN_FACILITIES = [
+    facility("blanchardstown", "Corduff Data Campus A", "Liffey Compute (fictional)", 53.400, -6.405, "live", 40, "reported", op_conf=0.97),
+    facility("blanchardstown", "Corduff Data Campus B", "Liffey Compute (fictional)", 53.405, -6.398, "live", 40, "reported", op_conf=0.97),
+    facility("blanchardstown", "Ballycoolin Hall 1", "Meridian Realty Trust (fictional)", 53.410, -6.380, "live", 24, "reported", op_conf=0.95),
+    facility("blanchardstown", "Damastown Colo", "Pinefield Networks (fictional)", 53.385, -6.420, "live", 10, "class_estimate", op_conf=0.9),
+    facility("blanchardstown", "Coolmine Edge", "Pinefield Networks (fictional)", 53.398, -6.360, "live", 6, "class_estimate", op_conf=0.9),
+    facility("blanchardstown", "Mulhuddart Cloud Park", "Orrin Cloud Services (fictional)", 53.420, -6.410, "under_construction", 120, "filed", op_conf=0.85),
+]
+assert len(BLANCHARDSTOWN_FACILITIES) == 6 and all(f["distance_km"] < 8 for f in BLANCHARDSTOWN_FACILITIES)
+GRANGE_CASTLE = {"name": "Google Ireland Grange Castle expansion (SD24A/0164W)", "codename": None, "operator": "Google Ireland Limited",
+                 "operator_confidence": 0.9, "distance_km": km(53.393, -6.392, 53.3144, -6.4443), "status": "announced",
+                 "estimated_mw": None, "mw_basis": None, "shares_substation": None, "lat": 53.3144, "lon": -6.4443}
+
+BRIEFS["blanchardstown"] = brief(
+    "blanchardstown",
+    headline(p_ie, None, "high", "Six data centres sit within 8 km of you, in ESB Networks' area. A typical Irish home pays about €45 more a month than two years ago."),
+    {
+        "on_your_grid": section("measured", 0.9, None,
+            "Six data-centre facilities sit within 8 km, five running and one under construction. ESB Networks is the distribution operator for Ireland, your street included.",
+            [s_reg_ie, s_esb], facilities=BLANCHARDSTOWN_FACILITIES),
+        "coming": section("reported", 0.8, None,
+            f"An Coimisiún Pleanála granted permission with conditions for the Grange Castle data storage expansion, {GRANGE_CASTLE['distance_km']} km south of you, in September 2026.",
+            [s_acp], gap="No aerial imagery is indexed for Ireland, so new roofs are not measured.", facilities=[GRANGE_CASTLE], construction=[]),
+        "your_bill": section("modelled", 0.8, "muse-spark-1.3",
+            "Ireland's average household electricity price rose 49.5% between the first half of 2024 and the first half of 2026. For a home using 350 kWh a month that is about €45 more per month, between €36 and €54 depending on how much you use.",
+            [s_estat, s_kwh], price=p_ie),
+        "protection": section("reported", 0.85, "muse-spark-1.3",
+            "No. A CRU connection policy for new data centres is in force: they must bring generation or storage to match the capacity they ask for. "
+            "Its stated aim is grid constraints, security of supply and renewable targets, not household costs.",
+            [s_cru], tariff={"large_load_tariff": "in_force", "name": "CRU connection policy for new data centres (December 2025)", "protects_households": False, "docket": None, "kind": "connection_policy"}),
+        "hearing": section("unavailable", 0.0, None, "Meetings of this planning authority are not yet indexed.", [],
+            gap="Fingal County Council is not in the indexed set.", hearing={"next_date": None, "body": None}),
+    },
+    [
+        claim("c1", "on_your_grid", "ESB Networks DAC is the licensed distribution system operator for Ireland.", s_esb),
+        claim("c2", "your_bill", "Ireland's household electricity price, band DC with all taxes, was 0.3871 EUR per kWh in 2026-S1 and 0.2590 EUR per kWh in 2024-S1.", s_estat),
+        claim("c3", "your_bill", "The regulator's typical annual domestic electricity consumption figure is 4,200 kWh.", s_kwh),
+        claim("c4", "protection", "New data centres must provide generation or storage to match their requested import capacity.", s_cru),
+        claim("c5", "coming", "An Coimisiún Pleanála decided the Grange Castle appeal with the decision Grant Permissions with Conditions.", s_acp),
+    ],
+    {"title": "Who's on my grid: Blanchardstown, Co. Dublin",
+     "lines": ["6 data centres within 8 km", "+€45/mo for a typical home vs 2 yrs ago",
+               "CRU data-centre connection policy in force; household bills not its stated aim", f"Grange Castle expansion granted {GRANGE_CASTLE['distance_km']} km away"],
+     "footer": "Sources: facility registry, network operator, national price series, regulator decision, planning appeal. Fictional fixture."},
+    [
+        house("bill", "modelled", 0.8, "Your electricity bill is about €45 a month higher than two years ago, between €36 and €54 depending on how much you use.", [s_estat, s_kwh]),
+        house("grid", "measured", 0.9, "Six data centres sit within 8 km, the nearest about a kilometre away.", [s_reg_ie]),
+    ],
+)
+
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     for key, b in BRIEFS.items():
-        (OUT / f"{key}.json").write_text(json.dumps(b, indent=2) + "\n", encoding="utf-8")
+        # newline="\n": the committed files are LF; on Windows text mode would write CRLF.
+        (OUT / f"{key}.json").write_text(json.dumps(b, indent=2) + "\n", encoding="utf-8", newline="\n")
         h = b["headline"]
         print("wrote", key, b["brief_id"], h["ai_rent_usd_per_month"], h["ai_rent_range_usd_per_month"])

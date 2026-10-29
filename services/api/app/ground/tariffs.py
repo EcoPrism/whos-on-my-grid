@@ -27,6 +27,8 @@ class TariffEntry:
     title: str
     min_mw: float | None = None  # the rule's size floor; None: no floor in the table
     min_mw_inclusive: bool = True  # "100 MW and above" (True) or "above 25 MW" (False)
+    quote: str | None = None  # verbatim from `url`; None: the US rows, which quote nothing
+    kind: str = "tariff"  # tariff | connection_policy (a connection rule, not a rate)
 
     def covers(self, mw: float) -> bool:
         """Whether a load of `mw` is above the rule's size floor."""

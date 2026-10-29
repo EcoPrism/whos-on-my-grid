@@ -28,7 +28,10 @@ FIXTURE_IDS = {
     "kenosha": "fbffd30aa062090e",
     "rural_sd": "f2afbbd87226c4c8",
     "tucson": "8bc089ffbae62dd2",
+    # Ireland: brief_id_for("Blanchardstown, Fingal, Co. Dublin, D15", "IE").
+    "blanchardstown": "ffefa78202dceea9",
 }
+US_FIXTURES = ("ashburn", "boise", "kenosha", "rural_sd", "tucson")
 # Gitignored caches that exist on a developer's machine: checked when present.
 CACHED_SETS = {
     "pre-step4": (REPO_ROOT / "data" / "briefs.pre-step4", "*.json"),
@@ -37,6 +40,7 @@ CACHED_SETS = {
 }
 SCENARIOS = REPO_ROOT / "data" / "scenarios"
 US_LOCALE = {"country": "US", "currency": "USD", "units": "us", "language": "en-US"}
+IE_LOCALE = {"country": "IE", "currency": "EUR", "units": "metric", "language": "en-IE"}
 
 
 def _load(path: Path) -> Any:
@@ -108,9 +112,29 @@ def test_committed_fixtures_exist() -> None:
 def test_committed_fixture_validates(key: str) -> None:
     brief = _load(FIXTURES_DIR / f"{key}.json")
     assert brief_problems(brief) == []
+    assert brief["brief_id"] == FIXTURE_IDS[key]
+    if key not in US_FIXTURES:
+        return  # a non-US fixture is checked below; the legacy shape is US-only
     assert _us_problems(brief) == []
     # The legacy shape: none of the new keys, so these stay the canaries.
     assert "locale" not in brief and "country" not in brief["address"]
+
+
+def test_irish_fixture_is_irish() -> None:
+    brief = _load(FIXTURES_DIR / "blanchardstown.json")
+    a = brief["address"]
+    assert brief["locale"] == IE_LOCALE
+    assert (a["country"], a["region_code"], a["county"], a["postal_code"]) == (
+        "IE",
+        "IE-D",
+        "Fingal",
+        "D15",
+    )
+    assert "state" not in a and "zip" not in a
+    price = brief["sections"]["your_bill"]["price"]
+    assert price["currency"] == "EUR" and price["granularity"] == "semiannual"
+    assert brief["sections"]["protection"]["tariff"]["kind"] == "connection_policy"
+    assert brief["headline"]["percentile"] is None
 
 
 @pytest.mark.parametrize("name,path", _cached_params())

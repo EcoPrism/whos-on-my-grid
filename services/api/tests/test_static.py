@@ -5,8 +5,17 @@ from httpx import ASGITransport, AsyncClient
 
 from app.brief import fixtures
 from app.main import create_app
-from app.static import OG_MARKER, OgMeta, inject, og_tags
+from app.static import (
+    OG_MARKER,
+    SITE_DESCRIPTION,
+    OgMeta,
+    describe,
+    inject,
+    og_tags,
+    site_description,
+)
 from tests import fakes
+from tests.test_health_regions import enable_ie
 
 INDEX = (
     "<!doctype html><html><head><title>grid</title>\n    "
@@ -96,3 +105,53 @@ async def test_defaults_use_request_origin_and_no_marker(tmp_path) -> None:
         page = (await c.get(f"/b/{bid}")).text
         assert f'content="http://local:8000/api/card/{bid}.png"' in page
         assert page.index("og:image") < page.index("</head>")
+
+
+US_DESC = (
+    "Type any US address. What is on my grid, what is coming, and what has it done to my bill."
+)
+DESC_INDEX = (
+    "<!doctype html><html><head><title>grid</title>\n"
+    f'    <meta name="description" content="{US_DESC}" />\n    '
+    f"{OG_MARKER}\n</head><body></body></html>"
+)
+
+
+def test_site_description_names_the_enabled_regions() -> None:
+    assert site_description([]) == SITE_DESCRIPTION == US_DESC
+    assert site_description(["US"]) == US_DESC
+    assert site_description(["US", "Ireland"]) == (
+        "Type an address in the US or Ireland. What is on my grid, what is coming, "
+        "and what has it done to my bill."
+    )
+    assert site_description(["Ireland"]).startswith("Type an address in Ireland. ")
+    assert site_description(["US", "Ireland", "UK"]).startswith(
+        "Type an address in the US, Ireland or UK. "
+    )
+    assert describe(DESC_INDEX, US_DESC) == DESC_INDEX
+    assert describe("<head></head>", "x") == "<head></head>"
+    out = describe(DESC_INDEX, 'a "b" & c')
+    assert 'content="a &quot;b&quot; &amp; c" />' in out and US_DESC not in out
+
+
+async def test_description_meta_follows_the_regions(tmp_path, monkeypatch) -> None:
+    """US alone: the page as built (byte for byte, the static golden too). With
+    Ireland enabled the page's description meta and the default og/twitter
+    description name both places; a brief's own tags are unchanged."""
+    d = dist(tmp_path, DESC_INDEX)
+    app = create_app(fakes.service(tmp_path, web_dist=str(d)))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        us_page = (await c.get("/")).text
+    assert f'<meta name="description" content="{US_DESC}" />' in us_page
+    assert "Ireland" not in us_page
+
+    enable_ie(monkeypatch)
+    app = create_app(services=fakes.services(tmp_path, web_dist=str(d)))
+    both = site_description(["US", "Ireland"])
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        for path in ("/", "/about", f"/b/{'f' * 16}"):
+            page = (await c.get(path)).text
+            assert f'<meta name="description" content="{both}" />' in page, path
+            assert f'property="og:description" content="{both}"' in page, path
+            assert f'name="twitter:description" content="{both}"' in page, path
+            assert US_DESC not in page, path

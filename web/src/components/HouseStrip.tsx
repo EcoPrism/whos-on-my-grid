@@ -1,4 +1,4 @@
-import type { HouseLine, Status } from '../types'
+import { US_LOCALE, type HouseLine, type Locale, type Status } from '../types'
 import { SourceLink } from './Sections'
 
 const STATUS_WORD: Record<Status, string> = {
@@ -12,10 +12,13 @@ const STATUS_WORD: Record<Status, string> = {
 // hero, the thing a resident screenshots for a neighbor. A layer over the five
 // sections, not a sixth. Every sentence still carries its status, confidence
 // and sources, in small type so the sentence stays the point.
-export default function HouseStrip({ lines, checking = false }: { lines: HouseLine[]; checking?: boolean }) {
+// The brief's locale sets the strip's language (en-IE spells "centre"), so a
+// screen reader and the browser's spell-check read the model's lines as written.
+export default function HouseStrip({ lines, checking = false, locale = US_LOCALE }: { lines: HouseLine[]; checking?: boolean; locale?: Locale }) {
   if (!lines.length) return null
+  const modelled = locale.language === 'en-US' ? 'Modeled' : 'Modelled'
   return (
-    <section aria-label="What this means at your house" className="border-y-2 border-[var(--ink)] bg-white">
+    <section aria-label="What this means at your house" lang={locale.language} className="border-y-2 border-[var(--ink)] bg-white">
       <div className="mx-auto max-w-6xl px-4 py-4 sm:py-5">
         <h2 className="wide text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">
           What this means at your house{checking && <span className="normal-case tracking-normal"> · drafts, being checked</span>}
@@ -25,7 +28,7 @@ export default function HouseStrip({ lines, checking = false }: { lines: HouseLi
             <li key={i} className={`rail-${l.status} border-l-4 pl-3`}>
               <p className={`text-[17px] leading-snug ${checking ? 'text-[var(--ink-soft)]' : ''}`}>{l.text}</p>
               <p className="mt-1 text-xs text-[var(--ink-soft)]">
-                <span className={`tag-${l.status} font-semibold`}>{STATUS_WORD[l.status]}</span>
+                <span className={`tag-${l.status} font-semibold`}>{l.status === 'modelled' ? modelled : STATUS_WORD[l.status]}</span>
                 {checking ? <span> · not yet checked</span> : l.status !== 'unavailable' && <span className="num"> · {Math.round(l.confidence * 100)}%</span>}
                 {l.sources.map((s) => (
                   <span key={s.url}> · <SourceLink s={s} /></span>

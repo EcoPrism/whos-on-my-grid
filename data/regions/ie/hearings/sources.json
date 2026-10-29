@@ -1,0 +1,42 @@
+{
+  "_about": "Ireland. Same shape as data/regions/us/hearings/sources.json. Bodies are planning authorities; `state` is the ISO 3166-2 county code (IE-D) and `counties` the planning-authority names (GeocodeResult.county). Irish decisions are matched by distance across all bodies (Ground.decisions_scope = radius), not by authority. Decisions cite An Coimisiún Pleanála case pages (HTML); `decided_by` names the body that decided when it is not the parent body (An Coimisiún Pleanála on appeal), and the prompt says it. Decision lat/lon must be the application site: the Google row uses OSM relation 4546404 (Profile Park), named in the case's site description. No meeting is indexed yet.",
+  "bodies": [
+    {
+      "id": "sdcc",
+      "name": "South Dublin County Council",
+      "state": "IE-D",
+      "counties": ["South Dublin"],
+      "archive": {"kind": "publici", "site": "sdcc", "view_id": null},
+      "meetings": [],
+      "decisions": [
+        {
+          "project": "Google Ireland Grange Castle expansion (SD24A/0164W)",
+          "codename": null,
+          "operator": "Google Ireland Limited",
+          "status": "approved",
+          "decided_by": "An Coimisiún Pleanála",
+          "date": "2026-09-23",
+          "text": "On 2026-09-23 An Coimisiún Pleanála decided appeal PL06S.320852 (South Dublin ref. SD24A/0164W), Google Ireland Limited's ten-year application to expand its operations with a data storage facility at Grange Castle Business Park South and Profile Park, with the decision Grant Permissions with Conditions.",
+          "source_url": "https://www.pleanala.ie/en-ie/case/320852",
+          "source_title": "An Coimisiún Pleanála, case PL06S.320852",
+          "quote": "Grant Permissions with Conditions",
+          "lat": 53.3144,
+          "lon": -6.4443,
+          "estimated_mw": null,
+          "history": "News reports say South Dublin County Council refused permission in August 2024 and Google appealed (lodged 18/09/2024); news reports a possible judicial review after the 2026 grant. Neither is on the cited page."
+        }
+      ],
+      "upcoming": []
+    },
+    {
+      "id": "fingal",
+      "name": "Fingal County Council",
+      "state": "IE-D",
+      "counties": ["Fingal"],
+      "archive": {"kind": "none", "site": null, "view_id": null},
+      "meetings": [],
+      "decisions": [],
+      "upcoming": []
+    }
+  ]
+}

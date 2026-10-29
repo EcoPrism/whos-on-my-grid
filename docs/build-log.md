@@ -297,3 +297,55 @@ from anything pre-existing.
   and `format.ts` helpers (`fmtMoney(n, currency)`, `fmtDistance`, `fmtVolume`, `fmtArea`), with
   no component rewired (D.6). Deferred to step 6: the PeeringDB country filter on pulse, renaming
   `PriceSeries.state`, moving the test set to `eval/us/`, and a per-region fingerprint. 446 tests.
+- 2026-10-29, Ireland (build order step 6), plus the deferred step-5 items and the D.6 web
+  wiring. Ireland is region `ie` ("US · Ireland" on the home page), off by default: production
+  keeps `GRID_REGIONS=us` until Ireland has a production geocoder. Decisions:
+  (0.1) region per country, `ie` not `eu`, because a region holds one currency, unit system and
+  language. (0.2) `NominatimGeocoder` only (`countrycodes=ie`, `accept-language=en`, 1 request/s
+  process-wide, in-memory LRU, one retry with the routing key when a full Eircode finds nothing,
+  one `/reverse` for a postal-district hit); coordinates are snapped to 3 decimals inside the
+  geocoder, so house-level precision never reaches a brief, a prompt or a log; errors carry the
+  exception class only. `county` is the planning authority (Fingal, South Dublin, Dublin City...),
+  `admin_county` the county, `postal_code` the routing key only. `GoogleGeocoder` is deferred.
+  (0.3) `Region` gains `scenarios`, `places_country`, `pulse_countries`, `brief_ttl_days`,
+  `placeholder`, `address_label`, `geocoder_attribution` and `sources_line`; Irish coverage is
+  `on_your_grid`, `your_bill` and `protection`, and a section outside coverage that came out
+  measured is downgraded to reported. (0.4) Prices from Eurostat `nrg_pc_204` (band DC, all taxes,
+  EUR/kWh), the same half-year two years apart (2026-S1 vs 2024-S1); the claim, figures and quote
+  come from one compact two-period response, and the typical home (4,200 kWh a year, 350 a month)
+  is a second cited claim from the CRU, so "+€45/mo" is the engine's arithmetic on two cited pages.
+  (0.5) ESB Networks as one polygon (Tailte Éireann provinces, CC BY 4.0,
+  `services/api/scripts/build_ie_boundary.py`); a point outside the map gets its own gap, an
+  unreadable map its own note. (0.6) One CRU row, `kind: connection_policy`,
+  `protects_households: false` because its stated aim is grid constraints, security of supply and
+  renewables; the text says only that ("household bills not its stated aim"). `tariff.kind` is
+  engine-owned, written only for a connection policy, and pruned from the draft schemas, whose
+  hashes are unchanged. (0.7) Planning decisions are matched by distance across the region
+  (`Ground.decisions_scope = "radius"`); the Google Grange Castle grant (ACP 320852) sits at the
+  Profile Park OSM centre; the Cruiserath row is not shipped (site unconfirmed). (0.8) Only
+  constants a code path reads: CRU typical consumption and the CSO 23% data-centre share (pulse).
+  (0.9) Outside the US the headline band comes from the facility count, never from a national
+  price change. (0.10) Irish text spells "data centre"; the bill-claim, no-facility and hearing
+  matchers accept both spellings. (0.11) Retention: `BriefCache.get` treats an expired non-US brief
+  as missing, and a sweep at startup and every `GRID_BRIEF_SWEEP_HOURS` deletes expired briefs and
+  their cards (`GRID_BRIEF_TTL_DAYS`, Bicep default 30). Step-5 items done: PeeringDB country
+  filter (pulse counts `IE` only; Irish briefs read IE and GB so a border address keeps Northern
+  Ireland facilities), `PriceSeries.state` renamed `jurisdiction`, test sets moved to `eval/us/`
+  and `eval/ie/` (ten named public places, the sign-in allow-list when Ireland is on), and a
+  per-region engine fingerprint (an Irish data edit never regenerates US briefs or cards). The
+  web reads the region from `/api/health`: label, placeholder, Places countries, footer sources,
+  km/euro/half-year formatting, the "Connection policy" row, OSM attribution on Irish briefs; the
+  what-if panel shows only where the region has it. As built: the switch sits in `Home.tsx`, not
+  `Shell.tsx`, so `BriefPage` and `About` have no switch; the indexer `--source`/`--provider` flags
+  and per-provider `min_roof_acres` are deferred. US output is byte-identical to step 5:
+  `tests/test_us_golden.py` pins prompts, draft schemas, briefs (agent and full), health, pulse,
+  cards, share text and static meta to digests recorded in a worktree at b02e7d1. Blocked or for
+  review: the production Irish geocoder (hosted Nominatim URL or a Google server key); the About
+  privacy text for Ireland and the EEA transfer mechanism (draft, needs the user's review, not
+  legal advice); ACP 320852 judicial review (recheck before the demo); the South Dublin meeting
+  transcript (`GRID_META_API_KEY`); no live Irish full-mode run yet (`run_eval.py --region ie`).
+  Live checks that needed no key: the ten Irish test addresses through the real Nominatim
+  geocoder (nine match their fixture exactly, Citywest's longitude is within 0.002 degrees), and
+  the three Nominatim fixtures the streams had reconstructed were re-captured live. Built as one
+  multi-agent workflow: a contracts phase, six streams in one tree, an integration pass.
+  719 tests.

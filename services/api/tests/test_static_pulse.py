@@ -1,13 +1,17 @@
 """The built web app is served by the API when its dist exists, with the SPA
 fallback behind every /api route; and /api/pulse is measured and free."""
 
+import json
+import time
+
 from httpx import ASGITransport, AsyncClient
 
 from app.ground import Ground
-from app.ground.facilities import FakeFacilityDatabase
+from app.ground.facilities import FacilityDatabase, FakeFacilityDatabase, PeeringDBSource
 from app.main import create_app
 from app.pulse import equivalences, scale
 from tests import fakes
+from tests.test_health_regions import IE_SHARE, enable_ie
 
 
 def dist(tmp_path):
@@ -79,3 +83,63 @@ async def test_pulse_full_mode_and_fixtures(tmp_path) -> None:
     app = create_app(fakes.service(tmp_path, brief_source="fixtures"))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         assert (await c.get("/api/pulse")).json() == {"peeringdb": None, "equivalences": []}
+
+
+async def test_pulse_ireland_counts_ireland_only(tmp_path, monkeypatch) -> None:
+    """The IE pulse counts PeeringDB's Irish facilities only (its briefs search
+    IE and GB), gives the homes line from ie_home_kwh_per_year and the CSO share
+    line, no football-field line, and no what-if constants."""
+    enable_ie(monkeypatch)
+    ground_dir = tmp_path / "pdb"
+    ground_dir.mkdir()
+    records = [
+        {"id": 1, "name": "A", "country": "IE", "created": "2020-01-01T00:00:00Z"},
+        {"id": 2, "name": "B", "country": "IE", "created": "2020-01-01T00:00:00Z"},
+        {"id": 3, "name": "C", "country": "GB", "created": "2020-01-01T00:00:00Z"},
+    ]
+    (ground_dir / "peeringdb_fac_ie_gb.json").write_text(
+        json.dumps({"fetched_at": time.time(), "data": records}), encoding="utf-8"
+    )
+    svcs = fakes.services(tmp_path, brief_source="full")
+    source = PeeringDBSource(ground_dir, countries=("IE", "GB"))
+    svcs["ie"].ground = Ground(facilities=FacilityDatabase([source], overrides=[]))
+    app = create_app(services=svcs)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        body = (await c.get("/api/pulse?region=ie")).json()
+    assert body["peeringdb"]["countries"] == ["IE"]
+    assert body["peeringdb"]["total"] == 2 and body["peeringdb"]["added"] == 0
+    assert body["constants"] == {}
+    lines = {line["id"]: line for line in body["equivalences"]}
+    assert list(lines) == ["homes_per_100mw", "dc_share_metered_electricity"]
+    # 100 MW × 8,760 h ÷ 4,200 kWh = 208,571 homes, to the nearest thousand.
+    homes = lines["homes_per_100mw"]
+    assert "about 209,000 homes in Ireland using 4,200 kWh a year each" in homes["text"]
+    assert homes["source_url"] == "https://www.cru.ie/publications/25651/"
+    assert "4,200 kWh" in homes["quote"] and "(2017)" in homes["basis"]
+    share = lines["dc_share_metered_electricity"]
+    assert share["text"] == IE_SHARE.claim and share["quote"] == IE_SHARE.quote
+    assert share["source_url"] == IE_SHARE.source_url and share["basis"].startswith("23% ")
+    for line in body["equivalences"]:
+        assert "acre" not in line["text"] and "US" not in line["text"]
+        assert "data center" not in line["text"]
+    # Only the asked-for region's pulse was built.
+    assert app.state.pulses.keys() == {"ie"}
+
+
+async def test_pulse_us_counts_the_us_and_keeps_its_lines(tmp_path) -> None:
+    svc = fakes.service(tmp_path, brief_source="full")
+    facilities = FakeFacilityDatabase([])
+    svc.ground = Ground(facilities=facilities)
+    app = create_app(svc)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        body = (await c.get("/api/pulse")).json()
+    assert facilities.summary_calls == [("US",)]
+    assert body["equivalences"] == equivalences()
+    assert [line["id"] for line in body["equivalences"]] == [
+        "homes_per_100mw",
+        "fields_per_million_sq_ft",
+    ]
+
+
+def test_regional_lines_leave_out_absent_constants() -> None:
+    assert equivalences("ie", {}, "Ireland") == []

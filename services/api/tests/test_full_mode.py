@@ -54,7 +54,7 @@ UTILITY = Utility(
     eia_id="19876",
 )
 PRICE = PriceSeries(
-    state="VA",
+    jurisdiction="VA",
     rate_now=0.16,
     rate_then=0.14,
     trend_pct=14.3,
@@ -278,7 +278,7 @@ async def test_rejected_status_is_legal_and_not_counted(tmp_path) -> None:
 
 
 UTILITY_PRICE = PriceSeries(
-    state="VA",
+    jurisdiction="VA",
     rate_now=0.13,
     rate_then=0.125,
     trend_pct=4.0,

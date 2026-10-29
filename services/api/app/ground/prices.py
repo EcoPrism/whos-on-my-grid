@@ -116,7 +116,7 @@ def series_from_rows(state: str, rows: list[Row]) -> PriceSeries | None:
     typical = sum(r[3] * 1000 / r[4] for r in now) / len(now)
     latest_row = rows[0]
     return PriceSeries(
-        state=state,
+        jurisdiction=state,
         rate_now=round(rate_now, 4),
         rate_then=round(rate_then, 4),
         trend_pct=round((rate_now - rate_then) / rate_then * 100, 1),
@@ -307,7 +307,7 @@ def utility_series_from_rows(
     rate_then = then[0] / then[1]
     typical = now[1] * 1000 / now[2] / 12
     return PriceSeries(
-        state=state,
+        jurisdiction=state,
         rate_now=round(rate_now, 4),
         rate_then=round(rate_then, 4),
         trend_pct=round((rate_now - rate_then) / rate_then * 100, 1),

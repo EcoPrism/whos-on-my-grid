@@ -1,0 +1,19 @@
+{
+  "_about": "The share card's bill line: a card line that starts with a sign and a currency symbol is the bill change, and is dropped when the big number shows it. app/card/spec.py _BILL_LINE and web/src/components/ShareCard.tsx BILL_LINE use the same character class, ^[+−-][$€£₹]; services/api/tests/test_card.py checks spec.py against these cases and integration checks the web regex with node.",
+  "cases": [
+    {"line": "+$12/mo", "bill": true},
+    {"line": "+$20/mo for a typical VA home vs 2 yrs ago", "bill": true},
+    {"line": "−$4/mo for a typical WA home vs 2 yrs ago", "bill": true},
+    {"line": "-$3/mo", "bill": true},
+    {"line": "+€45/mo", "bill": true},
+    {"line": "+€45/mo for a typical home in Ireland vs 2 yrs ago", "bill": true},
+    {"line": "−€3/mo", "bill": true},
+    {"line": "+£9/mo", "bill": true},
+    {"line": "+₹120/mo", "bill": true},
+    {"line": "CRU data-centre connection policy in force; household bills not its stated aim", "bill": false},
+    {"line": "15 data centers within 5 miles", "bill": false},
+    {"line": "6 data centres within 8 km", "bill": false},
+    {"line": "+12 MW announced", "bill": false},
+    {"line": "Bill shield: Schedule GS-5 in force", "bill": false}
+  ]
+}

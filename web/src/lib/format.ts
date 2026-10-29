@@ -1,4 +1,4 @@
-import { US_LOCALE, type Brief, type Locale, type Units } from '../types'
+import { US_LOCALE, type Brief, type Locale, type Price, type Units } from '../types'
 
 const KM_TO_MI = 0.621 // the factor the brief's tables have always used
 const L_TO_GAL = 0.264172
@@ -11,7 +11,7 @@ export function localeOf(b: Pick<Brief, 'locale'>): Locale {
 
 // '$' for USD, so the strings stay the ones card/spec.py mirrors; the narrow
 // symbol (or the code) for any other currency.
-function symbol(currency: string): string {
+export function symbol(currency: string): string {
   if (currency === 'USD') return '$'
   try {
     const parts = new Intl.NumberFormat('en', { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).formatToParts(0)
@@ -24,6 +24,71 @@ function symbol(currency: string): string {
 export function fmtMoney(n: number, currency = 'USD') {
   const sign = n < 0 ? '−' : '+'
   return `${sign}${symbol(currency)}${Math.abs(n).toFixed(0)}`
+}
+
+// An amount with no sign, whole units: "$12", "€45".
+export function fmtMoneyAbs(n: number, currency = 'USD') {
+  return `${symbol(currency)}${Math.abs(n).toFixed(0)}`
+}
+
+// A price per kWh: US cents as the brief has always shown them ("13.2¢/kWh");
+// any other currency in its own units, to the four places Eurostat reports
+// ("€0.3871/kWh"), so the figure reads as the cited page prints it.
+export function fmtRate(rate: number, currency = 'USD') {
+  return currency === 'USD' ? `${(rate * 100).toFixed(1)}¢/kWh` : `${symbol(currency)}${rate.toFixed(4)}/kWh`
+}
+
+// A date-only string ("2026-11-04") is a local calendar date, not a UTC instant.
+export function localDate(d: string) {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day)
+}
+
+// "November 4" in the US, "4 November" in Ireland.
+export function fmtDate(d: string, language = 'en-US') {
+  return localDate(d).toLocaleDateString(language, { month: 'long', day: 'numeric' })
+}
+
+// The brief's ring, as a noun phrase: "five-mile ring" or "8 km ring".
+export function ringWords(units: Units = 'us') {
+  return units === 'us' ? 'five-mile ring' : '8 km ring'
+}
+
+// The ring's radius in words: "five miles" or "8 km".
+export function ringRadius(units: Units = 'us') {
+  return units === 'us' ? 'five miles' : '8 km'
+}
+
+// The outer limit for the nearest campus past the ring: ten miles, or 16 km.
+export function outerWords(units: Units = 'us') {
+  return units === 'us' ? 'ten' : '16 km'
+}
+
+// The "close by" count: within a mile, or within a kilometre.
+export function nearKm(units: Units = 'us') {
+  return units === 'us' ? 1.61 : 1
+}
+export function nearWords(units: Units = 'us') {
+  return units === 'us' ? 'within a mile' : 'within a kilometre'
+}
+
+// The spelling the brief's own text uses for its subject.
+export function dcNoun(locale: Locale) {
+  return locale.language === 'en-US' ? 'data center' : 'data centre'
+}
+
+// A semiannual series' period words: as_of month 06 is H1, 12 is H2, and
+// "then" is as_of minus window_months ("H1 2026 vs H1 2024"). Null for any
+// other granularity, whose labels each caller already words.
+export function periodLabel(price: Pick<Price, 'as_of' | 'window_months' | 'granularity'> | undefined | null): { now: string; then: string; both: string } | null {
+  if (!price || price.granularity !== 'semiannual' || !price.as_of) return null
+  const [y, m] = price.as_of.split('-').map(Number)
+  if (!y || (m !== 6 && m !== 12)) return null
+  const half = (year: number, month: number) => `${month <= 6 ? 'H1' : 'H2'} ${year}`
+  const months = y * 12 + (m - 1) - (price.window_months ?? 24)
+  const now = half(y, m)
+  const then = half(Math.floor(months / 12), (months % 12) + 1)
+  return { now, then, both: `${now} vs ${then}` }
 }
 
 export function fmtDistance(km: number, units: Units = 'us'): string {

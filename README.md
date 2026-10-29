@@ -148,16 +148,21 @@ networks), then the others in `GRID_OVERPASS_ENDPOINTS`.
 
 ### The test set
 
-`eval/addresses.json` holds thirty street-level pins with an oracle for each: facility bucket,
+`eval/us/addresses.json` holds thirty street-level pins with an oracle for each: facility bucket,
 operators that must be named, serving utility, bill direction and size, tariff status, which
 consequence lines must appear and which phrases are hard fails. `eval/run_eval.py` reverse-geocodes
-each pin to a numbered address (cached in `eval/resolved.json`), posts it to a running API, and scores
-the briefs per dimension into `eval/runs/<name>/report.md`:
+each pin to a numbered address (cached in `eval/us/resolved.json`), posts it to a running API, and scores
+the briefs per dimension into the `--out` directory, or `eval/runs/<region>/<name>/` with `--name`:
 
 ```
 cd services/api && GRID_BRIEF_SOURCE=full GRID_DATA_DIR=eval/runs/full/cache   uv run uvicorn app.main:create_app --factory --port 8010
 python eval/run_eval.py --api http://localhost:8010 --out eval/runs/full
 ```
+
+Ireland's ten rows are in `eval/ie/addresses.json` (named public places only: a shopping centre,
+a railway station, civic offices, quays). `python eval/run_eval.py --region ie --name <run>`
+sends each row as typed with `region: "ie"` (no reverse geocoding), scores distances in km and
+the bill in euro, and fails any brief that leaks US units. Run the API with `GRID_REGIONS=us,ie`.
 
 Hearing is scored where a hook is expected and the county is indexed (`docs/counties.md`), and
 as information only elsewhere. Measured construction that adjoins a listed data center counts
@@ -169,6 +174,20 @@ Optional: `VITE_GOOGLE_MAPS_API_KEY` in `web/.env` turns the address box into Go
 autocomplete (US only). `GRID_BASETEN_API_KEY` is optional; without it claims stay `unchecked`.
 `GRID_ALLOWED_COUNTRIES=US` gates `/api/brief` behind an edge that sets `GRID_COUNTRY_HEADER`
 from the visitor IP; leave it empty locally.
+
+### Ireland
+
+`GRID_REGIONS=us,ie` adds Ireland to the same process (off by default). The home page then shows a
+"US · Ireland" switch; an Irish brief is in kilometres and euro, spells "data centre", and its
+sources are: PeeringDB (IE and GB) and OpenStreetMap for facilities, ESB Networks as the
+distribution system operator (one polygon built from Tailte Éireann's provinces, CC BY 4.0, see
+`data/regions/ie/README.md`), Eurostat `nrg_pc_204` for the residential price (same half-year,
+two years apart) with the CRU's 4,200 kWh typical consumption, the CRU's December 2025
+data-centre connection policy, and An Coimisiún Pleanála decisions matched by distance. Addresses
+are geocoded with OpenStreetMap Nominatim (`GRID_NOMINATIM_URL`; the public instance is for dev
+and eval only, one request a second) and rounded to 3 decimals before anything else sees them.
+`GRID_IE_GEOCODER=fake` answers only the Irish test set, for fixtures mode. Irish briefs are
+deleted after `GRID_BRIEF_TTL_DAYS` days (0 keeps them). The what-if is US only.
 
 ## Deploy
 
@@ -196,7 +215,8 @@ is used anywhere in this project.
 
 ## Coverage and honesty
 
-- US addresses only. Aerial imagery and state prices cover the whole country. Facility data is dense
+- US addresses, and Irish addresses when Ireland is enabled (no aerial imagery and no hearing
+  transcripts there yet). In the US, aerial imagery and state prices cover the whole country. Facility data is dense
   in data-center metros and sparse elsewhere. Hearings are covered for the counties that have been
   indexed, listed in `docs/counties.md`. The brief says which applies, per section.
 - A claim is text plus a verbatim quote plus a source URL. The verifier checks that the quote exists
@@ -205,7 +225,9 @@ is used anywhere in this project.
   not logged. Watch mode stores a ZIP code only.
 - Data sources and their terms: USDA NAIP imagery (public domain), US EIA (public domain), HIFLD
   service territories (public), OpenStreetMap (ODbL, attribution required), PeeringDB (research use
-  permitted, bulk redistribution and commercial use prohibited; queried per location only), county
+  permitted, bulk redistribution and commercial use prohibited; queried per location only),
+  Eurostat (reuse with acknowledgement), Tailte Éireann boundaries (CC BY 4.0), Nominatim
+  (OSMF usage policy: geocoding shown with "© OpenStreetMap contributors"), county
   and commission archives (public record, fetched from the official archive, never from video
   platforms).
 

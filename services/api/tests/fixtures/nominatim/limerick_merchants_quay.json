@@ -1,0 +1,43 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "Merchants Quay, Limerick"
+ },
+ "response": [
+  {
+   "place_id": 285165001,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 10262164,
+   "lat": "52.6675530",
+   "lon": "-8.6242539",
+   "category": "highway",
+   "type": "service",
+   "place_rank": 27,
+   "importance": 0.04006589532310978,
+   "addresstype": "road",
+   "name": "Merchants Quay",
+   "display_name": "Merchants Quay, John's B, The Metropolitan District of Limerick City, Limerick, County Limerick, Munster, V94 EKK1, Éire / Ireland",
+   "address": {
+    "road": "Merchants Quay",
+    "suburb": "John's B",
+    "city_district": "The Metropolitan District of Limerick City",
+    "city": "Limerick",
+    "county": "County Limerick",
+    "ISO3166-2-lvl6": "IE-LK",
+    "region": "Munster",
+    "ISO3166-2-lvl5": "IE-M",
+    "postcode": "V94 EKK1",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "52.6672591",
+    "52.6676626",
+    "-8.6249623",
+    "-8.6235248"
+   ]
+  }
+ ]
+}

@@ -1,6 +1,7 @@
 """Address to coordinates, state, county and ZIP via the US Census Bureau
-geocoder. No key, US only. The matched address, normalised, is what the brief
-id is hashed from, so two spellings of one address get one brief.
+geocoder (no key, US only), and for Ireland via OpenStreetMap Nominatim
+(NominatimGeocoder). The matched address, normalised, is what the brief id is
+hashed from, so two spellings of one address get one brief.
 
 The address itself is never logged and never stored; see brief_id_for().
 """
@@ -12,7 +13,8 @@ import json
 import re
 import time
 import zipfile
-from collections.abc import Awaitable, Callable
+from collections import OrderedDict
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -54,6 +56,9 @@ class GeocodeResult:
     postal_code: str  # US: the five-digit ZIP
     matched: str  # the geocoder's canonical one-line address, used for the id
     country: str = "US"  # ISO 3166-1 alpha-2
+    # IE: the traditional county ("Dublin"), where `county` is the planning
+    # authority ("Fingal"). US: None.
+    admin_county: str | None = None
 
     @property
     def state(self) -> str:
@@ -199,6 +204,276 @@ class CensusGeocoder:
             matched=matched,
             country="US",
         )
+
+
+# --- Ireland: OpenStreetMap Nominatim ------------------------------------------------
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org"
+# A full Eircode: routing key (letter + 2 digits, or D6W) and a 4-character unique id.
+EIRCODE = re.compile(r"^(?:[AC-FHKNPRTV-Y]\d{2}|D6W)\s?[0-9AC-FHKNPRTV-Y]{4}$", re.IGNORECASE)
+_EIRCODE_IN_TEXT = re.compile(
+    r"\b((?:[AC-FHKNPRTV-Y]\d{2}|D6W))\s?[0-9AC-FHKNPRTV-Y]{4}\b", re.IGNORECASE
+)
+_ROUTING_KEY = re.compile(r"^(?:[AC-FHKNPRTV-Y]\d{2}|D6W)$", re.IGNORECASE)
+_DUBLIN_DISTRICT = re.compile(r"^\s*Dublin\s+(\d{1,2})\s*(W)?\s*$", re.IGNORECASE)
+# Nominatim answers in the local language unless asked (accept-language=en is sent);
+# these catch the city names that still come back in Irish.
+_CITY_EN = {
+    "Cathair na Gaillimhe": "Galway",
+    "Corcaigh": "Cork",
+    "Luimneach": "Limerick",
+    "Baile Átha Cliath": "Dublin",
+}
+# Dublin's three county councils, which Nominatim gives as `municipality`.
+_DUBLIN_COUNCILS = {
+    "fingal": "Fingal",
+    "south dublin": "South Dublin",
+    "dún laoghaire-rathdown": "Dún Laoghaire-Rathdown",
+    "dun laoghaire-rathdown": "Dún Laoghaire-Rathdown",
+}
+_POSTAL_TYPES = ("postal_district", "postcode", "postal_code")
+_COUNTY_PREFIX = re.compile(r"^(?:County|Co\.?)\s+", re.IGNORECASE)
+
+
+def snap(x: float | str) -> float:
+    """Three decimals, about 110 m north-south: the only precision an Irish
+    point carries past the geocoder (plan 0.2)."""
+    return round(float(x), 3)
+
+
+def routing_key(postcode: str | None, postal_district: str | None = None) -> str:
+    """'D15 T1FD' -> 'D15'; 'D15' -> 'D15'; postal district 'Dublin 15' -> 'D15',
+    'Dublin 6W' -> 'D6W'; else ''. A full Eircode never leaves this function."""
+    pc = (postcode or "").strip()
+    if EIRCODE.match(pc):
+        return pc[:3].upper()
+    if _ROUTING_KEY.match(pc):
+        return pc.upper()
+    for text in (postal_district, pc):
+        m = _DUBLIN_DISTRICT.match(text or "")
+        if m:
+            n, w = int(m.group(1)), (m.group(2) or "").upper()
+            return "D6W" if (n, w) == (6, "W") else f"D{n:02d}"
+    return ""
+
+
+def _strip_county(name: str | None) -> str | None:
+    if not name:
+        return None
+    return _COUNTY_PREFIX.sub("", name.strip()) or None
+
+
+def ie_result(
+    address: dict, lat: float | str, lon: float | str, *, fallback_key: str = ""
+) -> GeocodeResult | None:
+    """A Nominatim `address` block (accept-language=en) to an Irish result, per
+    plan 0.2. The point is snapped to 3 decimals here, before anything sees it.
+    `display` is built from place components only, never a house number, a full
+    Eircode or the name of the matched POI."""
+    a = {k: v.strip() for k, v in address.items() if isinstance(v, str)}
+    if a.get("country_code", "").lower() != "ie":
+        return None
+    city = _CITY_EN.get(a.get("city", ""), a.get("city", ""))
+    admin = _strip_county(a.get("county"))
+    muni = _DUBLIN_COUNCILS.get(a.get("municipality", "").lower())
+    if muni:
+        authority: str | None = muni
+    elif admin == "Dublin" and city == "Dublin":
+        authority = "Dublin City"
+    elif city in ("Cork", "Galway"):
+        authority = f"{city} City"
+    else:
+        authority = admin
+    key = routing_key(a.get("postcode"), a.get("postal_district")) or fallback_key
+    place = next(
+        (v for v in (a.get("town"), a.get("village"), city, a.get("suburb"), a.get("road")) if v),
+        "",
+    )
+    shown_authority = authority
+    if authority and (authority == admin or (place and authority.startswith(place))):
+        shown_authority = None
+    display = ", ".join(
+        b for b in (place, shown_authority, f"Co. {admin}" if admin else "", key) if b
+    )
+    slat, slon = snap(lat), snap(lon)
+    street = " ".join(b for b in (a.get("house_number"), a.get("road")) if b)
+    matched = ", ".join(
+        b
+        for b in (street, place if place != a.get("road") else "", f"Co. {admin}" if admin else "")
+        if b
+    )
+    postcode = a.get("postcode") or key
+    if matched and postcode:
+        matched = f"{matched}, {postcode}"
+    if matched and not EIRCODE.match(a.get("postcode", "")):
+        # Without a full Eircode the text names a town or a road, not a place: two
+        # road-less hits in one town (a centre, the town node) would share a brief
+        # id. The snapped point keeps them apart and is no finer than the brief's own.
+        matched = f"{matched}, {slat:.3f},{slon:.3f}"
+    return GeocodeResult(
+        display=display or f"{slat:.3f}, {slon:.3f}",
+        lat=slat,
+        lon=slon,
+        region_code=a.get("ISO3166-2-lvl6", "").upper(),
+        county=authority,
+        postal_code=key,
+        matched=matched or f"{slat:.3f},{slon:.3f}",
+        country="IE",
+        admin_county=admin,
+    )
+
+
+class _Throttle:
+    """At most one request per `interval` seconds through one throttle. The
+    lock is made on first use in the running loop (an asyncio.Lock is bound to
+    one), so a process-wide throttle survives test loops."""
+
+    def __init__(
+        self,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
+        self.clock = clock
+        self.sleep = sleep
+        self.last: float | None = None
+        self._lock: asyncio.Lock | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+    def _get_lock(self) -> asyncio.Lock:
+        loop = asyncio.get_running_loop()
+        if self._lock is None or self._loop is not loop:
+            self._lock, self._loop = asyncio.Lock(), loop
+        return self._lock
+
+    async def wait(self, interval: float) -> None:
+        async with self._get_lock():
+            if self.last is not None:
+                gap = interval - (self.clock() - self.last)
+                if gap > 0:
+                    await self.sleep(gap)
+            self.last = self.clock()
+
+
+# One throttle per Nominatim base URL in this process: the public instance's
+# policy is one request a second from the whole application.
+_THROTTLES: dict[str, _Throttle] = {}
+
+
+def _throttle_for(base_url: str) -> _Throttle:
+    return _THROTTLES.setdefault(base_url, _Throttle())
+
+
+class NominatimGeocoder:
+    """Ireland. OpenStreetMap Nominatim search, English names, Irish results only.
+
+    - Rate: one request per `min_interval` seconds per base URL, process-wide.
+    - Cache: an in-memory LRU of `cache_size` answers keyed by the normalised
+      text; never written to disk.
+    - A full Eircode that finds nothing is retried once as its routing key.
+    - A hit without county or ISO code gets one /reverse at zoom 10.
+    - Transport errors, timeouts and HTTP errors raise GeocodeUnavailable with
+      the exception's class name only: an httpx message holds the URL, and the
+      URL holds the address or the point."""
+
+    def __init__(
+        self,
+        base_url: str = NOMINATIM_URL,
+        *,
+        email: str = "",
+        min_interval: float = 1.0,
+        timeout: float | None = None,
+        cache_size: int = 512,
+        transport: httpx.AsyncBaseTransport | None = None,
+        throttle: _Throttle | None = None,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.email = email
+        self.min_interval = min_interval
+        self.timeout = timeout
+        self.cache_size = cache_size
+        self.transport = transport
+        self.throttle = throttle or _throttle_for(self.base_url)
+        self._cache: OrderedDict[str, GeocodeResult | None] = OrderedDict()
+
+    def _params(self, extra: dict[str, str]) -> dict[str, str]:
+        p = {**extra, "format": "jsonv2", "addressdetails": "1", "accept-language": "en"}
+        if self.email:
+            p["email"] = self.email
+        return p
+
+    async def _get(self, path: str, params: dict[str, str]) -> object:
+        await self.throttle.wait(self.min_interval)
+        timeout = self.timeout or get_settings().geocode_timeout_seconds
+        try:
+            async with httpx.AsyncClient(
+                timeout=timeout, headers={"User-Agent": USER_AGENT}, transport=self.transport
+            ) as client:
+                r = await client.get(f"{self.base_url}/{path}", params=self._params(params))
+                r.raise_for_status()
+                return r.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            name = exc.__class__.__name__
+            log_event("geocode_unavailable", provider="nominatim", reason=name)
+            raise GeocodeUnavailable(name) from None
+
+    async def _search(self, q: str) -> list[dict]:
+        data = await self._get("search", {"q": q, "countrycodes": "ie", "limit": "1"})
+        return [h for h in data if isinstance(h, dict)] if isinstance(data, list) else []
+
+    async def _reverse(self, lat: str, lon: str) -> dict:
+        data = await self._get("reverse", {"lat": lat, "lon": lon, "zoom": "10"})
+        return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def _acceptable(hit: dict, *, postal_only: bool = False) -> bool:
+        kind = str(hit.get("type") or hit.get("addresstype") or "")
+        if kind in _POSTAL_TYPES:
+            return True
+        if postal_only:
+            return False
+        try:
+            return int(hit.get("place_rank") or 0) >= 16
+        except (TypeError, ValueError):
+            return False
+
+    async def _lookup(self, address: str) -> GeocodeResult | None:
+        hits = await self._search(address)
+        fallback_key = ""
+        postal_only = False
+        eircode = _EIRCODE_IN_TEXT.search(address)
+        if not hits and eircode:
+            fallback_key = eircode.group(1).upper()
+            retry = _WS.sub(" ", _EIRCODE_IN_TEXT.sub(fallback_key, address, count=1)).strip()
+            postal_only = normalise(retry) == fallback_key.lower()
+            hits = await self._search(retry)
+        if not hits or not self._acceptable(hits[0], postal_only=postal_only):
+            return None
+        hit = hits[0]
+        addr = hit.get("address") if isinstance(hit.get("address"), dict) else {}
+        if str(addr.get("country_code", "")).lower() != "ie":
+            return None
+        if not (addr.get("ISO3166-2-lvl6") and addr.get("county")):
+            rev = await self._reverse(str(hit.get("lat")), str(hit.get("lon")))
+            rev_addr = rev.get("address") if isinstance(rev.get("address"), dict) else {}
+            if str(rev_addr.get("country_code", "ie")).lower() == "ie":
+                addr = {**rev_addr, **addr}
+        try:
+            return ie_result(addr, hit["lat"], hit["lon"], fallback_key=fallback_key)
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    async def geocode(self, address: str) -> GeocodeResult | None:
+        key = normalise(address)
+        if not key:
+            return None
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        result = await self._lookup(address)
+        self._cache[key] = result
+        while len(self._cache) > self.cache_size:
+            self._cache.popitem(last=False)
+        return result
 
 
 def parse_gazetteer(text: str) -> dict[str, tuple[float, float]]:
@@ -371,15 +646,28 @@ class FakeZctaCentroids:
 
 
 class FakeGeocoder:
-    """Returns the scripted result for any address, or None when scripted so."""
+    """Returns the scripted result for any address, or None when scripted so.
+    With `by_address`, answers from that table instead, keyed by the
+    normalised text (None for anything not in it)."""
 
-    def __init__(self, result: GeocodeResult | None = None, *, fail: bool = False) -> None:
+    def __init__(
+        self,
+        result: GeocodeResult | None = None,
+        *,
+        fail: bool = False,
+        by_address: Mapping[str, GeocodeResult] | None = None,
+    ) -> None:
         self.result = result
         self.fail = fail
+        self.by_address = (
+            {normalise(k): v for k, v in by_address.items()} if by_address is not None else None
+        )
         self.calls = 0
 
     async def geocode(self, address: str) -> GeocodeResult | None:
         self.calls += 1
         if self.fail:
             raise GeocodeUnavailable("fake")
+        if self.by_address is not None:
+            return self.by_address.get(normalise(address))
         return self.result

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from app.auth import User, same_site_post
 from app.auth.gate import Gate, GateDenied
 from app.geocode import GeocodeUnavailable
+from app.regions import UnknownRegion
 from app.scenario.inputs import MW_MAX, MW_MIN, ScenarioInputs
 from app.scenario.pipeline import (
     InterpretFailed,
@@ -44,6 +45,9 @@ class ScenarioRequest(BaseModel):
     mw: int = Field(ge=MW_MIN, le=MW_MAX, strict=True)
     cooling: Literal["evaporative", "closed_loop"]
     pin: Pin | None = None
+    # A region id. Only an explicit one counts (never the country header): the
+    # what-if runs on US ZIPs and US constants, so a region without it is a 422.
+    region: str | None = Field(default=None, max_length=16)
 
 
 class DailyCap:
@@ -69,6 +73,19 @@ class DailyCap:
         self.used += 1
 
 
+def _check_region(request: Request, region: str | None) -> None:
+    """An unknown or disabled id is `unknown_region`; an enabled region where the
+    what-if does not run is `scenarios_not_in_region`. Absent or blank: fine."""
+    if region is None or not region.strip():
+        return
+    regions = request.app.state.regions
+    rid = region.strip().lower()
+    if rid not in regions:
+        raise HTTPException(422, "unknown_region") from UnknownRegion(rid)
+    if not regions[rid].scenarios:
+        raise HTTPException(422, "scenarios_not_in_region")
+
+
 def _service(request: Request) -> ScenarioService:
     service = getattr(request.app.state, "scenarios", None)
     if service is None:
@@ -89,6 +106,7 @@ async def create_scenario(body: ScenarioRequest, request: Request) -> dict:
     gate = request.app.state.gate
     if gate.on and not same_site_post(request):
         raise HTTPException(403, "cross_site")
+    _check_region(request, body.region)
     service = _service(request)
     inputs = ScenarioInputs.create(
         zip=body.zip,

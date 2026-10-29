@@ -85,6 +85,11 @@ class BriefService:
     def locale(self) -> Locale:
         return self.region.locale if self.region is not None else US_LOCALE
 
+    @property
+    def coverage(self) -> frozenset[str] | None:
+        """The sections this region can make `measured`; None (no region) is all."""
+        return self.region.coverage if self.region is not None else None
+
     async def resolve(self, address: str) -> Resolved:
         """Everything that costs no model tokens: geocode, derive the id, look
         in the cache. The router decides from this who may pay for the rest."""
@@ -146,6 +151,7 @@ class BriefService:
                 truth=truth,
                 public_base_url=self.settings.public_base_url,
                 locale=self.locale,
+                coverage=self.coverage,
             )
             brief["partial"] = {
                 "stage": stage,
@@ -159,7 +165,9 @@ class BriefService:
 
         async def one_section(sid: str) -> None:
             try:
-                r = await draft_section(self.draft_provider, sid, geo, now_iso, truth)
+                r = await draft_section(
+                    self.draft_provider, sid, geo, now_iso, truth, locale=self.locale
+                )
             except Exception as exc:  # noqa: BLE001  isolate it like any other failure
                 log_event(
                     "draft_crashed", section=sid, kind=exc.__class__.__name__, reason=str(exc)[:200]
@@ -176,7 +184,7 @@ class BriefService:
         if truth is not None:
             _, house = await asyncio.gather(
                 asyncio.gather(*(one_section(sid) for sid in to_draft)),
-                draft_house_lines(self.draft_provider, geo, now_iso, {}, truth),
+                draft_house_lines(self.draft_provider, geo, now_iso, {}, truth, locale=self.locale),
             )
         else:
             await asyncio.gather(*(one_section(sid) for sid in to_draft))
@@ -184,7 +192,9 @@ class BriefService:
             raise DraftingUnavailable()
         if house is None:
             summaries = {sid: d.summary for sid, d in drafts.items() if isinstance(d, DraftResult)}
-            house = await draft_house_lines(self.draft_provider, geo, now_iso, summaries, truth)
+            house = await draft_house_lines(
+                self.draft_provider, geo, now_iso, summaries, truth, locale=self.locale
+            )
 
         brief = assemble_brief(
             geo,
@@ -196,6 +206,7 @@ class BriefService:
             truth=truth,
             public_base_url=self.settings.public_base_url,
             locale=self.locale,
+            coverage=self.coverage,
         )
         total = len(brief["claims"])
         done = 0

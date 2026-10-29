@@ -1201,6 +1201,6 @@
   ],
   "global_forbid": {
     "substation_headline": "shares? your substation",
-    "causal_bill_claim": "data.?centers?[^.\"]{0,60}\\b(are |is |have been |has been )?(driving|causing|pushing up|raising|behind|responsible for)\\b[^.\"]{0,40}\\b(bills?|prices?|rates?)"
+    "causal_bill_claim": "data.?cent(?:er|re)s?[^.\"]{0,60}\\b(are |is |have been |has been )?(driving|causing|pushing up|raising|behind|responsible for)\\b[^.\"]{0,40}\\b(bills?|prices?|rates?)"
   }
 }

@@ -1,0 +1,27 @@
+{
+  "_about": "Ireland's constants, read after data/equivalences.json and merged with it by id (app/scenario/constants.py load_region). Same rules as data/regions/us/constants.json: each row names a page the verifier can fetch, quotes it verbatim, and `claim` restates only the quote. Only constants a code path reads are kept; the what-if is US-only in step 6.",
+  "constants": [
+    {
+      "id": "ie_home_kwh_per_year",
+      "value": 4200,
+      "unit": "kWh of electricity per household per year, the CRU's recommended typical annual domestic consumption (a regulator benchmark, not a metered mean)",
+      "as_of": "2017",
+      "source_title": "CRU, Review of Typical Consumption Figures - Decision Paper",
+      "source_url": "https://www.cru.ie/publications/25651/",
+      "quote": "This decision paper updates the recommended typical annual consumption figure for electricity to 4,200 kWh and the typical annual consumption for gas to 11,000 kWh.",
+      "claim": "The CRU's decision paper sets the recommended typical annual electricity consumption figure at 4,200 kWh.",
+      "checked": "2026-10-29"
+    },
+    {
+      "id": "ie_dc_share_metered_electricity",
+      "value": 0.23,
+      "unit": "fraction of Ireland's total metered electricity consumption used by data centres in 2025",
+      "as_of": "2025",
+      "source_title": "CSO, Data Centres Metered Electricity Consumption 2025, Key Findings",
+      "source_url": "https://www.cso.ie/en/releasesandpublications/ep/p-dcmec/datacentresmeteredelectricityconsumption2025/keyfindings/",
+      "quote": "The percentage share of total metered electricity consumption used by data centres rose to 23% in 2025 from 5% in 2015 (See Table 1).",
+      "claim": "The CSO reports that data centres used 23% of Ireland's total metered electricity consumption in 2025, up from 5% in 2015.",
+      "checked": "2026-10-29"
+    }
+  ]
+}

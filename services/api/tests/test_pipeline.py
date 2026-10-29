@@ -157,3 +157,31 @@ async def test_one_fetch_per_url(tmp_path) -> None:
     svc = fakes.service(tmp_path)
     await svc.brief_for_address("x")
     assert sorted(svc.fetcher.calls) == sorted(set(svc.fetcher.calls))
+
+
+async def test_region_locale_and_coverage_reach_the_drafts_and_assembly(tmp_path) -> None:
+    """The service hands its region's locale to every prompt and its coverage
+    to the assembler: an IE service drafts for an Irish resident, and a section
+    outside coverage cannot come out `measured`."""
+    from dataclasses import replace
+
+    from app.regions.locale import US_LOCALE
+    from tests.fakes_ie import ie_ground
+
+    svc = fakes.services(tmp_path, ("us", "ie"), brief_source="full")["ie"]
+    svc.region = replace(svc.region, coverage=frozenset({"your_bill"}))
+    brief = await svc.brief_for_address("Blanchardstown Centre, Dublin 15")
+    validate_brief(brief)
+    assert brief["locale"]["country"] == "IE"
+    assert brief["sections"]["on_your_grid"]["status"] == "reported"  # measured, downgraded
+    systems = {name: msgs[0]["content"] for name, msgs in svc.draft_provider.calls}
+    assert all("an Irish resident" in systems[f"draft_{sid}"] for sid in SECTION_IDS)
+    assert "a neighbour" in systems["draft_at_your_house"]
+
+    # The US service: default locale, every section may be measured.
+    us = fakes.service(tmp_path / "us", brief_source="full")
+    us.ground = ie_ground(jurisdiction=lambda g: g.region_code, decisions_scope="authority")
+    assert us.locale == US_LOCALE and us.coverage is None
+    brief = await us.brief_for_address("x")
+    assert brief["sections"]["on_your_grid"]["status"] == "measured"
+    assert "a US resident" in us.draft_provider.calls[0][1][0]["content"]

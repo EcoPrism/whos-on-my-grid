@@ -2,7 +2,7 @@
 says it is AI-assisted in its metadata, and the routes check the id first."""
 
 import io
-import re
+import json
 import struct
 from dataclasses import replace
 
@@ -15,11 +15,21 @@ from app.brief.assemble import assemble_brief
 from app.card import CardCache, make_png
 from app.card.provenance import IPTC_COMPOSITE_AI, with_c2pa
 from app.card.render import CQW, H, W, fit_title, render_png
-from app.card.spec import fmt_money, fmt_range, share_text, spec_from_brief, spec_from_scenario
+from app.card.spec import (
+    _BILL_LINE,
+    fmt_money,
+    fmt_range,
+    share_text,
+    spec_from_brief,
+    spec_from_scenario,
+)
+from app.config import REPO_ROOT
 from app.main import create_app
 from tests import fakes
 
-BILL = re.compile(r"^[+−-]\$")
+BILL = _BILL_LINE
+BILL_CASES = json.loads((REPO_ROOT / "schema" / "card_bill_cases.json").read_text("utf-8"))
+SYMBOL = {"USD": "$", "EUR": "€"}
 
 
 def _chunks(png: bytes) -> list[tuple[bytes, bytes]]:
@@ -42,8 +52,9 @@ def test_spec_from_brief_mirrors_share_card(key) -> None:
         assert spec.big is None and spec.lines == tuple(card["lines"])
     else:
         lo, hi = headline["ai_rent_range_usd_per_month"]
-        assert spec.big == f"+${lo:.0f} to ${hi:.0f}"
-        assert spec.big_caption and spec.big_caption.endswith("· modeled")
+        cur = SYMBOL[(brief.get("locale") or {}).get("currency", "USD")]
+        assert spec.big == f"+{cur}{lo:.0f} to {cur}{hi:.0f}"
+        assert spec.big_caption and spec.big_caption.endswith(("· modeled", "· modelled"))
         assert spec.lines == tuple(line for line in card["lines"] if not BILL.match(line))
     assert spec.footer == card["footer"]
     # Fixtures predate card.disclosure: it is made from the id and the date.
@@ -58,6 +69,33 @@ def test_bill_line_dropped_only_when_big_shows() -> None:
     headline = {**brief["headline"], "ai_rent_usd_per_month": None}
     spec = spec_from_brief({**brief, "card": card, "headline": headline})
     assert spec.big is None and len(spec.lines) == 2
+
+
+@pytest.mark.parametrize("case", BILL_CASES["cases"], ids=lambda c: c["line"][:24])
+def test_bill_line_cases(case) -> None:
+    """The shared table (schema/card_bill_cases.json) that ShareCard.tsx's regex
+    is checked against too."""
+    assert bool(_BILL_LINE.match(case["line"])) is case["bill"]
+    assert _BILL_LINE.pattern == "^[+−-][$€£₹]"
+
+
+def test_euro_card_drops_the_euro_bill_line() -> None:
+    brief = fixtures.by_key("blanchardstown")
+    assert brief is not None
+    spec = spec_from_brief(brief)
+    assert spec.big == "+€36 to €54"
+    assert spec.big_caption == "a month for a typical home, H1 2026 vs H1 2024 · modelled"
+    assert not any(line.startswith("+€") for line in spec.lines)
+    assert spec.title == "Blanchardstown, Co. Dublin"
+
+
+def test_usd_strings_unchanged() -> None:
+    assert fmt_money(31) == fmt_money(31, "USD") == "+$31"
+    assert fmt_range(25, 37) == "+$25 to $37"
+    assert fmt_range(36, 54, "EUR") == "+€36 to €54"
+    assert fmt_money(-3, "EUR") == "−€3"
+    spec = spec_from_brief(fixtures.by_key("ashburn"))
+    assert spec.big == "+$25 to $37" and spec.big_caption.endswith("· modeled")
 
 
 def test_disclosure_written_into_new_briefs() -> None:

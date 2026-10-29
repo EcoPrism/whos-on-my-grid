@@ -29,7 +29,9 @@ def brief_version(brief: dict[str, Any]) -> str:
 
 class CardCache:
     """{dir}/{kind}/{id}.{fingerprint}.png, where the fingerprint is the engine's
-    plus the brief version: a code change or a regenerated brief renders anew.
+    for the doc's region (engine_fingerprint(region_of(doc)); "us" for what-ifs)
+    plus the brief version: a code change, an edit to that region's curated data
+    or a regenerated brief renders anew.
     A signed card's timestamp makes its bytes differ per render, so a card is made
     once and served from here. `signing` (provenance.signing_stamp) joins the key, so
     loading or rotating a certificate re-renders instead of serving unsigned files."""
@@ -38,22 +40,25 @@ class CardCache:
         self.dir = directory
         self.signing = signing if re.fullmatch(r"[0-9a-f]*", signing) else ""
 
-    def path(self, kind: str, id: str, version: str = "") -> Path | None:
+    def path(self, kind: str, id: str, version: str = "", region_id: str = "us") -> Path | None:
         if kind not in KINDS or not ID.match(id) or not re.fullmatch(r"[0-9a-f]*", version):
             return None
-        stamp = f"{engine_fingerprint()}-{version}" if version else engine_fingerprint()
+        if not re.fullmatch(r"[a-z]{2,8}", region_id):
+            return None
+        engine = engine_fingerprint(region_id)
+        stamp = f"{engine}-{version}" if version else engine
         if self.signing:
             stamp += f"-c{self.signing}"
         return self.dir / kind / f"{id}.{stamp}.png"
 
-    def get(self, kind: str, id: str, version: str = "") -> bytes | None:
-        p = self.path(kind, id, version)
+    def get(self, kind: str, id: str, version: str = "", region_id: str = "us") -> bytes | None:
+        p = self.path(kind, id, version, region_id)
         if p is None or not p.is_file():
             return None
         return p.read_bytes()
 
-    def put(self, kind: str, id: str, png: bytes, version: str = "") -> None:
-        p = self.path(kind, id, version)
+    def put(self, kind: str, id: str, png: bytes, version: str = "", region_id: str = "us") -> None:
+        p = self.path(kind, id, version, region_id)
         if p is None:
             raise ValueError("bad card id")
         p.parent.mkdir(parents=True, exist_ok=True)

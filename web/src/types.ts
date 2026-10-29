@@ -74,6 +74,9 @@ export interface Tariff {
   name?: string | null
   protects_households?: boolean | null
   docket?: string | null
+  // Engine-owned, written only when not a tariff: a connection policy (Ireland's
+  // CRU rule) is labelled as one, and "shields households" reads by its stated aim.
+  kind?: 'tariff' | 'connection_policy'
 }
 
 export interface Said {

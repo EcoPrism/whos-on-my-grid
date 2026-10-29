@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 // A plain input by default. When VITE_GOOGLE_MAPS_API_KEY is set, Google
-// Places Autocomplete (US only) is mounted instead; if the script fails to
+// Places Autocomplete (restricted to the region's countries) is mounted
+// instead, and remounted when the region changes; if the script fails to
 // load, or Google rejects the key for this origin, the plain input is used.
 // Either way the parent gets a string: the picked suggestion or the typed text.
 
@@ -11,12 +12,15 @@ interface Props {
   value: string
   onChange: (v: string) => void
   disabled?: boolean
+  // Lower-case country codes for Places, from the region (`places_country`).
+  countries?: string[]
+  placeholder?: string
 }
 
 const INPUT_CLASS =
   'w-full border-2 border-[var(--ink)] bg-white px-4 py-3 text-lg placeholder:text-[var(--line)] disabled:opacity-60'
 
-export default function AddressInput({ value, onChange, disabled }: Props) {
+export default function AddressInput({ value, onChange, disabled, countries = ['us'], placeholder = '21715 Filigree Ct, Ashburn, VA' }: Props) {
   const [places, setPlaces] = useState<PlacesLib | null>(null)
   const host = useRef<HTMLDivElement>(null)
 
@@ -29,9 +33,11 @@ export default function AddressInput({ value, onChange, disabled }: Props) {
     return () => { cancelled = true }
   }, [])
 
+  // A stable key so a new array with the same countries does not remount the widget.
+  const countryKey = countries.join()
   useEffect(() => {
     if (!places || !host.current) return
-    const el = new places.PlaceAutocompleteElement({ componentRestrictions: { country: ['us'] } })
+    const el = new places.PlaceAutocompleteElement({ componentRestrictions: { country: countryKey.split(',') } })
     el.id = 'address'
     const onSelect = async (e: PlaceSelectEvent) => {
       const place = e.placePrediction ? e.placePrediction.toPlace() : e.place
@@ -55,7 +61,7 @@ export default function AddressInput({ value, onChange, disabled }: Props) {
     el.addEventListener('gmp-requesterror', onError)
     host.current.replaceChildren(el)
     return () => { el.remove() }
-  }, [places, onChange])
+  }, [places, onChange, countryKey])
 
   if (places) {
     return <div ref={host} className="w-full border-2 border-[var(--ink)] bg-white px-2 py-1 text-lg" />
@@ -65,7 +71,7 @@ export default function AddressInput({ value, onChange, disabled }: Props) {
       id="address"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="21715 Filigree Ct, Ashburn, VA"
+      placeholder={placeholder}
       autoComplete="street-address"
       disabled={disabled}
       className={INPUT_CLASS}

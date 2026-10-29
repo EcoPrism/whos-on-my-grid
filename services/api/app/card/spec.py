@@ -15,8 +15,11 @@ SHARE_TAIL = "AI-assisted brief, every claim cited."
 SCENARIO_SHARE_TAIL = "Hypothetical what-if, modelled from cited figures."
 MAX_LINES = 4
 
-# ShareCard.tsx drops the bill line ("+$20/mo ...") when the big number shows it.
-_BILL_LINE = re.compile(r"^[+−-]\$")
+# ShareCard.tsx drops the bill line ("+$20/mo ...", "+€45/mo ...") when the big
+# number shows it. ShareCard.tsx copies this character class; the shared cases are
+# schema/card_bill_cases.json.
+_BILL_LINE = re.compile(r"^[+−-][$€£₹]")
+_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹"}
 
 
 @dataclass(frozen=True)
@@ -44,14 +47,19 @@ def _whole(x: float) -> str:
     return str(Decimal(abs(x)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
-def fmt_money(n: float) -> str:
-    """lib/format.ts fmtMoney: '+$31', '−$4'."""
-    return f"{'−' if n < 0 else '+'}${_whole(n)}"
+def _symbol(currency: str) -> str:
+    return _SYMBOLS.get(currency.upper(), f"{currency.upper()} ")
 
 
-def fmt_range(lo: float, hi: float) -> str:
-    """lib/format.ts fmtRange: '+$25 to $37'. A range, never a point alone."""
-    return f"{'−' if hi < 0 else '+'}${_whole(lo)} to ${_whole(hi)}"
+def fmt_money(n: float, currency: str = "USD") -> str:
+    """lib/format.ts fmtMoney: '+$31', '−$4', '+€45'."""
+    return f"{'−' if n < 0 else '+'}{_symbol(currency)}{_whole(n)}"
+
+
+def fmt_range(lo: float, hi: float, currency: str = "USD") -> str:
+    """lib/format.ts fmtRange: '+$25 to $37', '+€36 to €54'. A range, never a point alone."""
+    sym = _symbol(currency)
+    return f"{'−' if hi < 0 else '+'}{sym}{_whole(lo)} to {sym}{_whole(hi)}"
 
 
 def _title(card: dict[str, Any]) -> str:
@@ -65,9 +73,19 @@ def _lines(card: dict[str, Any], big: str | None) -> tuple[str, ...]:
     return tuple(lines[:MAX_LINES])
 
 
+def _half(year: int, month: int) -> str:
+    return f"{'H1' if month <= 6 else 'H2'} {year}"
+
+
 def _years(price: dict[str, Any] | None) -> str:
-    """'2025 vs 2023' for annual utility data, as ShareCard.tsx words it."""
+    """'2025 vs 2023' for annual utility data, 'H1 2026 vs H1 2024' for a
+    semiannual series, as ShareCard.tsx (lib/format.ts periodLabel) words it."""
     as_of = (price or {}).get("as_of") or ""
+    if (price or {}).get("granularity") == "semiannual" and len(as_of) == 7:
+        y, m = int(as_of[:4]), int(as_of[5:7])
+        if m in (6, 12):
+            months = y * 12 + (m - 1) - int((price or {}).get("window_months") or 24)
+            return f"{_half(y, m)} vs {_half(months // 12, months % 12 + 1)}"
     if as_of.endswith("-12") and len(as_of) == 7:
         year = int(as_of[:4])
         return f"{year} vs {year - 2}"
@@ -102,10 +120,13 @@ def spec_from_brief(brief: dict[str, Any], *, public_base_url: str = "") -> Card
     big: str | None = None
     caption: str | None = None
     if rent is not None:
+        # The headline's figure is in the brief's currency (the key's name is legacy).
+        currency = str((brief.get("locale") or {}).get("currency") or "USD")
         span = headline.get("ai_rent_range_usd_per_month")
-        big = fmt_range(*span) if span else f"about {fmt_money(rent)}"
+        big = fmt_range(*span, currency) if span else f"about {fmt_money(rent, currency)}"
         price = ((brief.get("sections") or {}).get("your_bill") or {}).get("price")
-        caption = f"a month for a typical home, {_years(price)} · modeled"
+        word = "modeled" if currency == "USD" else "modelled"
+        caption = f"a month for a typical home, {_years(price)} · {word}"
     verified, grounded = _checked(brief)
     disclosure = disclosure_line(
         str(brief.get("brief_id") or ""),

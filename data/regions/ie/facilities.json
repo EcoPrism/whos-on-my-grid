@@ -1,0 +1,5 @@
+{
+  "_about": "Hand-curated like data/regions/us/facilities.json, same rules: sites the facility databases map without an operator, with the official page that names who runs them; an entry applies to an operator-less cluster whose centre is within radius_m of (lat, lon), and its claim and quote are what the verifier checks against source_url. Dublin hyperscale is operator-tagged in OSM, so no entry is needed yet. Echelon Arklow (OSM ways 1559986487/88) is the first candidate once a fetchable page names its operator. `peeringdb_use_org_name`: PeeringDB facility ids whose `name` field is a person's name; the engine shows the record's org_name instead, and the name is never written in this repository.",
+  "entries": [],
+  "peeringdb_use_org_name": [4256]
+}

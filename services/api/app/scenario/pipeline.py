@@ -319,7 +319,7 @@ class ScenarioService:
         """Write the interpreted scenario back. One made by an older engine
         keeps its stamp, so the next POST for those inputs still recomputes it."""
         engine = scenario.get("engine")
-        if not engine or engine == engine_fingerprint():
+        if not engine or engine == engine_fingerprint("us"):
             self.cache.put(scenario)
             return
         p = self.cache.path(scenario["scenario_id"])

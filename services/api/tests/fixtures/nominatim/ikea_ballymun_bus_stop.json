@@ -1,0 +1,42 @@
+{
+ "_note": "Live response from nominatim.openstreetmap.org on 2026-10-29 (search, jsonv2, addressdetails=1, countrycodes=ie, without accept-language), first hit only; checked for no house_number and no private person's name.",
+ "request": {
+  "path": "search",
+  "q": "IKEA Ballymun"
+ },
+ "response": [
+  {
+   "place_id": 276237009,
+   "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10693319040,
+   "lat": "53.4064360",
+   "lon": "-6.2752063",
+   "category": "highway",
+   "type": "bus_stop",
+   "place_rank": 30,
+   "importance": 8.015945677877496e-05,
+   "addresstype": "highway",
+   "name": "IKEA Ballymun",
+   "display_name": "IKEA Ballymun, Saint Margaret's Road, Dubber DED 1986, Fingal, County Dublin, Leinster, Éire / Ireland",
+   "address": {
+    "highway": "IKEA Ballymun",
+    "road": "Saint Margaret's Road",
+    "city_district": "Dubber DED 1986",
+    "municipality": "Fingal",
+    "county": "County Dublin",
+    "ISO3166-2-lvl6": "IE-D",
+    "state_district": "Leinster",
+    "ISO3166-2-lvl5": "IE-L",
+    "country": "Éire / Ireland",
+    "country_code": "ie"
+   },
+   "boundingbox": [
+    "53.4063860",
+    "53.4064860",
+    "-6.2752563",
+    "-6.2751563"
+   ]
+  }
+ ]
+}
