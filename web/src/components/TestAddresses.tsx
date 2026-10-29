@@ -1,12 +1,15 @@
-// A dropdown of addresses from the eval set (eval/addresses.json), each with
-// what the brief should say. For testing full and agent mode by hand; picking
-// one fills the address box, it does not submit.
+// The addresses that run without a sign-in: the eval set (eval/addresses.json).
+// The API serves the list (`health.test_addresses`), spelled exactly as the
+// gate admits them; four of them are offered as one-tap chips, the rest sit in
+// a select. Picking one fills the address box, it does not submit: a run
+// spends model time, so the button stays the only way to start one.
 
 export interface TestAddress {
   address: string
   expect: string
 }
 
+// Notes for the hand-testing dropdown, attached when an address matches.
 export const TEST_ADDRESSES: TestAddress[] = [
   { address: '21721 Filigree Court, Ashburn, VA 20147', expect: 'dense cluster, Dominion, GS-5 tariff' },
   { address: '22166 Pacific Boulevard, Sterling, VA 20166', expect: 'Loudoun cluster, Dominion' },
@@ -27,29 +30,49 @@ export const TEST_ADDRESSES: TestAddress[] = [
   { address: '998 Mililani Street, Honolulu, HI 96813', expect: 'null result, Hawaiian Electric' },
 ]
 
+// Four places that tell four different stories, shown as chips.
+const FEATURED = ['Ashburn, VA', 'Quincy, WA', 'New Albany, OH', 'Key West, FL']
+
 interface Props {
+  items?: string[]
   onPick: (address: string) => void
   disabled?: boolean
 }
 
-export default function TestAddresses({ onPick, disabled }: Props) {
+export default function TestAddresses({ items, onPick, disabled }: Props) {
+  const notes = new Map(TEST_ADDRESSES.map((t) => [t.address, t.expect]))
+  const list: TestAddress[] = items && items.length > 0
+    ? items.map((address) => ({ address, expect: notes.get(address) ?? '' }))
+    : TEST_ADDRESSES
+  const chips = FEATURED.flatMap((place) => {
+    const hit = list.find((t) => t.address.includes(place))
+    return hit ? [{ place, address: hit.address }] : []
+  })
+
   return (
-    <label className="mt-3 flex flex-col gap-1 text-sm text-[var(--ink-soft)] sm:flex-row sm:items-baseline sm:gap-3">
-      <span className="shrink-0">Or pick a test address</span>
-      <select
-        aria-label="Test addresses"
-        defaultValue=""
-        disabled={disabled}
-        onChange={(e) => { if (e.target.value) onPick(e.target.value) }}
-        className="w-full border border-[var(--line)] bg-white px-2 py-1 text-base text-[var(--ink)] disabled:opacity-60"
-      >
-        <option value="">Choose one…</option>
-        {TEST_ADDRESSES.map((t) => (
-          <option key={t.address} value={t.address}>
-            {t.address} — {t.expect}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
+      <span className="mr-1 text-[var(--ink-soft)]">Try</span>
+      {chips.map((c) => (
+        <button key={c.address} type="button" className="chip" disabled={disabled} onClick={() => onPick(c.address)}>
+          {c.place}
+        </button>
+      ))}
+      <label className="inline-flex items-center">
+        <span className="sr-only">All test addresses</span>
+        <select
+          defaultValue=""
+          disabled={disabled}
+          onChange={(e) => { if (e.target.value) onPick(e.target.value) }}
+          className="chip max-w-[14rem] cursor-pointer appearance-none pr-7"
+        >
+          <option value="">All {list.length} test addresses…</option>
+          {list.map((t) => (
+            <option key={t.address} value={t.address}>
+              {t.expect ? `${t.address} — ${t.expect}` : t.address}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
   )
 }

@@ -3,7 +3,7 @@
   "subscription": "EcoPrism - Prod",
   "resourceGroup": "rg-whoisinmygrid",
   "location": "eastus2",
-  "googleClientId": "",
+  "googleClientId": "550305077532-7hbn15bhejk7oe714u903ptbadvjeed2.apps.googleusercontent.com",
   "allowedCountries": "",
   "verifyModel": "meta-models/muse-spark-open-1026",
   "quotaPerUserDay": 5,

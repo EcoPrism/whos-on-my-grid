@@ -31,7 +31,7 @@ COPY data/tariffs.json data/facilities.json data/equivalences.json /app/data/
 COPY data/hearings /app/data/hearings
 COPY data/perception /app/data/perception
 COPY fixtures /app/fixtures
-COPY eval/addresses.json /app/eval/addresses.json
+COPY eval/addresses.json eval/resolved.json /app/eval/
 COPY --from=web /web/dist /app/web/dist
 
 # Briefs and downloaded datasets go to a mounted share in production

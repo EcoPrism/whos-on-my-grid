@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.auth import User, same_site_post
-from app.auth.gate import Gate, GateDenied
+from app.auth.gate import Gate, GateDenied, test_set_rows
 from app.brief import fixtures
 from app.brief.pipeline import (
     AddressNotFound,
@@ -58,6 +58,8 @@ async def health(request: Request) -> dict:
         "ok": True,
         "mode": mode,
         "examples": fixtures.examples() if mode == "fixtures" else [],
+        # The dropdown of free addresses; the gate admits exactly these strings.
+        "test_addresses": [] if mode == "fixtures" else [r["address"] for r in test_set_rows()],
         "auth": settings.auth_provider,
         "google_client_id": settings.google_client_id
         if settings.auth_provider == "google"

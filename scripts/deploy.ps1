@@ -153,32 +153,46 @@ foreach ($step in $steps) {
       $gateway = $null; $baseten = $null
 
       $account = Get-FirstName @('storage', 'account', 'list')
-      $key = Invoke-Az @('storage', 'account', 'keys', 'list', '-g', $rg, '-n', $account, '--query', '[0].value', '-o', 'tsv')
-      Invoke-Az @('storage', 'directory', 'create', '--account-name', $account, '--account-key', $key, '--share-name', 'grid', '--name', 'briefs', '-o', 'none') | Out-Null
-      $ground = Join-Path $repoRoot 'data/ground'
-      if (Test-Path $ground) {
-        foreach ($pattern in @('*.json', '*.xlsx')) {
-          Invoke-Az @('storage', 'file', 'upload-batch', '--account-name', $account, '--account-key', $key,
-            '--destination', 'grid', '--destination-path', 'ground', '--source', $ground, '--pattern', $pattern, '-o', 'none') | Out-Null
+      # The key goes to az through the environment, never the command line: az.cmd echoes its
+      # whole command line on a cmd-level error, and the process list shows arguments.
+      $env:AZURE_STORAGE_ACCOUNT = $account
+      $env:AZURE_STORAGE_KEY = Invoke-Az @('storage', 'account', 'keys', 'list', '-g', $rg, '-n', $account, '--query', '[0].value', '-o', 'tsv')
+      try {
+        Invoke-Az @('storage', 'directory', 'create', '--share-name', 'grid', '--name', 'briefs', '-o', 'none') | Out-Null
+        $ground = Join-Path $repoRoot 'data/ground'
+        if (Test-Path $ground) {
+          foreach ($pattern in @('*.json', '*.xlsx')) {
+            Invoke-Az @('storage', 'file', 'upload-batch', '--destination', 'grid', '--destination-path', 'ground',
+              '--source', $ground, '--pattern', $pattern, '-o', 'none') | Out-Null
+          }
+          Write-Host '    share seeded from data/ground (json, xlsx)'
         }
-        Write-Host '    share seeded from data/ground (json, xlsx)'
+      } finally {
+        Remove-Item Env:AZURE_STORAGE_KEY -ErrorAction SilentlyContinue
+        Remove-Item Env:AZURE_STORAGE_ACCOUNT -ErrorAction SilentlyContinue
       }
-      $key = $null
     }
     'image' {
       $acr = Get-FirstName @('acr', 'list')
       Write-Host "==> image: grid:$Tag in $acr" -ForegroundColor Cyan
       $mapsKey = Read-DotEnv (Join-Path $repoRoot 'web/.env') 'VITE_GOOGLE_MAPS_API_KEY'
+      # --no-logs: az on Windows runs Python in isolated mode and dies with a charmap error
+      # the moment the build log prints a non-ASCII character (npm's check mark). Poll instead.
       $buildArgs = @('acr', 'build', '--registry', $acr, '--image', "grid:$Tag", '--image', 'grid:latest',
-        '--file', (Join-Path $repoRoot 'Dockerfile'), '-o', 'none')
+        '--file', (Join-Path $repoRoot 'Dockerfile'), '--no-logs', '--query', 'runId', '-o', 'tsv')
       if ($mapsKey) { $buildArgs += @('--secret-build-arg', "VITE_GOOGLE_MAPS_API_KEY=$mapsKey") }
       else { Write-Warning 'VITE_GOOGLE_MAPS_API_KEY is empty in web/.env: the address box will be a plain input.' }
       $buildArgs += $repoRoot
-      $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-      & az @buildArgs 2>&1 | Select-String -Pattern 'error|Run ID|successful|Step [0-9]+/[0-9]+ : FROM' | ForEach-Object { $_.Line }
-      $ErrorActionPreference = $prev
-      if ($LASTEXITCODE -ne 0) { throw 'ACR build failed' }
-      $mapsKey = $null
+      $runId = Invoke-Az $buildArgs
+      $mapsKey = $null; $buildArgs = $null
+      if ($LASTEXITCODE -ne 0 -or -not $runId) { throw 'ACR build could not be queued' }
+      $status = 'Queued'; $last = ''
+      while ($status -in @('Queued', 'Started', 'Running')) {
+        Start-Sleep -Seconds 15
+        $status = Invoke-Az @('acr', 'task', 'show-run', '-r', $acr, '--run-id', $runId, '--query', 'status', '-o', 'tsv')
+        if ($status -ne $last) { Write-Host "    run $runId : $status"; $last = $status }
+      }
+      if ($status -ne 'Succeeded') { throw "ACR build $runId ended $status. Log: az acr task logs -r $acr --run-id $runId" }
     }
     'app' {
       if (-not [string]$cfg.googleClientId -and -not $AllowOpenGate) {
@@ -199,7 +213,7 @@ foreach ($step in $steps) {
         } catch { Start-Sleep -Seconds 10 }
       }
       if (-not $ok) { Write-Warning 'The app did not answer /api/health within five minutes. Check: az containerapp logs show -n ca-grid -g ' + $rg }
-      Write-Host '    Remember: add https://' + $fqdn + ' to the Google OAuth client''s JavaScript origins and to the Maps key''s referrers (docs/deploy.md).'
+      Write-Host "    Remember: add https://$fqdn to the Google OAuth client's JavaScript origins and to the Maps key's referrers (docs/deploy.md)."
     }
   }
 }

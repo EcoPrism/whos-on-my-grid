@@ -7,6 +7,7 @@
   --ink: #15202b;
   --ink-soft: #4a5663;
   --line: #c9ced4;
+  --paper-soft: #aab3bd; /* paper text on ink */
 
   /* the only colour on the page is the status rail */
   --measured: #0f766e;
@@ -101,6 +102,36 @@ a:hover { text-decoration-color: var(--ink); }
   border: 1px dashed var(--ink-soft); color: var(--ink-soft);
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
 }
+
+/* The one action on the home page: a hazard-yellow plate with ink letters. */
+.btn-signal {
+  background: var(--signal); color: var(--ink); border: 2px solid var(--ink);
+  font-weight: 700;
+}
+.btn-signal:hover:not(:disabled) { background: #ffd23f; }
+.btn-signal:disabled { opacity: 0.6; }
+
+/* Test-address chips and the select that holds the rest of them. */
+.chip {
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  padding: 0.3rem 0.75rem; font: inherit; font-size: 0.875rem; line-height: 1.25;
+}
+.chip:hover:not(:disabled) { border-color: var(--ink); }
+.chip:disabled { opacity: 0.6; }
+select.chip {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2315202b' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 12px;
+  text-overflow: ellipsis;
+}
+
+/* The footer's key to the four colours: the same rail the brief sections wear. */
+.key { border-left: 4px solid var(--line); }
+.key-measured { border-left-color: var(--measured); }
+.key-reported { border-left-color: var(--reported); }
+.key-modelled { border-left-color: var(--modelled); }
+.key-unavailable { border-left-color: var(--unavailable); border-left-style: dashed; }
+.footlink { color: var(--paper); text-decoration-color: var(--ink-soft); }
+.footlink:hover { text-decoration-color: var(--paper); }
 
 /* Something still being made: a slow breath, not a spinner. */
 .breathe { animation: breathe 1.6s ease-in-out infinite; }

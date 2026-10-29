@@ -31,8 +31,11 @@ hostname is the app's own `*.azurecontainerapps.io` until the domain is wired th
 2. Create the Google OAuth **Web application** client in Google Cloud project `ecoprism-ecoutil`
    (APIs & Services → Credentials). Consent screen: external, scopes `email` and `profile`.
    Authorized JavaScript origins: `http://localhost:5173` for now; the app's FQDN is added after
-   step 6, and `https://whoisinmygrid.com` when the domain is live. No redirect URIs are needed
-   (Google Identity Services uses a popup). Put the client id in `infra/deploy.json`.
+   step 6, and the domains (`https://whoisinmygrid.com`, `https://whoisonthegrid.com`, with and
+   without `www`) when they are live. No redirect URIs are needed (Google Identity Services uses a
+   popup). Put the client id in `infra/deploy.json`. There is no `gcloud` command for a standard
+   web client; it is created in the console (`gcloud iam oauth-clients` is Workforce Identity
+   Federation, a different thing).
 3. `./scripts/deploy.ps1 -Phase platform`
 4. `./scripts/deploy.ps1 -Phase secrets` (yours to run: it reads `.env` files)
 5. `./scripts/deploy.ps1 -Phase image`
@@ -56,12 +59,15 @@ Never an address. The web page shows the remaining count and the rule in one lin
 
 ## Domain and Cloudflare, later
 
-1. In Cloudflare, add `whoisinmygrid.com`, proxied CNAME `@` and `www` to the app FQDN.
+1. In Cloudflare, add `whoisinmygrid.com` (and `whoisonthegrid.com`, the spare), proxied CNAME `@`
+   and `www` to the app FQDN. The spare can redirect to the main domain with a Cloudflare rule
+   instead of being bound to the app.
 2. On the Container App, add the custom domain with a managed certificate
    (`az containerapp hostname add` / `bind`), or upload a Cloudflare origin certificate.
 3. Set `"allowedCountries": "US"` in `infra/deploy.json` and run `-Phase app`. The app then
    reads `cf-ipcountry` and fails closed: the raw FQDN stops serving briefs, which is intended.
-4. Add the domain to the Google OAuth client's origins and to the Maps key's referrers.
+4. Add the domains to the Google OAuth client's origins (scheme + host, no path) and to the Maps
+   key's referrers (`https://whoisinmygrid.com/*`, `https://*.whoisinmygrid.com/*`, same for the spare).
 
 ## Operating
 

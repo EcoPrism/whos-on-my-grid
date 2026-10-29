@@ -15,15 +15,43 @@ from app.geocode import normalise
 from app.telemetry import log_event
 
 TEST_SET = REPO_ROOT / "eval" / "addresses.json"
+# run_eval.py resolves each test address to a numbered one through the Census geocoder
+# and keeps the result here. The web dropdown shows the numbered form, so both spellings
+# are on the allow-list and the dropdown is served from this same file.
+RESOLVED = REPO_ROOT / "eval" / "resolved.json"
+
+
+def _load(path) -> dict:
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data if isinstance(data, dict) else {}
+
+
+@lru_cache(maxsize=1)
+def test_set_rows() -> tuple[dict[str, str], ...]:
+    """One row per test address: its id, the address to show (the resolved, numbered
+    one when known) and the raw address from the test set."""
+    resolved = _load(RESOLVED)
+    rows = []
+    for r in _load(TEST_SET).get("addresses", []):
+        raw = r.get("address")
+        if not isinstance(raw, str):
+            continue
+        shown = resolved.get(r.get("id"))
+        address = shown if isinstance(shown, str) else raw
+        rows.append({"id": str(r.get("id", "")), "address": address, "raw": raw})
+    return tuple(rows)
 
 
 @lru_cache(maxsize=1)
 def test_set_addresses() -> frozenset[str]:
-    if not TEST_SET.exists():
-        return frozenset()
-    with open(TEST_SET, encoding="utf-8") as f:
-        rows = json.load(f).get("addresses", [])
-    return frozenset(normalise(r["address"]) for r in rows if isinstance(r.get("address"), str))
+    out = set()
+    for r in test_set_rows():
+        out.add(normalise(r["raw"]))
+        out.add(normalise(r["address"]))
+    return frozenset(out)
 
 
 class GateDenied(Exception):

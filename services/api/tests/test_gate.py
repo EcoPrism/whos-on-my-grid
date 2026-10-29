@@ -11,6 +11,7 @@ from tests import fakes
 HDR = {"x-requested-with": "grid"}
 ADDR = "21715 Filigree Ct, Ashburn, VA"
 TEST_SET_ADDR = "Filigree Ct, Ashburn, VA 20147"  # first row of eval/addresses.json
+RESOLVED_ADDR = "21721 Filigree Court, Ashburn, VA 20147"  # its eval/resolved.json form
 SECRET = "s" * 40
 
 
@@ -40,6 +41,8 @@ async def test_health_reports_the_gate(client) -> None:
     h = (await client.get("/api/health")).json()
     assert h["auth"] == "fake" and h["user"] is None and h["google_client_id"] is None
     assert h["quota_per_user_day"] == 5
+    # The dropdown is served from the same file the gate admits, in its numbered form.
+    assert RESOLVED_ADDR in h["test_addresses"] and TEST_SET_ADDR not in h["test_addresses"]
 
 
 async def test_new_brief_needs_sign_in_and_spends_nothing(client) -> None:
@@ -105,6 +108,9 @@ async def test_test_set_address_runs_without_sign_in(client) -> None:
     r = await client.post("/api/brief", json={"address": TEST_SET_ADDR}, headers=HDR)
     assert r.status_code == 200, r.text
     assert await client.app.state.gate.usage.count_global_today() == 1
+    # The numbered spelling the dropdown sends is admitted too.
+    r = await client.post("/api/brief", json={"address": RESOLVED_ADDR}, headers=HDR)
+    assert r.status_code == 200, r.text
 
 
 async def test_global_cap_holds_for_everyone(tmp_path) -> None:

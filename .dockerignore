@@ -16,6 +16,7 @@ data/perception/**/*.png
 data/perception/**/*.tif
 !fixtures
 !eval/addresses.json
+!eval/resolved.json
 !web
 web/node_modules
 web/dist

@@ -3,7 +3,8 @@ import { signInWithGoogle, signOut, type Health, type Me } from '../lib/api'
 
 // Google Identity Services. The script is loaded once, on demand, only when
 // the service says sign-in is Google's. The id_token goes to our API, which
-// sets an HttpOnly cookie; nothing is kept in JavaScript.
+// sets an HttpOnly cookie; nothing is kept in JavaScript. Rendered in the
+// masthead: the button when signed out, one line of account state when in.
 
 type GisButtonOptions = { theme: string; size: string; text: string; shape: string; width?: number }
 type Gis = {
@@ -71,7 +72,7 @@ export default function SignIn({ health, onUser }: { health: Health; onUser: (me
             }
           },
         })
-        g.accounts.id.renderButton(el, { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular' })
+        g.accounts.id.renderButton(el, { theme: 'outline', size: 'medium', text: 'signin_with', shape: 'rectangular' })
       })
       .catch(() => setError('Could not load Google sign-in.'))
     return () => {
@@ -83,9 +84,11 @@ export default function SignIn({ health, onUser }: { health: Health; onUser: (me
 
   if (user) {
     return (
-      <p className="mt-3 text-sm text-[var(--ink-soft)]">
-        Signed in as <span className="text-[var(--ink)]">{user.email}</span>.{' '}
-        <span className="num">{user.remaining}</span> of {health.quota_per_user_day} new briefs left today.{' '}
+      <p className="flex flex-wrap items-baseline justify-end gap-x-3 gap-y-0 text-sm text-[var(--ink-soft)]">
+        <span className="text-[var(--ink)]">{user.email}</span>
+        <span>
+          <span className="num text-[var(--ink)]">{user.remaining}</span> of {health.quota_per_user_day} new briefs left today
+        </span>
         <button
           type="button"
           className="underline underline-offset-[3px]"
@@ -102,12 +105,9 @@ export default function SignIn({ health, onUser }: { health: Health; onUser: (me
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-      <div ref={slot} aria-busy={busy} className="min-h-10" />
-      <p className="text-sm text-[var(--ink-soft)]">
-        Sign in to run a new address. Shared briefs and the example addresses need no sign-in.
-      </p>
+    <div className="flex items-center gap-3">
       {error && <p className="text-sm" role="alert">{error}</p>}
+      <div ref={slot} aria-busy={busy} className="min-h-8" />
     </div>
   )
 }

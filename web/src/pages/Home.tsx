@@ -7,6 +7,17 @@ import { ApiError, getHealth, getPulse, streamBrief, type Health, type Me, type 
 import { fmtMoney } from '../lib/format'
 import { setLive, updateLive } from '../lib/live'
 
+// The five parts of a brief, in the brief page's own words. The colour on
+// each tile is the kind of evidence that part usually rests on, the same key
+// the brief sections and the footer use.
+const PARTS = [
+  { title: 'On your grid', status: 'measured', word: 'Measured', text: 'The data centers within reach of your address, with operator and distance, from PeeringDB and OpenStreetMap.' },
+  { title: 'Coming', status: 'reported', word: 'Reported, checked', text: 'What is announced, permitted or under construction near you, each line cited to a page you can open.' },
+  { title: 'Your bill', status: 'modelled', word: 'Modeled', text: 'Your utility’s household price over its last two reported years, from EIA-861, worked into a range for a bill like yours.' },
+  { title: 'Protection', status: 'reported', word: 'Reported, checked', text: 'Whether a large-load tariff in your state shields households, and what it actually says.' },
+  { title: 'Hearing', status: 'measured', word: 'Measured where indexed', text: 'What was said at the last public hearing, from the official archive, never a video platform.' },
+]
+
 export default function Home() {
   const [input, setInput] = useState('')
   const [health, setHealth] = useState<Health | null>(null)
@@ -16,18 +27,19 @@ export default function Home() {
   const [pulse, setPulse] = useState<Pulse | null>(null)
   const nav = useNavigate()
   const mode = health?.mode
+  const live = mode === 'agent' || mode === 'full'
 
   useEffect(() => {
     getHealth()
       .then(setHealth)
-      .catch(() => setHealth({ ok: false, mode: 'offline', examples: [], auth: 'off', google_client_id: null, user: null, quota_per_user_day: 0 }))
+      .catch(() => setHealth({ ok: false, mode: 'offline', examples: [], test_addresses: [], auth: 'off', google_client_id: null, user: null, quota_per_user_day: 0 }))
   }, [])
 
   // The pulse is measured and free: what PeeringDB lists, and the house-terms lines.
   useEffect(() => {
-    if (mode !== 'full' && mode !== 'agent') return
+    if (!live) return
     getPulse().then(setPulse).catch(() => setPulse(null))
-  }, [mode])
+  }, [live])
 
   const onUser = useCallback((me: Me | null) => {
     setHealth((h) => (h ? { ...h, user: me } : h))
@@ -77,47 +89,63 @@ export default function Home() {
     }
   }
 
-  return (
-    <main className="mx-auto max-w-3xl px-4 pb-24 pt-14 sm:pt-24">
-      <h1 className="sign text-[clamp(3.2rem,12vw,7.5rem)]">
-        Who's on<br />my grid?
-      </h1>
-      <p className="mt-8 max-w-[52ch] text-xl leading-snug">
-        Type a US address. Find out which data centers are on your local grid, what is being built
-        near you, what your bill has done, and when the next vote is.
-      </p>
+  const gated = health?.auth === 'google'
+  const signedIn = Boolean(health?.user)
 
-      <form onSubmit={go} className="mt-10">
-        <label htmlFor="address" className="block text-sm text-[var(--ink-soft)]">
-          Street address, city, state
-        </label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <AddressInput value={input} onChange={onChange} disabled={busy} />
-          <button
-            type="submit"
-            disabled={busy}
-            className="shrink-0 border-2 border-[var(--ink)] bg-[var(--ink)] px-6 py-3 text-lg font-semibold text-[var(--paper)] disabled:opacity-60"
-          >
-            {busy ? 'Working…' : 'Check my grid'}
-          </button>
-        </div>
-        {(mode === 'agent' || mode === 'full') && (
-          <TestAddresses onPick={onChange} disabled={busy} />
-        )}
+  return (
+    <main className="mx-auto max-w-5xl px-4">
+      <header className="flex min-h-14 items-center justify-between gap-4 py-3">
+        <span className="wide inline-flex items-center gap-2 text-sm font-semibold">
+          <svg viewBox="0 0 32 32" aria-hidden="true" className="h-6 w-6">
+            <rect width="32" height="32" fill="var(--ink)" />
+            <path d="M18 4 8 18h7l-1 10 10-14h-7z" fill="var(--signal)" />
+          </svg>
+          Who's on my grid
+        </span>
         {health && <SignIn health={health} onUser={onUser} />}
-        {busy && (mode === 'agent' || mode === 'full') && (
-          <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
-            Spark is drafting five sections, then Spark Open fetches every cited page and checks each
-            claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
-          </p>
-        )}
-        {error && (
-          <p className="mt-3 text-sm" role="alert">{error}</p>
-        )}
-      </form>
+      </header>
+
+      <section className="max-w-3xl pt-12 sm:pt-20">
+        <h1 className="sign text-[clamp(3.4rem,13vw,8.5rem)]">
+          Who's on<br />my grid?
+        </h1>
+        <p className="mt-8 max-w-[48ch] text-xl leading-snug">
+          Type a US address. Find out which data centers are on your local grid, what is being built
+          near you, what your bill has done, and when the next vote is.
+        </p>
+
+        <form onSubmit={go} className="mt-10">
+          <label htmlFor="address" className="block text-sm text-[var(--ink-soft)]">
+            Street address, city, state
+          </label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <AddressInput value={input} onChange={onChange} disabled={busy} />
+            <button type="submit" disabled={busy} className="btn-signal shrink-0 px-6 py-3 text-lg">
+              {busy ? 'Working…' : 'Check my grid'}
+            </button>
+          </div>
+          {live && <TestAddresses items={health?.test_addresses} onPick={onChange} disabled={busy} />}
+          {gated && !busy && (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]">
+              {signedIn
+                ? 'A new address spends model time, so each person gets a few a day. Test addresses and shared briefs are always free.'
+                : 'Test addresses and shared briefs run without an account. A new address needs a Google sign-in, because each one spends model time.'}
+            </p>
+          )}
+          {busy && live && (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]" aria-live="polite">
+              Spark is drafting five sections, then Spark Open fetches every cited page and checks each
+              claim. Usually 30–90 seconds. <span className="num">{elapsed}s</span>
+            </p>
+          )}
+          {error && (
+            <p className="mt-3 text-sm" role="alert">{error}</p>
+          )}
+        </form>
+      </section>
 
       {mode === 'fixtures' && health && (
-        <section className="mt-14">
+        <section className="mt-14 max-w-3xl">
           <h2 className="text-sm text-[var(--ink-soft)]">Example addresses</h2>
           <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
             {health.examples.map((ex) => (
@@ -138,36 +166,62 @@ export default function Home() {
       )}
 
       {pulse && (pulse.peeringdb || pulse.equivalences.length > 0) && (
-        <section className="mt-14 max-w-[64ch]">
-          {pulse.peeringdb && (
-            <p className="text-lg leading-snug">
-              <a href={pulse.peeringdb.source_url} rel="noopener">{pulse.peeringdb.source_title}</a> lists{' '}
-              <span className="num font-semibold">{pulse.peeringdb.total.toLocaleString('en-US')}</span> data-center
-              facilities in the United States today
-              {pulse.peeringdb.added !== null && (
-                <>
-                  , <span className="num font-semibold">{pulse.peeringdb.added.toLocaleString('en-US')}</span> of them added in the last{' '}
-                  {pulse.peeringdb.days} days
-                </>
-              )}
-              .
-            </p>
-          )}
-          {pulse.equivalences.length > 0 && (
-            <>
-              <h2 className="mt-8 text-sm text-[var(--ink-soft)]">A data center, in house terms</h2>
-              <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
-                {pulse.equivalences.map((e) => (
-                  <li key={e.id} className="py-3">
-                    <p>{e.text}</p>
-                    <p className="mt-1 text-sm text-[var(--ink-soft)]">
-                      {e.basis} Source: <a href={e.source_url} rel="noopener" title={e.quote}>{e.source_title}</a>.
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+        <section className="mt-20 border-t-4 border-[var(--measured)] pt-5">
+          <h2 className="tag-measured text-sm font-semibold">Measured today</h2>
+          <div className="mt-4 grid gap-x-12 gap-y-10 md:grid-cols-[1fr_1.3fr]">
+            {pulse.peeringdb && (
+              <div>
+                <p className="wide num text-[clamp(3.2rem,8vw,5.6rem)] font-bold leading-none tracking-tight">
+                  {pulse.peeringdb.total.toLocaleString('en-US')}
+                </p>
+                <p className="mt-3 max-w-[32ch] text-lg leading-snug">
+                  data-center facilities in the United States, as{' '}
+                  <a href={pulse.peeringdb.source_url} rel="noopener">{pulse.peeringdb.source_title}</a> lists them today
+                  {pulse.peeringdb.added !== null && (
+                    <>
+                      . <span className="num font-semibold">{pulse.peeringdb.added.toLocaleString('en-US')}</span>{' '}
+                      {pulse.peeringdb.added === 1 ? 'was' : 'were'} added in the last {pulse.peeringdb.days} days
+                    </>
+                  )}
+                  .
+                </p>
+              </div>
+            )}
+            {pulse.equivalences.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold leading-tight">A data center, in house terms</h3>
+                <ul className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                  {pulse.equivalences.map((e) => (
+                    <li key={e.id} className="py-3">
+                      <p className="leading-snug">{e.text}</p>
+                      <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                        {e.basis} Source: <a href={e.source_url} rel="noopener" title={e.quote}>{e.source_title}</a>.
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {live && (
+        <section className="mt-20">
+          <h2 className="text-2xl font-bold leading-none">What comes back</h2>
+          <p className="mt-3 max-w-[60ch] text-[var(--ink-soft)]">
+            One brief in five parts, on a map of your grid. The colour on each part is the kind of
+            evidence behind it, and a part that does not know says so.
+          </p>
+          <ul className="mt-8 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
+            {PARTS.map((p) => (
+              <li key={p.title} className={`tile tile-${p.status} pt-3`}>
+                <h3 className="text-xl font-bold leading-tight">{p.title}</h3>
+                <p className={`tag-${p.status} mt-1 text-xs font-semibold`}>{p.word}</p>
+                <p className="mt-2 text-sm leading-snug text-[var(--ink-soft)]">{p.text}</p>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -202,11 +256,11 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined): string {
           ? 'That request did not come from this page. Reload and try again.'
           : 'This service covers US addresses and is only available from the United States.'
       case 401:
-        return 'Sign in with Google to run a new address. Shared briefs and the example addresses need no sign-in.'
+        return 'Sign in with Google at the top of the page to run a new address. Test addresses and shared briefs need no sign-in.'
       case 429:
         return err.detail === 'quota_exceeded_user'
           ? "You have used today's new briefs. Try again tomorrow, or open a shared brief."
-          : "Today's brief budget is spent. Shared briefs and the example addresses still open."
+          : "Today's brief budget is spent. Shared briefs and the test addresses still open."
       case 503:
         return 'The address lookup service is not answering. Try again in a minute.'
       case 502:
