@@ -68,11 +68,11 @@ export default function AddressInput({ value, onChange, disabled, countries = ['
   }, [places, onChange, countryKey])
 
   // The widget keeps its own text, so a value set from outside (a test-address
-  // chip) is written into its input; typing never loops back, as the text
-  // already matches. The shadow root is open (the `input` listener relies on it too).
+  // chip) is written through its `value` property; its shadow root is closed.
+  // Typing never loops back, as the text already matches.
   useEffect(() => {
-    const input = widget.current?.shadowRoot?.querySelector('input')
-    if (input && input.value !== value) input.value = value
+    const el = widget.current as (HTMLElement & { value?: string }) | null
+    if (el && 'value' in el && el.value !== value) el.value = value
   }, [value, places])
 
   if (places) {
