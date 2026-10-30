@@ -58,7 +58,7 @@ so expect the first run of each address after a release to spend tokens.
 Opening a brief and running a test-set address (`eval/us/addresses.json`, plus
 `eval/ie/addresses.json` when Ireland is enabled) need no sign-in. Making a
 brief for a new address needs a Google sign-in and counts against `GRID_QUOTA_PER_USER_DAY` (5) and
-`GRID_QUOTA_GLOBAL_DAY` (40), both set in `infra/deploy.json`. The `usage` table holds, per day,
+`GRID_QUOTA_GLOBAL_DAY` (80), both set in `infra/deploy.json`. The `usage` table holds, per day,
 the subject, email and brief id of each run; the `users` table holds email and first/last seen.
 Never an address. The web page shows the remaining count and the rule in one line.
 

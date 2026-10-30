@@ -7,7 +7,7 @@
   "allowedCountries": "",
   "verifyModel": "meta-models/muse-spark-open-1026",
   "quotaPerUserDay": 5,
-  "quotaGlobalDay": 40,
+  "quotaGlobalDay": 80,
   "publicBaseUrl": "https://mygrid.ai",
   "regions": "us",
   "defaultRegion": "us",

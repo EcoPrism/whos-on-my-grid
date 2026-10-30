@@ -389,3 +389,13 @@ from anything pre-existing.
   × 12,000, ISO Newswire). The strip line and the working name the operator. No price is
   borrowed across operators: NYISO (zonal, monthly), ERCOT, SPP and the non-market regions stay
   unknown, and the working lists the operators the engine does have.
+- **SAM 3.1 and Voice Transcribe run for real (2026-10-30).** With `GRID_META_API_KEY` in place
+  (dev.meta.ai; kept in `services/api/.env` and Key Vault `meta-api-key`, never in code),
+  `app.perception.index` ran SAM 3.1 over 193 tile pairs (NAIP 2023 vs USDA FPAC 2025) per area:
+  New Albany, OH, 41 sites, 33 counted, 203 acres; Ashburn, VA, 59 sites, 36 counted, 108 acres
+  (`data/regions/us/perception/`). `app.hearings.index` ran Muse Voice Transcribe on Loudoun's
+  18 Mar 2025 Data Center Standards hearing (clip 7909, 1 h 53 min of windows): 506 diarized
+  turns replacing the captions-only index, 0.86 agreement with the archive captions, 310 turns
+  role-labelled by Spark. Pima's recording 403s a scripted download and stays captions-only.
+  Also: the global daily cap is 80 for judging (`infra/deploy.json`), and `eval/run_eval.py`
+  sends the same-site header so it can warm the deployed cache after each deploy.

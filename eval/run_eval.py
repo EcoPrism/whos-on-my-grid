@@ -190,7 +190,11 @@ async def run_all(
 ) -> None:
     (out / "briefs").mkdir(parents=True, exist_ok=True)
     sem = asyncio.Semaphore(concurrency)
-    async with httpx.AsyncClient(timeout=httpx.Timeout(900, connect=30)) as client:
+    # The header a gated API asks of a same-site POST (app/auth/session.py), so a run
+    # against the deployed service is admitted like the page's own requests.
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(900, connect=30), headers={"x-requested-with": "grid"}
+    ) as client:
 
         async def one(row: dict[str, Any]) -> None:
             rid = row["id"]
