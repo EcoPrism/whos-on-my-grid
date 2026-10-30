@@ -75,14 +75,29 @@ def test_bill_outcome() -> None:
     unknown = model.bill_outcome(tariff("none_found", None), None, 300, c)
     assert unknown.kind == "unknown" and unknown.range_usd_per_month is None
 
-    # The capacity price is PJM's: outside PJM, or with no BA known, there is no range.
-    for ba in ("MISO", None):
+    assert exposed.market == "PJM" and "PJM capacity price" in exposed.basis
+
+    # Each operator's own price: MISO's range comes from MISO's constant.
+    miso = model.bill_outcome(None, replace(UTILITY, ba_code="MISO"), 300, c)
+    assert miso.market == "MISO" and "MISO capacity price" in miso.basis
+    assert miso.range_usd_per_month == (
+        pytest.approx(300 * 50_000 * 0.3 / 200_000 / 12, abs=0.01),
+        pytest.approx(300 * 50_000 * 0.4 / 200_000 / 12, abs=0.01),
+    )
+    assert "miso_capacity_usd_per_mw_year" in {k.id for k in miso.constants}
+    # ISO-NE is a capacity market, but with no cited price there is no range.
+    isne = model.bill_outcome(None, replace(UTILITY, ba_code="ISNE"), 300, c)
+    assert isne.kind == "unknown" and "no cited page" in isne.basis
+
+    # Outside the capacity markets, or with no BA known, there is no range:
+    # a price is never borrowed from another operator.
+    for ba in ("ERCO", "NYIS", None):
         other = model.bill_outcome(None, replace(UTILITY, ba_code=ba), 300, c)
         assert other.kind == "unknown" and other.range_usd_per_month is None
-        assert "PJM" in other.basis and other.constants == ()
+        assert "PJM, MISO, ISO-NE" in other.basis and other.constants == ()
     assert (
-        "in the MISO balancing area"
-        in model.bill_outcome(None, replace(UTILITY, ba_code="MISO"), 300, c).basis
+        "in the ERCO balancing area"
+        in model.bill_outcome(None, replace(UTILITY, ba_code="ERCO"), 300, c).basis
     )
     # A shield still reads as a shield anywhere.
     shield = model.bill_outcome(tariff("in_force", True), replace(UTILITY, ba_code="ERCO"), 300, c)

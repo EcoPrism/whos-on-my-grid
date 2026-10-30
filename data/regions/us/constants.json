@@ -101,6 +101,28 @@
       "checked": "2026-10-29"
     },
     {
+      "id": "miso_capacity_usd_per_mw_year",
+      "value": 45990,
+      "unit": "USD per MW-year: the top of MISO's 2026-27 annualized capacity price range across its zones ($126/MW-day × 365; the lowest zone cleared at $116), the price MISO loads pay for capacity; not a transmission cost. Used only for a utility whose EIA-861 balancing authority is MISO",
+      "as_of": "2026-27 planning year",
+      "source_title": "Utility Dive, MISO capacity prices fall as new supply outpaces demand growth",
+      "source_url": "https://www.utilitydive.com/news/miso-capacity-auction-nerc/818797/",
+      "quote": "fell to a range of $116/MW-day to $126/MW-day for its 2026-27 Planning Year",
+      "claim": "Utility Dive reports that MISO's annualized capacity prices fell to a range of $116/MW-day to $126/MW-day for its 2026-27 planning year.",
+      "checked": "2026-10-30"
+    },
+    {
+      "id": "isone_capacity_usd_per_mw_year",
+      "value": 42960,
+      "unit": "USD per MW-year: ISO-NE's Forward Capacity Auction 18 clearing price ($3.58/kW-month × 12 × 1,000), the price New England loads pay for capacity; not a transmission cost. Used only for a utility whose EIA-861 balancing authority is ISNE",
+      "as_of": "2027/2028 commitment period",
+      "source_title": "ISO Newswire, ISO-NE files finalized capacity auction results",
+      "source_url": "https://isonewswire.com/2024/02/21/iso-ne-files-finalized-capacity-auction-results/",
+      "quote": "The finalized results confirm a clearing price of $3.58 per kilowatt-month (kW-month) in all zones and import interfaces",
+      "claim": "ISO New England's finalized auction results confirm a clearing price of $3.58 per kilowatt-month in all zones and import interfaces.",
+      "checked": "2026-10-30"
+    },
+    {
       "id": "residential_allocation_lo",
       "value": 0.373,
       "unit": "fraction of a cost borne by residential customers when it is spread by energy sold: the residential share of US retail electricity sales in 2025",

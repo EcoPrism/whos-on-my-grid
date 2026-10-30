@@ -48,6 +48,7 @@ _ROWS: list[tuple[str, float, str, str]] = [
         "USD per MW per year",
         "capacity price of $100,000 per MW-year",
     ),
+    ("miso_capacity_usd_per_mw_year", 50000, "USD per MW per year", "MISO cleared at $50,000"),
     ("residential_allocation_lo", 0.3, "fraction", "residential share between 30 percent"),
     ("residential_allocation_hi", 0.4, "fraction", "and 40 percent of capacity costs"),
 ]

@@ -381,3 +381,11 @@ from anything pre-existing.
   estimate". The eval scorer counts a noise tile as the noise topic. US golden digests
   re-recorded in `tests/us_golden.py` for this deliberate change. A line that carries a
   figure is never folded, and the hearing match uses noise-specific words only (review). 733 tests.
+- **Bill range beyond PJM (2026-10-30).** The what-if bill tile read "Unknown" for every utility
+  outside PJM because PJM's was the only capacity price in the constants. `model.bill_outcome`
+  now picks the price by the utility's EIA-861 BA code from `CAPACITY_MARKETS`: PJM, MISO
+  (`miso_capacity_usd_per_mw_year`, $126/MW-day × 365, the top of the 2026-27 annualized range
+  across zones, Utility Dive) and ISO-NE (`isone_capacity_usd_per_mw_year`, FCA 18's $3.58/kW-month
+  × 12,000, ISO Newswire). The strip line and the working name the operator. No price is
+  borrowed across operators: NYISO (zonal, monthly), ERCOT, SPP and the non-market regions stay
+  unknown, and the working lists the operators the engine does have.

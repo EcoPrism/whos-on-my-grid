@@ -251,6 +251,8 @@ page when curated; the ids and the kind of page are fixed here:
 | `dc_permanent_jobs_per_100mw` | jobs | an economic impact statement, cited with its caveats |
 | `dc_tax_usd_per_mw_year` | USD | Loudoun County budget: data center tax revenue over installed MW |
 | `pjm_capacity_usd_per_mw_year` | USD | PJM's capacity clearing price × 365 (PJM utilities only; not a transmission cost) |
+| `miso_capacity_usd_per_mw_year` | USD | top of MISO's annualized capacity price range across zones × 365 (MISO utilities only) |
+| `isone_capacity_usd_per_mw_year` | USD | ISO-NE's Forward Capacity Auction price per kW-month × 12,000 (ISNE utilities only) |
 | `residential_allocation_lo`, `_hi` | fraction | the Harvard Electricity Law Initiative paper or a commission order |
 
 As curated (step 2), several ids use a different kind of page, on purpose. The verifier reads HTML
@@ -376,11 +378,12 @@ class BillOutcome:
     confidence: float   # 0.3 when exposed; the tariff page's confidence when shielded
 ```
 
-Exposed formula, stated on the page: `mw × pjm_capacity_usd_per_mw_year × allocation ÷
-utility.customers ÷ 12`, evaluated at `allocation_lo` and `allocation_hi`. The price is PJM's
-capacity price, not a transmission cost, so it is used only when the utility's EIA-861
-`BA Code` is `PJM`; elsewhere, or with no utility customer count, the kind is `unknown` and
-the line says so.
+Exposed formula, stated on the page: `mw × <operator>_capacity_usd_per_mw_year × allocation ÷
+utility.customers ÷ 12`, evaluated at `allocation_lo` and `allocation_hi`. The price is the
+utility's own grid operator's capacity price, not a transmission cost, picked by its EIA-861
+`BA Code` from `model.CAPACITY_MARKETS` (`PJM`, `MISO`, `ISNE`). A price is never borrowed from
+another operator: elsewhere (ERCOT, SPP, the Southeast and West, and NYISO, which prices by zone
+and month), or with no utility customer count, the kind is `unknown` and the line says so.
 
 ```python
 # assemble.py

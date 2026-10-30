@@ -14,7 +14,14 @@ from app.ground.types import Utility
 from app.scenario.constants import Constant, Constants
 from app.scenario.inputs import Cooling
 
-PJM = "PJM"  # EIA-861 BA Code of the one RTO whose capacity price is in the constants
+# EIA-861 BA Code -> (the grid operator's name, the constant holding its
+# capacity clearing price per MW-year). Only operators that run a capacity
+# auction with one published price are here; NYISO prices by zone and month.
+CAPACITY_MARKETS: dict[str, tuple[str, str]] = {
+    "PJM": ("PJM", "pjm_capacity_usd_per_mw_year"),
+    "MISO": ("MISO", "miso_capacity_usd_per_mw_year"),
+    "ISNE": ("ISO-NE", "isone_capacity_usd_per_mw_year"),
+}
 
 KM_TO_MI = 0.621371
 HOURS_PER_YEAR = 8_760
@@ -43,6 +50,7 @@ class BillOutcome:
     basis: str
     confidence: float  # 0.3 when exposed; the tariff page's confidence when shielded
     constants: tuple[Constant, ...] = ()
+    market: str | None = None  # the grid operator whose capacity price the range uses
 
 
 def fmt(v: float) -> str:
@@ -165,10 +173,11 @@ def bill_outcome(
 ) -> BillOutcome:
     """Shielded when the tariff table says a rule in force keeps large-load costs
     off households and the campus is above the rule's size floor. Otherwise,
-    only for a utility whose EIA-861 balancing authority is PJM: PJM's capacity
-    price for a campus this size, times the residential share at both ends of
-    the cited range, spread over the utility's customers. The capacity price is
-    PJM's alone, so anywhere else there is no range."""
+    only for a utility whose EIA-861 balancing authority runs a capacity auction
+    in CAPACITY_MARKETS: that operator's capacity price for a campus this size,
+    times the residential share at both ends of the cited range, spread over the
+    utility's customers. A price is never borrowed from another operator, so
+    anywhere else there is no range."""
     covered = tariff is not None and tariff.covers(mw)
     lead = tariff.lead if tariff is not None and covered else None
     # A rule with a size floor the campus is under does not apply to it.
@@ -189,7 +198,6 @@ def bill_outcome(
             0.8,
         )
     kind: Literal["partial", "exposed"] = "partial" if lead == "Partly." else "exposed"
-    cost = c.get("pjm_capacity_usd_per_mw_year")
     lo, hi = c.get("residential_allocation_lo"), c.get("residential_allocation_hi")
     customers = utility.customers if utility is not None else None
     if not customers:
@@ -197,15 +205,18 @@ def bill_outcome(
             "unknown", None, below + "The utility's customer count is not known, so no range.", 0.2
         )
     ba = utility.ba_code if utility is not None else None
-    if ba != PJM:
-        where = f"is in the {ba} balancing area" if ba else "is not known to be in PJM"
+    if ba not in CAPACITY_MARKETS:
+        names = ", ".join(m for m, _ in CAPACITY_MARKETS.values())
+        where = f"is in the {ba} balancing area" if ba else "is not known to be in any of them"
         return BillOutcome(
             "unknown",
             None,
-            below + f"The only capacity price the engine has is PJM's, and this utility {where}, "
+            below + f"The engine has capacity prices only for {names}, and this utility {where}, "
             "so no range.",
             0.2,
         )
+    market, cost_id = CAPACITY_MARKETS[ba]
+    cost = c.get(cost_id)
     if cost is None or lo is None or hi is None:
         return BillOutcome(
             "unknown",
@@ -228,12 +239,13 @@ def bill_outcome(
     return BillOutcome(
         kind,
         (a, b),
-        why + f"{mw:,} MW × ${fmt(cost.value)} PJM capacity price per MW-year × "
+        why + f"{mw:,} MW × ${fmt(cost.value)} {market} capacity price per MW-year × "
         f"{pct(lo.value)} to "
         f"{pct(hi.value)} residential share ÷ {customers:,} customers ÷ 12 months "
         f"= ${a:,.2f} to ${b:,.2f} a month",
         0.3,
         (cost, lo, hi),
+        market,
     )
 
 

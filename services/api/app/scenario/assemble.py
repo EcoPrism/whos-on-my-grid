@@ -345,8 +345,8 @@ def assemble_scenario(
     elif bill.range_usd_per_month:
         lo, hi = bill.range_usd_per_month
         bill_text = (
-            f"If PJM's capacity price for a campus this size were shared out like other costs, "
-            f"a typical home could pay about {fmt_range(lo, hi)} more a month."
+            f"If {bill.market}'s capacity price for a campus this size were shared out like other "
+            f"costs, a typical home could pay about {fmt_range(lo, hi)} more a month."
             + (" A large-load rule covers part of that." if bill.kind == "partial" else "")
         )
     else:
