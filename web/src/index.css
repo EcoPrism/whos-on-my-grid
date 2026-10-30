@@ -120,6 +120,7 @@ body {
   padding: 0.3rem 0.75rem; font: inherit; font-size: 0.875rem; line-height: 1.25;
 }
 .chip:hover:not(:disabled) { border-color: var(--ink); }
+.chip[aria-pressed='true'] { border-color: var(--ink); background: var(--ink); color: #fff; }
 .chip:disabled { opacity: 0.6; }
 select.chip {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2315202b' stroke-width='1.5'/%3E%3C/svg%3E");

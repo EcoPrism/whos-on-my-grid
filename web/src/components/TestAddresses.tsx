@@ -56,12 +56,14 @@ const FEATURED: Record<string, string[]> = {
 interface Props {
   items?: string[]
   onPick: (address: string) => void
+  // The address in the box, so the chip or option that put it there shows as picked.
+  selected?: string
   disabled?: boolean
   // The region the list is for; the US when absent.
   region?: string
 }
 
-export default function TestAddresses({ items, onPick, disabled, region = 'us' }: Props) {
+export default function TestAddresses({ items, onPick, selected, disabled, region = 'us' }: Props) {
   const known = NOTES[region] ?? []
   const notes = new Map(known.map((t) => [t.address, t.expect]))
   const list: TestAddress[] = items && items.length > 0
@@ -77,14 +79,14 @@ export default function TestAddresses({ items, onPick, disabled, region = 'us' }
     <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
       <span className="mr-1 text-[var(--ink-soft)]">Try</span>
       {chips.map((c) => (
-        <button key={c.address} type="button" className="chip" disabled={disabled} onClick={() => onPick(c.address)}>
+        <button key={c.address} type="button" className="chip" aria-pressed={selected === c.address} disabled={disabled} onClick={() => onPick(c.address)}>
           {c.place}
         </button>
       ))}
       <label className="inline-flex items-center">
         <span className="sr-only">All test addresses</span>
         <select
-          defaultValue=""
+          value={list.some((t) => t.address === selected) ? selected : ''}
           disabled={disabled}
           onChange={(e) => { if (e.target.value) onPick(e.target.value) }}
           className="chip max-w-[14rem] cursor-pointer appearance-none pr-7"

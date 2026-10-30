@@ -23,6 +23,7 @@ const INPUT_CLASS =
 export default function AddressInput({ value, onChange, disabled, countries = ['us'], placeholder = '21715 Filigree Ct, Ashburn, VA' }: Props) {
   const [places, setPlaces] = useState<PlacesLib | null>(null)
   const host = useRef<HTMLDivElement>(null)
+  const widget = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!KEY) return
@@ -62,8 +63,17 @@ export default function AddressInput({ value, onChange, disabled, countries = ['
     el.addEventListener('input', onInput)
     el.addEventListener('gmp-requesterror', onError)
     host.current.replaceChildren(el)
-    return () => { el.remove() }
+    widget.current = el
+    return () => { el.remove(); widget.current = null }
   }, [places, onChange, countryKey])
+
+  // The widget keeps its own text, so a value set from outside (a test-address
+  // chip) is written into its input; typing never loops back, as the text
+  // already matches. The shadow root is open (the `input` listener relies on it too).
+  useEffect(() => {
+    const input = widget.current?.shadowRoot?.querySelector('input')
+    if (input && input.value !== value) input.value = value
+  }, [value, places])
 
   if (places) {
     return <div ref={host} className="w-full min-w-0 border-2 border-[var(--ink)] bg-white px-2 py-1 text-lg" />

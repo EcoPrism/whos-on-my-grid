@@ -299,7 +299,7 @@ export default function Home() {
                 Sign in to check a new address. It's free: {health?.quota_per_user_day} a day.
               </p>
             )}
-            {live && <TestAddresses key={region} items={health?.test_addresses} onPick={onChange} disabled={busy} region={region} />}
+            {live && <TestAddresses key={region} items={health?.test_addresses} onPick={onChange} selected={input} disabled={busy} region={region} />}
             {gated && !busy && (
               <p className="mt-3 text-sm text-[var(--ink-soft)]">
                 {signedIn
