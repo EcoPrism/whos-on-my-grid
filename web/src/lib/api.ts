@@ -43,9 +43,9 @@ export interface Health {
   ok: boolean
   mode: 'fixtures' | 'agent' | 'full' | 'offline'
   examples: Example[]
-  // Addresses that cost no quota (the test set), as the API spells them.
+  // Addresses that run without a sign-in (the test set), as the API spells them.
   test_addresses: string[]
-  // off: anyone can generate (local dev). google: every address check needs a Google sign-in.
+  // off: anyone can generate (local dev). google: new briefs need a Google sign-in.
   auth: 'off' | 'google' | 'fake'
   google_client_id: string | null
   user: Me | null

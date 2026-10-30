@@ -124,9 +124,9 @@ class Settings(BaseSettings):
     # How often the retention sweep runs when any enabled region has a TTL.
     brief_sweep_hours: float = 6.0
 
-    # Sign-in gate for address checks. off = anyone can generate (local dev); google =
+    # Sign-in gate for *new* briefs. off = anyone can generate (local dev); google =
     # Google Identity Services id_tokens; fake = "fake:<sub>:<email>" tokens (tests only).
-    # Opening a brief link never needs sign-in; a test-set address costs no user quota.
+    # Viewing a brief, and running a test-set address, never needs sign-in.
     auth_provider: str = "off"
     google_client_id: str = ""
     # HS256 secret for the session cookie. Required when auth_provider is not off.

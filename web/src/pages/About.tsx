@@ -70,12 +70,11 @@ export default function About() {
           It is never logged and never written anywhere else.
         </p>
         <p>
-          Checking an address needs a Google sign-in, because a new brief costs model time. For a
-          signed-in user we keep the email address, when it was first and last seen, and the ids of
-          the briefs it generated, with a daily limit per person and overall; the example addresses
-          and briefs already made do not count toward it. Opening a shared brief link needs no
-          sign-in and stores nothing about you. Nothing is sold. The address goes only to the
-          services named here.
+          Making a new brief costs model time, so it needs a Google sign-in. For a signed-in user we
+          keep the email address, when it was first and last seen, and the ids of the briefs it
+          generated, with a daily limit per person and overall. Opening a brief, and running one of the
+          example addresses, needs no sign-in and stores nothing about you. Nothing is sold. The
+          address goes only to the services named here.
         </p>
         <p>
           For a US address: as you type, Google Places suggests addresses (Google receives what you

@@ -144,17 +144,11 @@ async def pulse(request: Request, region: str | None = None) -> dict:
 
 
 async def _admit(body: BriefRequest, request: Request, region: Region) -> Resolved:
-    """Check the sign-in, resolve the address (no tokens spent) and decide who
-    pays for a new brief. A cached or in-flight brief costs nothing, but still
-    needs a signed-in user: only a brief link is open. Raises HTTPException."""
+    """Resolve the address (no tokens spent) and decide who may pay for a new
+    brief. A cached or in-flight brief is free to anyone. Raises HTTPException."""
     gate = _gate(request)
     if gate.on and not same_site_post(request):
         raise HTTPException(403, "cross_site")
-    user = _user(request)
-    try:
-        gate.require(user)
-    except GateDenied as exc:
-        raise HTTPException(exc.status, exc.detail) from exc
     try:
         resolved = await _service(request, region).resolve(body.address)
     except AddressNotFound as exc:
@@ -164,7 +158,7 @@ async def _admit(body: BriefRequest, request: Request, region: Region) -> Resolv
     if resolved.cached is not None or resolved.inflight:
         return resolved
     try:
-        payer = await gate.admit(body.address, user)
+        payer = await gate.admit(body.address, _user(request))
     except GateDenied as exc:
         raise HTTPException(exc.status, exc.detail) from exc
     await gate.charge(payer, resolved.brief_id)

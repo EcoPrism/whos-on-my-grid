@@ -145,7 +145,10 @@ export default function Home() {
     return () => clearInterval(t)
   }, [busy])
 
-  const onChange = useCallback((v: string) => { setInput(v); setError(null) }, [])
+  // A new address asked for a sign-in: Google's button takes the place of the
+  // check button until the box changes.
+  const [askSignIn, setAskSignIn] = useState(false)
+  const onChange = useCallback((v: string) => { setInput(v); setError(null); setAskSignIn(false) }, [])
 
   // A new region empties the box: an address typed for one country is not one for another.
   const pick = useCallback((id: string) => {
@@ -175,11 +178,11 @@ export default function Home() {
 
   function go(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || !input.trim() || (gated && !signedIn)) return
+    if (busy || !input.trim()) return
     void check(input)
   }
 
-  // Signing in from the form is asking to check: once Google answers, the
+  // Signing in after a new address asked for it is asking to check: once Google answers, the
   // typed address runs with no second press. Google's callback was bound on
   // an earlier render, so it reaches the current `check` and box through refs.
   const inputRef = useRef(input)
@@ -188,6 +191,7 @@ export default function Home() {
   checkRef.current = check
   const onSignedIn = useCallback((me: Me) => {
     onUser(me)
+    setAskSignIn(false)
     const address = inputRef.current.trim()
     if (address) void checkRef.current(address)
   }, [onUser])
@@ -225,8 +229,9 @@ export default function Home() {
       const msg = messageFor(err, mode, copy, regions)
       if (id) updateLive(id, { stage: 'error', error: msg })
       else setError(msg)
-      // A spent quota shows up in the count; a lost session shows the button
-      // again; a region the API no longer serves falls back to the API's pick.
+      // A spent quota shows up in the count; a sign-in the address needs shows
+      // the button; a region the API no longer serves falls back to the API's pick.
+      if (err instanceof ApiError && err.status === 401) setAskSignIn(true)
       if (isUnknownRegion(err)) reload(true)
       else if (err instanceof ApiError && (err.status === 401 || err.status === 429)) reload()
     } finally {
@@ -257,7 +262,7 @@ export default function Home() {
         </span>
         <div className="flex items-center gap-4">
           {regions.length > 1 && <RegionSwitch regions={regions} current={region} onPick={pick} disabled={busy} />}
-          {health && <SignIn health={health} onUser={onUser} button={false} />}
+          {health && <SignIn health={health} onUser={onUser} />}
         </div>
       </header>
 
@@ -279,7 +284,7 @@ export default function Home() {
             </label>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <AddressInput value={input} onChange={onChange} disabled={busy} countries={countries} placeholder={placeholder} />
-              {gated && !signedIn && health?.google_client_id ? (
+              {gated && !signedIn && askSignIn && health?.google_client_id ? (
                 <div className="flex shrink-0 items-center">
                   <GoogleButton clientId={health.google_client_id} onUser={onSignedIn} text="continue_with" theme="filled_black" size="large" />
                 </div>
@@ -289,9 +294,9 @@ export default function Home() {
                 </button>
               )}
             </div>
-            {gated && !signedIn && !busy && (
+            {gated && !signedIn && askSignIn && !busy && (
               <p className="mt-2 text-sm font-semibold">
-                Sign in to check. It's free: {health?.quota_per_user_day} new addresses a day.
+                Sign in to check a new address. It's free: {health?.quota_per_user_day} a day.
               </p>
             )}
             {live && <TestAddresses key={region} items={health?.test_addresses} onPick={onChange} disabled={busy} region={region} />}
@@ -299,7 +304,7 @@ export default function Home() {
               <p className="mt-3 text-sm text-[var(--ink-soft)]">
                 {signedIn
                   ? 'A new address spends model time, so each person gets a few a day. Test addresses and briefs already made do not count.'
-                  : 'Each new address spends model time, hence the sign-in. A shared brief link opens without an account.'}{' '}
+                  : 'Test addresses and briefs already made run without an account. A new address needs a Google sign-in, because each one spends model time.'}{' '}
                 Your address is never logged; the brief keeps the street and city, without the house number, so its link can be shared.{' '}
                 <a href="/about#data">What is stored</a>
               </p>
@@ -447,7 +452,7 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined, copy: Copy, 
           ? `This service covers addresses in ${servedPlaces(regions)} and is only available from those countries.`
           : 'This service covers US addresses and is only available from the United States.'
       case 401:
-        return 'Your sign-in has ended. Continue with Google, next to the address box, to check it.'
+        return 'A new address needs a sign-in. Continue with Google, next to the address box, and it runs. Test addresses need none.'
       case 429:
         return err.detail === 'quota_exceeded_user'
           ? "You have used today's new briefs. Test addresses and briefs already made still open."

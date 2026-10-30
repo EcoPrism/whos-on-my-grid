@@ -1,4 +1,4 @@
-// The addresses that cost no quota: the region's eval set (eval/<region>/addresses.json).
+// The addresses that run without a sign-in: the region's eval set (eval/<region>/addresses.json).
 // The API serves the list (`health.test_addresses`), spelled exactly as the
 // gate admits them; four of them are offered as one-tap chips, the rest sit in
 // a select. Picking one fills the address box, it does not submit: a run
