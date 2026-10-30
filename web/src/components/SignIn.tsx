@@ -3,8 +3,11 @@ import { signInWithGoogle, signOut, type Health, type Me } from '../lib/api'
 
 // Google Identity Services. The script is loaded once, on demand, only when
 // the service says sign-in is Google's. The id_token goes to our API, which
-// sets an HttpOnly cookie; nothing is kept in JavaScript. Rendered in the
-// masthead: the button when signed out, one line of account state when in.
+// sets an HttpOnly cookie; nothing is kept in JavaScript. `SignIn` is the
+// masthead: one line of account state when in, and (unless `button` is false)
+// the button when out. `GoogleButton` is the button alone, for the place the
+// sign-in is needed. Google's own button is the only way to get an id_token,
+// so it cannot hide behind a button of ours.
 
 type GisButtonOptions = { theme: string; size: string; text: string; shape: string; width?: number }
 type Gis = {
@@ -43,15 +46,21 @@ function loadGis(): Promise<Gis> {
   return loading
 }
 
-export default function SignIn({ health, onUser }: { health: Health; onUser: (me: Me | null) => void }) {
+interface ButtonProps {
+  clientId: string
+  onUser: (me: Me) => void
+  text?: 'signin_with' | 'continue_with'
+  theme?: 'outline' | 'filled_black'
+  size?: 'medium' | 'large'
+}
+
+export function GoogleButton({ clientId, onUser, text = 'signin_with', theme = 'outline', size = 'medium' }: ButtonProps) {
   const slot = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const clientId = health.google_client_id
-  const user = health.user
 
   useEffect(() => {
-    if (user || !clientId || !slot.current) return
+    if (!slot.current) return
     let cancelled = false
     const el = slot.current
     loadGis()
@@ -72,13 +81,25 @@ export default function SignIn({ health, onUser }: { health: Health; onUser: (me
             }
           },
         })
-        g.accounts.id.renderButton(el, { theme: 'outline', size: 'medium', text: 'signin_with', shape: 'rectangular' })
+        g.accounts.id.renderButton(el, { theme, size, text, shape: 'rectangular' })
       })
       .catch(() => setError('Could not load Google sign-in.'))
     return () => {
       cancelled = true
     }
-  }, [user, clientId, onUser])
+  }, [clientId, onUser, text, theme, size])
+
+  return (
+    <div className="flex items-center gap-3">
+      {error && <p className="text-sm" role="alert">{error}</p>}
+      <div ref={slot} aria-busy={busy} className="min-h-8" />
+    </div>
+  )
+}
+
+export default function SignIn({ health, onUser, button = true }: { health: Health; onUser: (me: Me | null) => void; button?: boolean }) {
+  const clientId = health.google_client_id
+  const user = health.user
 
   if (health.auth !== 'google') return null
 
@@ -104,10 +125,6 @@ export default function SignIn({ health, onUser }: { health: Health; onUser: (me
     )
   }
 
-  return (
-    <div className="flex items-center gap-3">
-      {error && <p className="text-sm" role="alert">{error}</p>}
-      <div ref={slot} aria-busy={busy} className="min-h-8" />
-    </div>
-  )
+  if (!button || !clientId) return null
+  return <GoogleButton clientId={clientId} onUser={onUser} />
 }

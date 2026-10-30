@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AddressInput from '../components/AddressInput'
 import GroundSteps from '../components/GroundSteps'
-import SignIn from '../components/SignIn'
+import SignIn, { GoogleButton } from '../components/SignIn'
 import TestAddresses from '../components/TestAddresses'
 import WhatIfPanel from '../components/WhatIfPanel'
 import { ApiError, createScenario, getPulse, isUnknownRegion, streamBrief, type Health, type Me, type Pulse, type RegionInfo } from '../lib/api'
@@ -173,9 +173,27 @@ export default function Home() {
     }
   }
 
-  async function go(e: React.FormEvent) {
+  function go(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || !input.trim()) return
+    if (busy || !input.trim() || (gated && !signedIn)) return
+    void check(input)
+  }
+
+  // Signing in from the form is asking to check: once Google answers, the
+  // typed address runs with no second press. Google's callback was bound on
+  // an earlier render, so it reaches the current `check` and box through refs.
+  const inputRef = useRef(input)
+  inputRef.current = input
+  const checkRef = useRef<(address: string) => Promise<void>>(async () => {})
+  checkRef.current = check
+  const onSignedIn = useCallback((me: Me) => {
+    onUser(me)
+    const address = inputRef.current.trim()
+    if (address) void checkRef.current(address)
+  }, [onUser])
+
+  async function check(address: string) {
+    if (busy) return
     setError(null)
     setBusy(true)
     stepsRef.current = {}
@@ -186,7 +204,7 @@ export default function Home() {
     let id: string | null = null
     const startedAt = Date.now()
     try {
-      await streamBrief(input, region, (ev) => {
+      await streamBrief(address, region, (ev) => {
         if (ev.stage === 'error') return // thrown by streamBrief instead
         if (ev.stage === 'gathering') {
           stepsRef.current = { ...stepsRef.current, [ev.step]: ev.state }
@@ -239,7 +257,7 @@ export default function Home() {
         </span>
         <div className="flex items-center gap-4">
           {regions.length > 1 && <RegionSwitch regions={regions} current={region} onPick={pick} disabled={busy} />}
-          {health && <SignIn health={health} onUser={onUser} />}
+          {health && <SignIn health={health} onUser={onUser} button={false} />}
         </div>
       </header>
 
@@ -261,16 +279,29 @@ export default function Home() {
             </label>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <AddressInput value={input} onChange={onChange} disabled={busy} countries={countries} placeholder={placeholder} />
-              <button type="submit" disabled={busy} className="btn-signal shrink-0 px-6 py-3 text-lg">
-                {busy ? 'Working…' : 'Check my grid'}
-              </button>
+              {gated && !signedIn && health?.google_client_id ? (
+                <div className="flex shrink-0 items-center">
+                  <GoogleButton clientId={health.google_client_id} onUser={onSignedIn} text="continue_with" theme="filled_black" size="large" />
+                </div>
+              ) : (
+                <button type="submit" disabled={busy} className="btn-signal shrink-0 px-6 py-3 text-lg">
+                  {busy ? 'Working…' : 'Check my grid'}
+                </button>
+              )}
             </div>
+            {gated && !signedIn && !busy && (
+              <p className="mt-2 text-sm font-semibold">
+                Sign in to check. It's free: {health?.quota_per_user_day} new addresses a day.
+              </p>
+            )}
             {live && <TestAddresses key={region} items={health?.test_addresses} onPick={onChange} disabled={busy} region={region} />}
             {gated && !busy && (
               <p className="mt-3 text-sm text-[var(--ink-soft)]">
                 {signedIn
-                  ? 'A new address spends model time, so each person gets a few a day. Test addresses and shared briefs are always free.'
-                  : 'Test addresses and shared briefs run without an account. A new address needs a Google sign-in, because each one spends model time.'}
+                  ? 'A new address spends model time, so each person gets a few a day. Test addresses and briefs already made do not count.'
+                  : 'Each new address spends model time, hence the sign-in. A shared brief link opens without an account.'}{' '}
+                Your address is never logged; the brief keeps the street and city, without the house number, so its link can be shared.{' '}
+                <a href="/about#data">What is stored</a>
               </p>
             )}
             {busy && live && (
@@ -416,11 +447,11 @@ function messageFor(err: unknown, mode: Health['mode'] | undefined, copy: Copy, 
           ? `This service covers addresses in ${servedPlaces(regions)} and is only available from those countries.`
           : 'This service covers US addresses and is only available from the United States.'
       case 401:
-        return 'Sign in with Google at the top of the page to run a new address. Test addresses and shared briefs need no sign-in.'
+        return 'Your sign-in has ended. Continue with Google, next to the address box, to check it.'
       case 429:
         return err.detail === 'quota_exceeded_user'
-          ? "You have used today's new briefs. Try again tomorrow, or open a shared brief."
-          : "Today's brief budget is spent. Shared briefs and the test addresses still open."
+          ? "You have used today's new briefs. Test addresses and briefs already made still open."
+          : "Today's brief budget is spent. Briefs already made still open."
       case 503:
         return 'The address lookup service is not answering. Try again in a minute.'
       case 502:

@@ -46,8 +46,9 @@ hostname is the app's own `*.azurecontainerapps.io` until the domains are wired 
 6. `./scripts/deploy.ps1 -Phase app`. It prints the FQDN and polls `/api/health`.
 7. Add `https://<fqdn>` to the OAuth client's JavaScript origins and to the Maps key's referrers
    (`gcloud services api-keys update`, key in project `ecoprism-ecoutil`).
-8. Open the FQDN. Sign in, run one new address, open the brief link in a private window without
-   signing in, run a test-set address from the dropdown without signing in.
+8. Open the FQDN. Signed out, "Check my grid" asks for a sign-in. Sign in, run one new address and
+   a test-set address from the dropdown (the quota count drops only for the first), then open the
+   brief link in a private window without signing in.
 
 A later release is `-Phase image` then `-Phase app` (or `-Phase all`, which re-runs the cheap
 phases idempotently). A code change invalidates every cached brief by design (engine fingerprint),
@@ -55,10 +56,11 @@ so expect the first run of each address after a release to spend tokens.
 
 ## The gate
 
-Opening a brief and running a test-set address (`eval/us/addresses.json`, plus
-`eval/ie/addresses.json` when Ireland is enabled) need no sign-in. Making a
-brief for a new address needs a Google sign-in and counts against `GRID_QUOTA_PER_USER_DAY` (5) and
-`GRID_QUOTA_GLOBAL_DAY` (40), both set in `infra/deploy.json`. The `usage` table holds, per day,
+Checking any address needs a Google sign-in; only a brief link (`/b/<id>`) opens without one.
+A brief already made costs nothing. A test-set address (`eval/us/addresses.json`, plus
+`eval/ie/addresses.json` when Ireland is enabled) counts against `GRID_QUOTA_GLOBAL_DAY` (40) but
+not the person's quota; any other new address counts against both `GRID_QUOTA_PER_USER_DAY` (5)
+and the global cap, both set in `infra/deploy.json`. The `usage` table holds, per day,
 the subject, email and brief id of each run; the `users` table holds email and first/last seen.
 Never an address. The web page shows the remaining count and the rule in one line.
 

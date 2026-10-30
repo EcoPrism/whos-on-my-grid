@@ -1,6 +1,7 @@
-"""The sign-in gate guards only new briefs. Cached briefs, brief links and
-test-set addresses are free; a signed-in user has a daily quota; the global
-cap holds for everyone. Fake verifier, memory usage store, no network."""
+"""The sign-in gate guards every address check; only a brief link is open.
+Cached briefs and test-set addresses cost no quota; a signed-in user has a
+daily quota for new ones; the global cap holds for everyone. Fake verifier,
+memory usage store, no network."""
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -84,13 +85,13 @@ async def test_sign_in_generate_cache_and_quota(tmp_path) -> None:
         assert (await c.get("/api/auth/me")).json()["remaining"] == 0
         assert await app.state.gate.usage.count_global_today() == 1
 
-        # The same address again is a cache hit: free, no sign-in needed either.
+        # The same address again is a cache hit: no quota spent. Signed out, the
+        # address check is refused, but the brief link still opens.
         r = await c.post("/api/brief", json={"address": ADDR}, headers=HDR)
         assert r.status_code == 200 and r.json() == brief
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anon:
-            assert (
-                await anon.post("/api/brief", json={"address": ADDR}, headers=HDR)
-            ).json() == brief
+            r = await anon.post("/api/brief", json={"address": ADDR}, headers=HDR)
+            assert r.status_code == 401 and r.json()["detail"] == "sign_in_required"
             assert (await anon.get(f"/api/brief/{brief['brief_id']}")).status_code == 200
 
         # A new brief with the quota spent is refused before any model call.
@@ -107,10 +108,15 @@ async def test_sign_in_generate_cache_and_quota(tmp_path) -> None:
         assert r.status_code == 401
 
 
-async def test_test_set_address_runs_without_sign_in(client) -> None:
+async def test_test_set_address_needs_sign_in_but_no_quota(client) -> None:
+    r = await client.post("/api/brief", json={"address": TEST_SET_ADDR}, headers=HDR)
+    assert r.status_code == 401 and r.json()["detail"] == "sign_in_required"
+    assert client.service.draft_provider.calls == []
+    await sign_in(client)
     r = await client.post("/api/brief", json={"address": TEST_SET_ADDR}, headers=HDR)
     assert r.status_code == 200, r.text
     assert await client.app.state.gate.usage.count_global_today() == 1
+    assert (await client.get("/api/auth/me")).json()["remaining"] == 5
     # The numbered spelling the dropdown sends is admitted too.
     r = await client.post("/api/brief", json={"address": RESOLVED_ADDR}, headers=HDR)
     assert r.status_code == 200, r.text

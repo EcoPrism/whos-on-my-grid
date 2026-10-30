@@ -39,6 +39,8 @@ export default function AddressInput({ value, onChange, disabled, countries = ['
     if (!places || !host.current) return
     const el = new places.PlaceAutocompleteElement({ componentRestrictions: { country: countryKey.split(',') } })
     el.id = 'address'
+    // Fill the host, so the widget's own width never pushes the button out of the form.
+    el.style.width = '100%'
     const onSelect = async (e: PlaceSelectEvent) => {
       const place = e.placePrediction ? e.placePrediction.toPlace() : e.place
       if (!place) return
@@ -64,7 +66,7 @@ export default function AddressInput({ value, onChange, disabled, countries = ['
   }, [places, onChange, countryKey])
 
   if (places) {
-    return <div ref={host} className="w-full border-2 border-[var(--ink)] bg-white px-2 py-1 text-lg" />
+    return <div ref={host} className="w-full min-w-0 border-2 border-[var(--ink)] bg-white px-2 py-1 text-lg" />
   }
   return (
     <input

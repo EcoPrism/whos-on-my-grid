@@ -80,6 +80,11 @@ def _client(app: FastAPI) -> AsyncClient:
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
+async def _sign_in(c: AsyncClient) -> None:
+    cred = {"credential": "fake:a@example.com:a@example.com"}
+    assert (await c.post("/api/auth/google", json=cred, headers=HDR)).status_code == 200
+
+
 @pytest.mark.parametrize("over", [{"regions": "us,zz"}, {"default_region": "eu"}])
 def test_create_app_refuses_unknown_regions(tmp_path: Path, over: dict[str, str]) -> None:
     with pytest.raises(RuntimeError, match="GRID_REGIONS"):
@@ -209,7 +214,7 @@ def test_gate_allow_list_is_the_us_test_set(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("address", [TEST_SET_ADDR, RESOLVED_ADDR])
 @pytest.mark.parametrize("region", [None, "us"])
-async def test_test_set_needs_no_sign_in_with_or_without_region(
+async def test_test_set_is_admitted_with_or_without_region(
     tmp_path: Path, address: str, region: str | None
 ) -> None:
     svc = fakes.service(
@@ -219,7 +224,9 @@ async def test_test_set_needs_no_sign_in_with_or_without_region(
     if region is not None:
         body["region"] = region
     async with _client(create_app(svc)) as c:
+        await _sign_in(c)
         r = await c.post("/api/brief", json=body, headers=HDR)
+        assert (await c.get("/api/auth/me")).json()["remaining"] == 5
     assert r.status_code == 200, r.json().get("detail")
 
 
@@ -254,7 +261,7 @@ def test_gate_allow_list_adds_the_irish_test_set(
     assert normalise("Blanchardstown Centre, Blanchardstown, Dublin 15") in allowed
 
 
-async def test_irish_test_address_needs_no_sign_in(
+async def test_irish_test_address_costs_no_quota(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_ie(monkeypatch)
@@ -264,15 +271,13 @@ async def test_irish_test_address_needs_no_sign_in(
     app = create_app(services=svcs)
     body = {"address": "Blanchardstown Centre, Blanchardstown, Dublin 15", "region": "ie"}
     async with _client(app) as c:
-        # First an address outside the test set: the fake geocoder places it at
-        # the same point, so once a brief exists it would be free to anyone.
-        r = await c.post(
-            "/api/brief", json={"address": "1 Main St, Somewhere", "region": "ie"}, headers=HDR
-        )
+        r = await c.post("/api/brief", json=body, headers=HDR)
         assert r.status_code == 401 and r.json()["detail"] == "sign_in_required"
+        await _sign_in(c)
         r = await c.post("/api/brief", json=body, headers=HDR)
         assert r.status_code == 200, r.text
         assert r.json()["brief_id"] == fakes.IE_BRIEF_ID
+        assert (await c.get("/api/auth/me")).json()["remaining"] == 5
 
 
 async def test_lifespan_sweeps_when_a_region_ages_briefs(

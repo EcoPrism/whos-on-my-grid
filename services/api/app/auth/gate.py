@@ -1,8 +1,10 @@
-"""Who may spend model tokens. A cached brief, or one already being made, is
-served to anyone. A new brief is made for: a signed-in user with quota left
-today, or anyone for an address in a region's test set (eval/<region>/addresses.json), so
-the demo dropdown works without an account. Both count toward the global
-daily cap, which is the gateway budget's belt. A what-if's interpretation
+"""Who may check an address and who pays for it. Every address check needs a
+signed-in user (`require`); a brief link (/b/<id>) stays open to anyone. A
+cached brief, or one already being made, costs nothing. A new brief is charged
+to the user's daily quota, except for an address in a region's test set
+(eval/<region>/addresses.json), which is charged to no one, so the demo
+dropdown does not eat a judge's quota. Both count toward the global daily cap,
+which is the gateway budget's belt. A what-if's interpretation
 (`admit_scenario`) needs a signed-in user with quota left; it is charged as
 `scenario:{id}`, so a usage row never holds the ZIP."""
 
@@ -86,19 +88,23 @@ class Gate:
         used = await self.usage.count_user_today(user.subject)
         return max(0, self.settings.quota_per_user_day - used)
 
+    def require(self, user: User | None) -> None:
+        """Every address check needs a sign-in, cached or not. Raises GateDenied."""
+        if self.on and user is None:
+            log_event("gate_denied", reason="sign_in")
+            raise GateDenied(401, "sign_in_required")
+
     async def admit(self, address: str, user: User | None) -> User | None:
         """Raise GateDenied, or return who to charge (None for a test-set run)."""
         if not self.on:
             return None
+        self.require(user)
         if await self.usage.count_global_today() >= self.settings.quota_global_day:
             log_event("gate_denied", reason="global_quota")
             raise GateDenied(429, "quota_exceeded_today")
         allowed = self.allowed if self.allowed is not None else test_set_addresses()
-        if normalise(address) in allowed:
+        if normalise(address) in allowed or user is None:
             return None
-        if user is None:
-            log_event("gate_denied", reason="sign_in")
-            raise GateDenied(401, "sign_in_required")
         if await self.remaining(user) <= 0:
             log_event("gate_denied", reason="user_quota")
             raise GateDenied(429, "quota_exceeded_user")
