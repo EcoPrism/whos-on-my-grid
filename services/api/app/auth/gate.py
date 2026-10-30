@@ -86,6 +86,16 @@ class Gate:
         used = await self.usage.count_user_today(user.subject)
         return max(0, self.settings.quota_per_user_day - used)
 
+    def anonymous_ok(self, address: str, user: User | None) -> None:
+        """Signed out, only a test-set address goes on to the geocoder; any
+        other is refused before an upstream call. Raises GateDenied."""
+        if not self.on or user is not None:
+            return
+        allowed = self.allowed if self.allowed is not None else test_set_addresses()
+        if normalise(address) not in allowed:
+            log_event("gate_denied", reason="sign_in")
+            raise GateDenied(401, "sign_in_required")
+
     async def admit(self, address: str, user: User | None) -> User | None:
         """Raise GateDenied, or return who to charge (None for a test-set run)."""
         if not self.on:

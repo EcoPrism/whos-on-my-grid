@@ -304,7 +304,7 @@ export default function Home() {
               <p className="mt-3 text-sm text-[var(--ink-soft)]">
                 {signedIn
                   ? 'A new address spends model time, so each person gets a few a day. Test addresses and briefs already made do not count.'
-                  : 'Test addresses and briefs already made run without an account. A new address needs a Google sign-in, because each one spends model time.'}{' '}
+                  : 'Test addresses and shared brief links work without an account. Any other address needs a Google sign-in, because each new one spends model time.'}{' '}
                 Your address is never logged; the brief keeps the street and city, without the house number, so its link can be shared.{' '}
                 <a href="/about#data">What is stored</a>
               </p>

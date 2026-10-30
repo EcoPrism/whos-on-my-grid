@@ -1,5 +1,5 @@
-"""The sign-in gate guards only new briefs. Cached briefs, brief links and
-test-set addresses are free; a signed-in user has a daily quota; the global
+"""The sign-in gate. Brief links and test-set addresses need no sign-in;
+signed out, any other address is refused before the geocoder; cached briefs are free; a signed-in user has a daily quota; the global
 cap holds for everyone. Fake verifier, memory usage store, no network."""
 
 import pytest
@@ -56,6 +56,15 @@ async def test_new_brief_needs_sign_in_and_spends_nothing(client) -> None:
     assert client.service.draft_provider.calls == []
 
 
+async def test_signed_out_new_address_is_refused_before_the_geocoder(client) -> None:
+    # A geocoder that fails would answer 503; the 401 shows it was never asked.
+    from app.geocode import FakeGeocoder
+
+    client.service.geocoder = FakeGeocoder(fail=True)
+    r = await client.post("/api/brief", json={"address": ADDR}, headers=HDR)
+    assert r.status_code == 401 and r.json()["detail"] == "sign_in_required"
+
+
 async def test_cross_site_post_is_refused_when_gated(client) -> None:
     r = await client.post("/api/brief", json={"address": ADDR})
     assert r.status_code == 403 and r.json()["detail"] == "cross_site"
@@ -84,13 +93,13 @@ async def test_sign_in_generate_cache_and_quota(tmp_path) -> None:
         assert (await c.get("/api/auth/me")).json()["remaining"] == 0
         assert await app.state.gate.usage.count_global_today() == 1
 
-        # The same address again is a cache hit: free, no sign-in needed either.
+        # The same address again is a cache hit: free. Signed out, the brief's
+        # link opens, but the form does not geocode an address off the test set.
         r = await c.post("/api/brief", json={"address": ADDR}, headers=HDR)
         assert r.status_code == 200 and r.json() == brief
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anon:
-            assert (
-                await anon.post("/api/brief", json={"address": ADDR}, headers=HDR)
-            ).json() == brief
+            r = await anon.post("/api/brief", json={"address": ADDR}, headers=HDR)
+            assert r.status_code == 401
             assert (await anon.get(f"/api/brief/{brief['brief_id']}")).status_code == 200
 
         # A new brief with the quota spent is refused before any model call.
