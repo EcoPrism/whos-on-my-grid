@@ -399,3 +399,11 @@ from anything pre-existing.
   role-labelled by Spark. Pima's recording 403s a scripted download and stays captions-only.
   Also: the global daily cap is 80 for judging (`infra/deploy.json`), and `eval/run_eval.py`
   sends the same-site header so it can warm the deployed cache after each deploy.
+- **Engine-written gaps (2026-10-30).** The bill and tariff sections showed Muse Spark's own
+  notes as their gap line ("no search tool available and SCC page wording could not be
+  recalled, so attribution is null"). Where the engine has the figures it now writes the gap:
+  the bill section says no regulator or utility is cited tying the change to data centers
+  (US only; Ireland says nothing, as before) plus the engine's notes, and the tariff section
+  points to the published tariff or policy page (none when no tariff is found). The system
+  prompt's rule 2 now asks for a gap a resident can read, never naming tools, memory, search
+  or field names. US golden digests re-recorded for this deliberate change. 734 tests.

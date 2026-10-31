@@ -105,6 +105,11 @@ _TOPIC_ORDER = {
 CONNECTION_POLICY_CARD = (
     "CRU data-centre connection policy in force; household bills not its stated aim"
 )
+# The tariff section's gap, written by the engine in place of the model's.
+TARIFF_GAP = (
+    "This is a short reading of the published {kind}; its page has the full terms and any "
+    "later changes."
+)
 NO_TYPICAL_USE = (
     "No typical household consumption figure is on record, so the monthly change is not computed."
 )
@@ -881,7 +886,11 @@ def _bill_section(
     change = monthly_change(price)
     if not drafted:
         section["summary"] = _bill_summary(truth, geo, change, v)
-        section["gap"] = " ".join(filter(None, [section.get("gap"), *truth.notes])) or None
+    # The engine writes this gap; a model's note on what it could not recall is not for the page.
+    gap = " ".join(
+        filter(None, [None if attribution else (v.no_dc_statement or "").strip(), *truth.notes])
+    )
+    section["gap"] = gap or None
     section["price"] = price
     section["status"] = "modelled"
     section["confidence"] = 0.85 if p.scope == "utility" else 0.8
@@ -1044,6 +1053,8 @@ def _protection_section(
     stated_aim = t.kind == "connection_policy" and t.protects_households is False
     lead = f"{t.lead} {CONNECTION_POLICY_AIM}" if stated_aim else t.lead
     section["summary"] = f"{lead} {t.summary}"
+    kind = "tariff" if t.kind == "tariff" else "policy"
+    section["gap"] = None if t.status == "none_found" else TARIFF_GAP.format(kind=kind)
     section["status"] = "reported"
     section["confidence"] = max(float(section.get("confidence") or 0.0), 0.8)
     section["sources"] = _distinct_sources([c for c in claims if c["section"] == "protection"])
